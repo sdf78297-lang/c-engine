@@ -6,6 +6,7 @@
 
 #include <ExoEngine/Math/Mat4.h>
 #include <ExoEngine/Math/Vec.h>
+#include <ExoEngine/Renderer/MeshBuffer.h>
 
 namespace Exo {
 
@@ -32,21 +33,14 @@ public:
     void shutdown();
     void resize(std::uint32_t width, std::uint32_t height);
     void beginFrame(const RenderView& view);
-    void drawReferenceRoom();
-    void drawCharacter(const Mat4& modelTransform);
-    void drawTV(const Mat4& modelTransform);
-    [[nodiscard]] std::int32_t loadGltfMesh(const std::filesystem::path& path);
-    void drawGltfMesh(std::int32_t handle, const Mat4& modelTransform);
-    [[nodiscard]] bool gltfMeshBounds(std::int32_t handle, Vec3& minOut, Vec3& maxOut) const;
+    [[nodiscard]] std::int32_t loadSceneMesh(const std::filesystem::path& path);
+    void drawSceneMesh(std::int32_t handle, const Mat4& modelTransform);
+    [[nodiscard]] bool sceneMeshBounds(std::int32_t handle, Vec3& minOut, Vec3& maxOut) const;
     void endFrame();
 
     [[nodiscard]] const RenderStats& stats() const;
 
 private:
-    bool createReferenceGeometry();
-    bool createReferenceShader();
-    bool createCharacterGeometry();
-    bool createTVGeometry();
     bool createTexturedShader();
 
     struct GltfSubMesh {
@@ -65,24 +59,29 @@ private:
         Vec3 aabbMax {0.0f, 0.0f, 0.0f};
     };
 
+    struct SceneMesh {
+        enum class Kind {
+            Obj,
+            Gltf
+        };
+
+        Kind kind = Kind::Obj;
+        MeshBuffer objBuffer;
+        GltfModel gltfModel;
+        Vec3 aabbMin {0.0f, 0.0f, 0.0f};
+        Vec3 aabbMax {0.0f, 0.0f, 0.0f};
+    };
+
+    [[nodiscard]] std::int32_t loadObjMesh(const std::filesystem::path& path);
+    [[nodiscard]] std::int32_t loadGltfMesh(const std::filesystem::path& path);
+    void drawGltfModel(const GltfModel& model);
+
     std::uint32_t width_ = 0;
     std::uint32_t height_ = 0;
     Mat4 currentViewProjection_ = Mat4::identity();
-    std::uint32_t shader_ = 0;
-    std::uint32_t vao_ = 0;
-    std::uint32_t vbo_ = 0;
-    std::uint32_t ebo_ = 0;
-    std::uint32_t characterVao_ = 0;
-    std::uint32_t characterVbo_ = 0;
-    std::uint32_t characterEbo_ = 0;
-    std::uint32_t characterIndexCount_ = 0;
-    std::uint32_t tvVao_ = 0;
-    std::uint32_t tvVbo_ = 0;
-    std::uint32_t tvEbo_ = 0;
-    std::uint32_t tvIndexCount_ = 0;
     std::uint32_t texturedShader_ = 0;
     std::uint32_t whiteTexture_ = 0;
-    std::vector<GltfModel> gltfModels_;
+    std::vector<SceneMesh> sceneMeshes_;
     RenderStats stats_ {};
 };
 

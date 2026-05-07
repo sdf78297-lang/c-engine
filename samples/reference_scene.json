@@ -5,6 +5,7 @@
       "name": "reference_room",
       "meshAsset": "engine/reference_room.mesh",
       "materialAsset": "engine/reference_room.material",
+      "meshSource": "samples/reference_room.obj",
       "transform": {
         "position": [0.0, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0],

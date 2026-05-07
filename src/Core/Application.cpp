@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cctype>
 #include <filesystem>
 #include <iomanip>
 #include <limits>
@@ -35,6 +36,14 @@ std::string formatSize(Vec3 a, Vec3 b) {
     s << std::fixed << std::setprecision(3)
       << (b.x - a.x) << " x " << (b.y - a.y) << " x " << (b.z - a.z);
     return s.str();
+}
+
+std::string lowerExtension(const std::filesystem::path& path) {
+    std::string ext = path.extension().string();
+    for (char& c : ext) {
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+    return ext;
 }
 
 void transformAabb(Vec3 localMin, Vec3 localMax, const Transform& t, Vec3& outMin, Vec3& outMax) {
@@ -153,31 +162,55 @@ int Application::runHeadless() {
             + " rotY=" + std::to_string(m.transform.rotation.y)
             + " scale=" + formatVec3(m.transform.scale));
         if (m.meshSource.empty()) {
-            Logger::info("       (no glTF source)");
+            Logger::warn("       no meshSource; scene instance will not render");
             continue;
         }
         std::filesystem::path source(m.meshSource);
         if (!source.is_absolute()) {
             source = engineRoot / source;
         }
-        try {
-            GltfModelData data = GltfLoader::loadFromFile(source);
-            if (data.primitives.empty()) {
-                Logger::warn("       glTF empty: " + source.string());
+        const std::string ext = lowerExtension(source);
+        if (ext == ".obj") {
+            ObjImportResult importResult = importer.importFile(source);
+            if (!importResult.success()) {
+                Logger::error("       OBJ load failed: " + source.string());
                 continue;
             }
-            Logger::info("       glTF: " + m.meshSource
-                + " (" + std::to_string(data.primitives.size()) + " prims)");
-            Logger::info("       local AABB: min=" + formatVec3(data.aabbMin)
-                + " max=" + formatVec3(data.aabbMax)
-                + " size=" + formatSize(data.aabbMin, data.aabbMax));
-            Vec3 worldMin, worldMax;
-            transformAabb(data.aabbMin, data.aabbMax, m.transform, worldMin, worldMax);
-            Logger::info("       world AABB: min=" + formatVec3(worldMin)
-                + " max=" + formatVec3(worldMax)
-                + " size=" + formatSize(worldMin, worldMax));
-        } catch (const std::exception& e) {
-            Logger::error(std::string("       glTF load failed: ") + e.what());
+            Logger::info("       OBJ: " + m.meshSource
+                + " (" + std::to_string(importResult.mesh.vertices.size()) + " verts, "
+                + std::to_string(importResult.mesh.indices.size() / 3) + " tris)");
+            if (importResult.mesh.bounds.valid) {
+                Logger::info("       local AABB: min=" + formatVec3(importResult.mesh.bounds.min)
+                    + " max=" + formatVec3(importResult.mesh.bounds.max)
+                    + " size=" + formatSize(importResult.mesh.bounds.min, importResult.mesh.bounds.max));
+                Vec3 worldMin, worldMax;
+                transformAabb(importResult.mesh.bounds.min, importResult.mesh.bounds.max, m.transform, worldMin, worldMax);
+                Logger::info("       world AABB: min=" + formatVec3(worldMin)
+                    + " max=" + formatVec3(worldMax)
+                    + " size=" + formatSize(worldMin, worldMax));
+            }
+        } else if (ext == ".glb" || ext == ".gltf") {
+            try {
+                GltfModelData data = GltfLoader::loadFromFile(source);
+                if (data.primitives.empty()) {
+                    Logger::warn("       glTF empty: " + source.string());
+                    continue;
+                }
+                Logger::info("       glTF: " + m.meshSource
+                    + " (" + std::to_string(data.primitives.size()) + " prims)");
+                Logger::info("       local AABB: min=" + formatVec3(data.aabbMin)
+                    + " max=" + formatVec3(data.aabbMax)
+                    + " size=" + formatSize(data.aabbMin, data.aabbMax));
+                Vec3 worldMin, worldMax;
+                transformAabb(data.aabbMin, data.aabbMax, m.transform, worldMin, worldMax);
+                Logger::info("       world AABB: min=" + formatVec3(worldMin)
+                    + " max=" + formatVec3(worldMax)
+                    + " size=" + formatSize(worldMin, worldMax));
+            } catch (const std::exception& e) {
+                Logger::error(std::string("       glTF load failed: ") + e.what());
+            }
+        } else {
+            Logger::error("       unsupported meshSource format: " + source.string());
         }
     }
 
@@ -226,7 +259,7 @@ int Application::runWindowed() {
         if (!source.is_absolute()) {
             source = engineRoot / source;
         }
-        sceneMeshHandles_[i] = renderer_.loadGltfMesh(source);
+        sceneMeshHandles_[i] = renderer_.loadSceneMesh(source);
     }
 
     if (config_.maxFrames == 0) {
@@ -287,16 +320,13 @@ int Application::runWindowed() {
         }
 
         renderer_.beginFrame(makeCurrentView());
-        renderer_.drawReferenceRoom();
         for (std::size_t i = 0; i < scene_.staticMeshes().size(); ++i) {
             const StaticMeshInstance& instance = scene_.staticMeshes()[i];
             const Mat4 model = Mat4::translate(instance.transform.position)
                 * Mat4::rotateY(instance.transform.rotation.y)
                 * Mat4::scale(instance.transform.scale);
             if (sceneMeshHandles_[i] >= 0) {
-                renderer_.drawGltfMesh(sceneMeshHandles_[i], model);
-            } else if (instance.name == "tv") {
-                renderer_.drawTV(model);
+                renderer_.drawSceneMesh(sceneMeshHandles_[i], model);
             }
         }
         renderer_.endFrame();
