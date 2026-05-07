@@ -2,6 +2,7 @@
 
 #include <ExoEngine/Assets/ObjImporter.h>
 #include <ExoEngine/Core/Logger.h>
+#include <ExoEngine/Scene/SceneLoader.h>
 
 #include <SDL2/SDL.h>
 
@@ -27,6 +28,10 @@ int Application::run() {
 
 int Application::runHeadless() {
     Logger::info("ExoEngine headless check");
+    if (!loadStartupScene(true)) {
+        return 3;
+    }
+
     Logger::info("Scene loaded: " + scene_.name());
     Logger::info("Fixed camera shots: " + std::to_string(scene_.cameraRig().shots().size()));
     Logger::info("Static mesh slots: " + std::to_string(scene_.staticMeshes().size()));
@@ -60,6 +65,10 @@ int Application::runHeadless() {
 }
 
 int Application::runWindowed() {
+    if (!loadStartupScene(false)) {
+        Logger::warn("Using built-in reference scene");
+    }
+
     WindowConfig windowConfig;
     windowConfig.title = config_.name;
     windowConfig.width = config_.width;
@@ -73,12 +82,18 @@ int Application::runWindowed() {
         return 1;
     }
 
+    if (!debugOverlay_.initialize(window_.nativeHandle(), nullptr)) {
+        Logger::warn("Debug overlay is not available");
+    }
+
     Logger::info("Sandbox running. Press Esc to close.");
 
     bool running = true;
     while (running) {
         SDL_Event event {};
         while (SDL_PollEvent(&event) != 0) {
+            debugOverlay_.handleEvent(event);
+
             if (event.type == SDL_QUIT) {
                 running = false;
             }
@@ -98,6 +113,9 @@ int Application::runWindowed() {
         renderer_.beginFrame(makeCurrentView());
         renderer_.drawReferenceRoom();
         renderer_.endFrame();
+        debugOverlay_.beginFrame();
+        debugOverlay_.drawEngineOverlay(scene_, renderer_.stats());
+        debugOverlay_.endFrame();
         window_.swapBuffers();
 
         if (config_.maxFrames != 0 && renderer_.stats().frameIndex >= config_.maxFrames) {
@@ -107,9 +125,28 @@ int Application::runWindowed() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
+    debugOverlay_.shutdown();
     renderer_.shutdown();
     window_.destroy();
     return 0;
+}
+
+bool Application::loadStartupScene(bool required) {
+    const std::filesystem::path scenePath = std::filesystem::path(EXO_ENGINE_ROOT) / "samples" / "reference_scene.json";
+
+    try {
+        scene_ = SceneLoader::loadFromFile(scenePath);
+        Logger::info("Scene JSON loaded: " + scenePath.string());
+        return true;
+    } catch (const std::exception& error) {
+        Logger::error(error.what());
+        if (required) {
+            return false;
+        }
+    }
+
+    scene_ = Scene::createReferenceScene();
+    return false;
 }
 
 RenderView Application::makeCurrentView() const {

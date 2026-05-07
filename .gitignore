@@ -13,5 +13,6 @@ compile_commands.json
 *.log
 *.tmp
 *.user
+imgui.ini
 *.exe
 !tools/*.exe

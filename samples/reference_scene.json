@@ -1,0 +1,59 @@
+{
+  "name": "engine_reference_room",
+  "staticMeshes": [
+    {
+      "name": "reference_room",
+      "meshAsset": "engine/reference_room.mesh",
+      "materialAsset": "engine/reference_room.material",
+      "transform": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    }
+  ],
+  "pointLights": [
+    {
+      "position": [0.0, 1.8, 0.7],
+      "color": [1.0, 0.78, 0.52],
+      "radius": 5.5,
+      "intensity": 1.0
+    },
+    {
+      "position": [-2.25, 1.15, -1.45],
+      "color": [0.55, 0.68, 1.0],
+      "radius": 2.75,
+      "intensity": 0.34
+    }
+  ],
+  "fixedCameras": [
+    {
+      "name": "entry_angle",
+      "bounds": {
+        "min": [-3.0, -0.5, -3.0],
+        "max": [3.0, 2.5, 3.0]
+      },
+      "position": [4.6, 2.35, 5.2],
+      "target": [0.0, 0.85, 0.0],
+      "fovDeg": 45.0,
+      "near": 0.05,
+      "far": 80.0,
+      "priority": 10,
+      "blendSeconds": 0.0
+    },
+    {
+      "name": "corner_pressure",
+      "bounds": {
+        "min": [-3.0, -0.5, -3.0],
+        "max": [-0.6, 2.5, 0.85]
+      },
+      "position": [1.15, 2.1, -4.35],
+      "target": [-1.35, 0.95, -0.55],
+      "fovDeg": 38.0,
+      "near": 0.05,
+      "far": 70.0,
+      "priority": 20,
+      "blendSeconds": 0.18
+    }
+  ]
+}

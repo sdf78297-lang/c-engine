@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 
+#include <ExoEngine/Debug/DebugOverlay.h>
 #include <ExoEngine/Platform/Window.h>
 #include <ExoEngine/Renderer/Renderer.h>
 #include <ExoEngine/Scene/Scene.h>
@@ -26,12 +27,14 @@ public:
 private:
     int runHeadless();
     int runWindowed();
+    [[nodiscard]] bool loadStartupScene(bool required);
     [[nodiscard]] RenderView makeCurrentView() const;
 
     ApplicationConfig config_;
     Scene scene_;
     Window window_;
     Renderer renderer_;
+    DebugOverlay debugOverlay_;
 };
 
 } // namespace Exo

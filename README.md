@@ -10,7 +10,20 @@ runtime, renderer, scene layer, and asset pipeline as separate systems.
 - SDL2 windowing and OpenGL rendering.
 - Fixed-camera scene foundation for classic survival horror staging.
 - OBJ/MTL import pipeline prepared for high-quality 3D assets.
+- JSON scene loading for rooms, lights, meshes and fixed cameras.
+- Texture loading through `stb_image`.
+- Dear ImGui debug overlay for engine/runtime inspection.
 - Runtime assets separated from game-specific content.
+
+## Dependencies
+
+The project uses CMake `FetchContent` for engine-side libraries:
+
+- `nlohmann/json` for scene and data files.
+- `stb_image` for PNG/TGA/JPG texture loading.
+- `Dear ImGui` for debug UI.
+
+The dependency revisions are pinned in `cmake/Dependencies.cmake` so builds do not drift when upstream repositories change.
 
 ## Build
 
@@ -31,6 +44,12 @@ Run the render sandbox:
 
 ```powershell
 .\build\exo_sandbox.exe
+```
+
+For a short OpenGL smoke test that closes automatically:
+
+```powershell
+.\build\exo_sandbox.exe --frames 1
 ```
 
 ## Asset Direction
