@@ -24,7 +24,14 @@ FetchContent_Declare(
     SOURCE_SUBDIR cmake-do-not-add
 )
 
-FetchContent_MakeAvailable(nlohmann_json stb imgui)
+FetchContent_Declare(
+    cgltf
+    GIT_REPOSITORY https://github.com/jkuhlmann/cgltf.git
+    GIT_TAG v1.14
+    SOURCE_SUBDIR cmake-do-not-add
+)
+
+FetchContent_MakeAvailable(nlohmann_json stb imgui cgltf)
 
 add_library(exo_stb_image STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Vendor/stb_image.cpp"
@@ -36,6 +43,17 @@ target_include_directories(exo_stb_image
 )
 
 add_library(Exo::stb_image ALIAS exo_stb_image)
+
+add_library(exo_cgltf STATIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Vendor/cgltf.cpp"
+)
+
+target_include_directories(exo_cgltf
+    PUBLIC
+        "${cgltf_SOURCE_DIR}"
+)
+
+add_library(Exo::cgltf ALIAS exo_cgltf)
 
 add_library(exo_imgui STATIC
     "${imgui_SOURCE_DIR}/imgui.cpp"

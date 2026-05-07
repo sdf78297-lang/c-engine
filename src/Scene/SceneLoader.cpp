@@ -278,6 +278,7 @@ private:
             instance.name = requiredStringField(mesh, "name", meshPath);
             instance.meshAsset = requiredStringField(mesh, "meshAsset", meshPath);
             instance.materialAsset = optionalStringField(mesh, "materialAsset", meshPath, "");
+            instance.meshSource = optionalStringField(mesh, "meshSource", meshPath, "");
 
             if (const Json* transform = optionalField(mesh, "transform")) {
                 instance.transform = transformValue(*transform, childPath(meshPath, "transform"));

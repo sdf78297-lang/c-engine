@@ -10,6 +10,28 @@
         "rotation": [0.0, 0.0, 0.0],
         "scale": [1.0, 1.0, 1.0]
       }
+    },
+    {
+      "name": "tv",
+      "meshAsset": "engine/tv.mesh",
+      "materialAsset": "engine/tv.material",
+      "meshSource": "samples/tv.glb",
+      "transform": {
+        "position": [-1.5, 0.222, -1.5],
+        "rotation": [0.0, 0.7853981, 0.0],
+        "scale": [0.28, 0.28, 0.28]
+      }
+    },
+    {
+      "name": "door",
+      "meshAsset": "engine/door.mesh",
+      "materialAsset": "engine/door.material",
+      "meshSource": "samples/door.glb",
+      "transform": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
     }
   ],
   "pointLights": [

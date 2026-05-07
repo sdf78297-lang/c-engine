@@ -76,6 +76,7 @@ target_link_libraries(ExoEngine
     PRIVATE
         Exo::stb_image
         Exo::imgui
+        Exo::cgltf
         nlohmann_json::nlohmann_json
 )
 

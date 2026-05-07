@@ -18,6 +18,7 @@ struct StaticMeshInstance {
     std::string name;
     std::string meshAsset;
     std::string materialAsset;
+    std::string meshSource;
     Transform transform {};
 };
 

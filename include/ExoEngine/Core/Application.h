@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include <ExoEngine/Debug/DebugOverlay.h>
 #include <ExoEngine/Platform/Window.h>
@@ -29,12 +30,18 @@ private:
     int runWindowed();
     [[nodiscard]] bool loadStartupScene(bool required);
     [[nodiscard]] RenderView makeCurrentView() const;
+    void updatePlayer(float deltaSeconds, float mouseDeltaX, float mouseDeltaY);
 
     ApplicationConfig config_;
     Scene scene_;
     Window window_;
     Renderer renderer_;
     DebugOverlay debugOverlay_;
+
+    Vec3 playerPosition_ {0.0f, 1.65f, 1.5f};
+    float playerYaw_ = 0.0f;
+    float playerPitch_ = 0.0f;
+    std::vector<std::int32_t> sceneMeshHandles_;
 };
 
 } // namespace Exo

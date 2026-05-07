@@ -42,6 +42,7 @@ Scene Scene::createReferenceScene() {
         .name = "reference_room",
         .meshAsset = "engine/reference_room.mesh",
         .materialAsset = "engine/reference_room.material",
+        .meshSource = "",
     });
 
     scene.addPointLight({
