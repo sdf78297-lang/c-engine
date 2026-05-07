@@ -1,0 +1,13 @@
+newmtl reference_wall
+Ka 0.020 0.022 0.024
+Kd 0.620 0.640 0.610
+Ks 0.040 0.040 0.040
+Ns 18.0
+illum 2
+
+newmtl reference_floor
+Ka 0.018 0.019 0.020
+Kd 0.360 0.390 0.380
+Ks 0.060 0.060 0.055
+Ns 24.0
+illum 2
