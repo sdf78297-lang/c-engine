@@ -156,7 +156,7 @@ void Renderer::drawReferenceRoom() {
     glUniformMatrix4fv(vpLocation, 1, GL_FALSE, currentViewProjection_.data());
     glUniformMatrix4fv(modelLocation, 1, GL_FALSE, model.data());
 
-    glDrawElements(GL_TRIANGLES, 30, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
     ++stats_.drawCalls;
 
     glBindVertexArray(0);
@@ -175,23 +175,45 @@ bool Renderer::createReferenceGeometry() {
         Vec3 color;
     };
 
-    const std::array<Vertex, 8> vertices {{
-        {{-2.0f, 0.0f, -2.0f}, {0.17f, 0.20f, 0.20f}},
-        {{2.0f, 0.0f, -2.0f}, {0.17f, 0.20f, 0.20f}},
-        {{2.0f, 0.0f, 2.0f}, {0.15f, 0.17f, 0.17f}},
-        {{-2.0f, 0.0f, 2.0f}, {0.15f, 0.17f, 0.17f}},
-        {{-2.0f, 2.4f, -2.0f}, {0.35f, 0.36f, 0.34f}},
-        {{2.0f, 2.4f, -2.0f}, {0.34f, 0.35f, 0.33f}},
-        {{2.0f, 2.4f, 2.0f}, {0.30f, 0.31f, 0.30f}},
-        {{-2.0f, 2.4f, 2.0f}, {0.31f, 0.32f, 0.31f}},
+    const std::array<Vertex, 24> vertices {{
+        {{-2.0f, 0.0f, -2.0f}, {0.13f, 0.16f, 0.16f}},
+        {{-2.0f, 0.0f, 2.0f}, {0.14f, 0.17f, 0.17f}},
+        {{2.0f, 0.0f, 2.0f}, {0.15f, 0.18f, 0.18f}},
+        {{2.0f, 0.0f, -2.0f}, {0.13f, 0.16f, 0.16f}},
+
+        {{-2.0f, 2.4f, -2.0f}, {0.27f, 0.28f, 0.26f}},
+        {{2.0f, 2.4f, -2.0f}, {0.28f, 0.29f, 0.27f}},
+        {{2.0f, 2.4f, 2.0f}, {0.25f, 0.26f, 0.25f}},
+        {{-2.0f, 2.4f, 2.0f}, {0.25f, 0.26f, 0.25f}},
+
+        {{-2.0f, 0.0f, -2.0f}, {0.38f, 0.39f, 0.36f}},
+        {{2.0f, 0.0f, -2.0f}, {0.39f, 0.40f, 0.37f}},
+        {{2.0f, 2.4f, -2.0f}, {0.31f, 0.32f, 0.30f}},
+        {{-2.0f, 2.4f, -2.0f}, {0.30f, 0.31f, 0.29f}},
+
+        {{-2.0f, 0.0f, 2.0f}, {0.34f, 0.35f, 0.33f}},
+        {{-2.0f, 2.4f, 2.0f}, {0.28f, 0.29f, 0.27f}},
+        {{2.0f, 2.4f, 2.0f}, {0.29f, 0.30f, 0.28f}},
+        {{2.0f, 0.0f, 2.0f}, {0.35f, 0.36f, 0.34f}},
+
+        {{-2.0f, 0.0f, -2.0f}, {0.33f, 0.35f, 0.34f}},
+        {{-2.0f, 2.4f, -2.0f}, {0.27f, 0.29f, 0.28f}},
+        {{-2.0f, 2.4f, 2.0f}, {0.28f, 0.30f, 0.29f}},
+        {{-2.0f, 0.0f, 2.0f}, {0.34f, 0.36f, 0.35f}},
+
+        {{2.0f, 0.0f, -2.0f}, {0.32f, 0.33f, 0.31f}},
+        {{2.0f, 0.0f, 2.0f}, {0.33f, 0.34f, 0.32f}},
+        {{2.0f, 2.4f, 2.0f}, {0.27f, 0.28f, 0.26f}},
+        {{2.0f, 2.4f, -2.0f}, {0.26f, 0.27f, 0.25f}},
     }};
 
-    const std::array<std::uint32_t, 30> indices {{
+    const std::array<std::uint32_t, 36> indices {{
         0, 1, 2, 0, 2, 3,
-        0, 4, 5, 0, 5, 1,
-        1, 5, 6, 1, 6, 2,
-        2, 6, 7, 2, 7, 3,
-        3, 7, 4, 3, 4, 0,
+        4, 5, 6, 4, 6, 7,
+        8, 9, 10, 8, 10, 11,
+        12, 13, 14, 12, 14, 15,
+        16, 17, 18, 16, 18, 19,
+        20, 21, 22, 20, 22, 23,
     }};
 
     glGenVertexArrays(1, &vao_);

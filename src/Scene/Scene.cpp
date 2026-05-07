@@ -54,9 +54,9 @@ Scene Scene::createReferenceScene() {
     scene.cameraRig().addShot({
         .name = "entry_angle",
         .activationBounds = {{-3.0f, -0.5f, -3.0f}, {3.0f, 2.5f, 3.0f}},
-        .position = {4.6f, 2.35f, 5.2f},
-        .target = {0.0f, 0.85f, 0.0f},
-        .fovRadians = 0.7853981f,
+        .position = {1.45f, 1.55f, 1.55f},
+        .target = {-0.45f, 0.78f, -0.55f},
+        .fovRadians = 0.9075712f,
         .nearPlane = 0.05f,
         .farPlane = 80.0f,
         .priority = 10,
