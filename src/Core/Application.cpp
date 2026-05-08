@@ -7,6 +7,7 @@
 #include <ExoEngine/Game/InventorySystem.h>
 #include <ExoEngine/Game/SaveSystem.h>
 #include <ExoEngine/Scene/SceneLoader.h>
+#include <ExoEngine/UI/HtmlMenu.h>
 
 #include <SDL2/SDL.h>
 
@@ -286,11 +287,25 @@ int Application::runWindowed() {
 
     reloadSceneMeshes();
 
-    if (config_.maxFrames == 0) {
-        SDL_SetRelativeMouseMode(SDL_TRUE);
+    HtmlMenu mainMenu;
+    bool mainMenuActive = false;
+    if (config_.maxFrames == 0 || config_.showMenu) {
+        mainMenuActive = mainMenu.initialize({
+            .engineRoot = engineRoot(),
+            .htmlPath = std::filesystem::path("assets") / "ui" / "main_menu" / "web" / "index.html",
+            .ultralightResourcePath = engineRoot() / "local_deps" / "ultralight-sdk" / "resources",
+            .width = window_.width(),
+            .height = window_.height(),
+        });
     }
 
-    Logger::info("Runtime running. WASD move, mouse look, Shift run, Tab mouse capture, E interact, F5 save, F9 load, Esc quit.");
+    if (config_.maxFrames == 0 && !mainMenuActive) {
+        SDL_SetRelativeMouseMode(SDL_TRUE);
+    } else {
+        SDL_SetRelativeMouseMode(SDL_FALSE);
+    }
+
+    Logger::info("Runtime running. HTML menu: mouse/Enter start, Esc back. Game: WASD move, mouse look, Shift run, Tab mouse capture, E interact, F5 save, F9 load, Esc quit.");
 
     bool running = true;
     auto lastTime = SDL_GetPerformanceCounter();
@@ -306,11 +321,18 @@ int Application::runWindowed() {
 
         SDL_Event event {};
         while (SDL_PollEvent(&event) != 0) {
+            if (mainMenuActive) {
+                mainMenu.handleEvent(event);
+            }
+
             switch (event.type) {
                 case SDL_QUIT:
                     running = false;
                     break;
                 case SDL_KEYDOWN:
+                    if (mainMenuActive) {
+                        break;
+                    }
                     if (event.key.keysym.sym == SDLK_ESCAPE) {
                         running = false;
                     } else if (event.key.keysym.sym == SDLK_TAB) {
@@ -346,10 +368,16 @@ int Application::runWindowed() {
                             static_cast<std::uint32_t>(event.window.data1),
                             static_cast<std::uint32_t>(event.window.data2)
                         );
+                        if (mainMenuActive) {
+                            mainMenu.resize(
+                                static_cast<std::uint32_t>(event.window.data1),
+                                static_cast<std::uint32_t>(event.window.data2)
+                            );
+                        }
                     }
                     break;
                 case SDL_MOUSEMOTION:
-                    if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
+                    if (!mainMenuActive && SDL_GetRelativeMouseMode() == SDL_TRUE) {
                         mouseDeltaX += static_cast<float>(event.motion.xrel);
                         mouseDeltaY += static_cast<float>(event.motion.yrel);
                     }
@@ -357,6 +385,34 @@ int Application::runWindowed() {
                 default:
                     break;
             }
+        }
+
+        if (mainMenuActive) {
+            mainMenu.update();
+            if (mainMenu.startRequested()) {
+                mainMenu.shutdown();
+                mainMenuActive = false;
+                if (config_.maxFrames == 0) {
+                    SDL_SetRelativeMouseMode(SDL_TRUE);
+                }
+                Logger::info("HTML menu requested game start");
+                continue;
+            }
+            if (mainMenu.quitRequested()) {
+                running = false;
+            }
+
+            renderer_.beginFrame(makeCurrentView());
+            mainMenu.render();
+            renderer_.endFrame();
+            window_.swapBuffers();
+
+            if (config_.maxFrames != 0 && renderer_.stats().frameIndex >= config_.maxFrames) {
+                running = false;
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
         }
 
         if (config_.maxFrames == 0) {

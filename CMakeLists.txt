@@ -12,6 +12,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(EXO_BUILD_SANDBOX "Build the engine sandbox application" ON)
 option(EXO_BUILD_VALIDATOR "Build the content validation command line tool" ON)
+option(EXO_ENABLE_HTML_UI "Enable live HTML/CSS/JS UI through Ultralight" OFF)
+set(EXO_ULTRALIGHT_SDK "${CMAKE_CURRENT_SOURCE_DIR}/local_deps/ultralight-sdk" CACHE PATH "Path to the Ultralight SDK")
 
 find_package(OpenGL REQUIRED)
 find_package(SDL2 CONFIG QUIET)
@@ -49,6 +51,24 @@ target_compile_definitions(ExoEngine
         EXO_DEBUG_UI_WITH_IMGUI
 )
 
+if(EXO_ENABLE_HTML_UI)
+    if(NOT EXISTS "${EXO_ULTRALIGHT_SDK}/include/Ultralight/CAPI.h")
+        message(FATAL_ERROR "EXO_ENABLE_HTML_UI is ON, but Ultralight SDK was not found at '${EXO_ULTRALIGHT_SDK}'")
+    endif()
+
+    target_compile_definitions(ExoEngine PUBLIC EXO_ENABLE_HTML_UI=1)
+    target_include_directories(ExoEngine PRIVATE "${EXO_ULTRALIGHT_SDK}/include")
+    target_link_libraries(ExoEngine
+        PRIVATE
+            "${EXO_ULTRALIGHT_SDK}/lib/UltralightCore.lib"
+            "${EXO_ULTRALIGHT_SDK}/lib/Ultralight.lib"
+            "${EXO_ULTRALIGHT_SDK}/lib/WebCore.lib"
+            "${EXO_ULTRALIGHT_SDK}/lib/AppCore.lib"
+    )
+else()
+    target_compile_definitions(ExoEngine PUBLIC EXO_ENABLE_HTML_UI=0)
+endif()
+
 if(MSVC)
     target_compile_options(ExoEngine PRIVATE /W4 /permissive-)
 else()
@@ -85,6 +105,11 @@ if(EXO_BUILD_SANDBOX)
     add_executable(ExoSandbox apps/sandbox/main.cpp)
     target_link_libraries(ExoSandbox PRIVATE Exo::Engine)
     set_target_properties(ExoSandbox PROPERTIES OUTPUT_NAME "exo_sandbox")
+    if(EXO_ENABLE_HTML_UI)
+        add_custom_command(TARGET ExoSandbox POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${EXO_ULTRALIGHT_SDK}/bin" "$<TARGET_FILE_DIR:ExoSandbox>"
+        )
+    endif()
 endif()
 
 if(EXO_BUILD_VALIDATOR)

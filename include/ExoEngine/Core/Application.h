@@ -23,6 +23,7 @@ struct ApplicationConfig {
     std::uint32_t height = 720;
     std::uint32_t maxFrames = 0;
     bool headless = false;
+    bool showMenu = false;
 };
 
 class Application {

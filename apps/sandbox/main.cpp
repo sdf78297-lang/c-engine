@@ -44,6 +44,7 @@ int main(int argc, char** argv) {
     config.height = 720;
     config.headless = hasFlag(args, "--headless");
     config.maxFrames = integerOption(args, "--frames", 0);
+    config.showMenu = hasFlag(args, "--menu");
 
     Exo::Application app(config);
     return app.run();

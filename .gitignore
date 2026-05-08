@@ -1,5 +1,6 @@
 build/
 out/
+local_deps/
 .vs/
 .vscode/
 CMakeFiles/
