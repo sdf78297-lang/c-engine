@@ -349,6 +349,17 @@ int Application::runWindowed() {
             evaluateCurrentTrigger();
         }
 
+        std::vector<RenderPointLight> renderLights;
+        renderLights.reserve(scene_.pointLights().size());
+        for (const PointLight& light : scene_.pointLights()) {
+            renderLights.push_back({
+                .position = light.position,
+                .color = light.color,
+                .radius = light.radius,
+                .intensity = light.intensity,
+            });
+        }
+        renderer_.setPointLights(renderLights);
         renderer_.beginFrame(makeCurrentView());
         for (std::size_t i = 0; i < scene_.staticMeshes().size(); ++i) {
             const StaticMeshInstance& instance = scene_.staticMeshes()[i];

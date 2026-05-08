@@ -30,12 +30,14 @@ uniform mat4 uViewProjection;
 uniform mat4 uModel;
 
 out vec3 vNormalWS;
+out vec3 vWorldPos;
 out vec2 vUV;
 
 void main() {
     vec4 worldPos = uModel * vec4(aPos, 1.0);
     vec3 normal = aFlags.x > 0.5 ? aNormal : vec3(0.0, 1.0, 0.0);
     vNormalWS = normalize(mat3(uModel) * normal);
+    vWorldPos = worldPos.xyz;
     vUV = aFlags.y > 0.5 ? aUV : vec2(0.0);
     gl_Position = uViewProjection * worldPos;
 }
@@ -44,22 +46,46 @@ void main() {
 constexpr const char* kTexturedFragmentShader = R"glsl(
 #version 330 core
 in vec3 vNormalWS;
+in vec3 vWorldPos;
 in vec2 vUV;
 out vec4 FragColor;
 
 uniform sampler2D uAlbedo;
 uniform vec3 uBaseColor;
+uniform int uPointLightCount;
+uniform vec3 uPointLightPosition[8];
+uniform vec3 uPointLightColor[8];
+uniform float uPointLightRadius[8];
+uniform float uPointLightIntensity[8];
 
 void main() {
     vec4 sampled = texture(uAlbedo, vUV);
     vec3 albedo = sampled.rgb * uBaseColor;
+    vec3 normal = normalize(vNormalWS);
 
     vec3 lightDir = normalize(vec3(0.40, 0.85, 0.32));
-    float ndotl = max(dot(normalize(vNormalWS), lightDir), 0.0);
-    float ambient = 0.30;
-    vec3 lit = albedo * (ambient + ndotl * 0.85);
+    float ndotl = max(dot(normal, lightDir), 0.0);
+    float ambient = 0.38;
+    vec3 lit = albedo * (ambient + ndotl * 0.58);
 
-    FragColor = vec4(lit, sampled.a);
+    for (int i = 0; i < 8; ++i) {
+        if (i >= uPointLightCount) {
+            break;
+        }
+
+        vec3 toLight = uPointLightPosition[i] - vWorldPos;
+        float distanceToLight = length(toLight);
+        float radius = max(uPointLightRadius[i], 0.001);
+        float attenuation = clamp(1.0 - (distanceToLight / radius), 0.0, 1.0);
+        attenuation *= attenuation;
+
+        vec3 lightVector = distanceToLight > 0.001 ? toLight / distanceToLight : vec3(0.0, 1.0, 0.0);
+        float pointDiffuse = max(dot(normal, lightVector), 0.0);
+        vec3 pointLight = uPointLightColor[i] * uPointLightIntensity[i] * attenuation * (0.20 + pointDiffuse * 0.85);
+        lit += albedo * pointLight;
+    }
+
+    FragColor = vec4(min(lit, vec3(1.0)), sampled.a);
 }
 )glsl";
 
@@ -110,6 +136,10 @@ std::string lowerExtension(const std::filesystem::path& path) {
         return static_cast<char>(std::tolower(c));
     });
     return ext;
+}
+
+std::string meshCacheKey(const std::filesystem::path& path) {
+    return std::filesystem::absolute(path).lexically_normal().generic_string();
 }
 
 } // namespace
@@ -165,6 +195,8 @@ void Renderer::shutdown() {
         mesh.gltfModel.subMeshes.clear();
     }
     sceneMeshes_.clear();
+    sceneMeshCache_.clear();
+    activePointLights_.clear();
 
     if (whiteTexture_ != 0) {
         glDeleteTextures(1, &whiteTexture_);
@@ -183,6 +215,13 @@ void Renderer::resize(std::uint32_t width, std::uint32_t height) {
     glViewport(0, 0, static_cast<GLsizei>(width_), static_cast<GLsizei>(height_));
 }
 
+void Renderer::setPointLights(const std::vector<RenderPointLight>& lights) {
+    activePointLights_ = lights;
+    if (activePointLights_.size() > 8) {
+        activePointLights_.resize(8);
+    }
+}
+
 void Renderer::beginFrame(const RenderView& view) {
     stats_.drawCalls = 0;
     ++stats_.frameIndex;
@@ -193,16 +232,26 @@ void Renderer::beginFrame(const RenderView& view) {
 }
 
 std::int32_t Renderer::loadSceneMesh(const std::filesystem::path& path) {
-    const std::string ext = lowerExtension(path);
-    if (ext == ".obj") {
-        return loadObjMesh(path);
-    }
-    if (ext == ".glb" || ext == ".gltf") {
-        return loadGltfMesh(path);
+    const std::string cacheKey = meshCacheKey(path);
+    if (const auto it = sceneMeshCache_.find(cacheKey); it != sceneMeshCache_.end()) {
+        return it->second;
     }
 
-    Logger::error("Unsupported scene mesh format: " + path.string());
-    return -1;
+    const std::string ext = lowerExtension(path);
+    std::int32_t handle = -1;
+    if (ext == ".obj") {
+        handle = loadObjMesh(path);
+    } else if (ext == ".glb" || ext == ".gltf") {
+        handle = loadGltfMesh(path);
+    } else {
+        Logger::error("Unsupported scene mesh format: " + path.string());
+        return -1;
+    }
+
+    if (handle >= 0) {
+        sceneMeshCache_.emplace(cacheKey, handle);
+    }
+    return handle;
 }
 
 void Renderer::drawSceneMesh(std::int32_t handle, const Mat4& modelTransform) {
@@ -215,11 +264,24 @@ void Renderer::drawSceneMesh(std::int32_t handle, const Mat4& modelTransform) {
     const GLint vpLoc = glGetUniformLocation(texturedShader_, "uViewProjection");
     const GLint modelLoc = glGetUniformLocation(texturedShader_, "uModel");
     const GLint texLoc = glGetUniformLocation(texturedShader_, "uAlbedo");
+    const GLint pointCountLoc = glGetUniformLocation(texturedShader_, "uPointLightCount");
 
     glUniformMatrix4fv(vpLoc, 1, GL_FALSE, currentViewProjection_.data());
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, modelTransform.data());
     glUniform1i(texLoc, 0);
+    glUniform1i(pointCountLoc, static_cast<GLint>(activePointLights_.size()));
     glActiveTexture(GL_TEXTURE0);
+
+    for (std::size_t i = 0; i < activePointLights_.size(); ++i) {
+        const RenderPointLight& light = activePointLights_[i];
+        const std::string index = std::to_string(i);
+        glUniform3f(glGetUniformLocation(texturedShader_, ("uPointLightPosition[" + index + "]").c_str()),
+            light.position.x, light.position.y, light.position.z);
+        glUniform3f(glGetUniformLocation(texturedShader_, ("uPointLightColor[" + index + "]").c_str()),
+            light.color.x, light.color.y, light.color.z);
+        glUniform1f(glGetUniformLocation(texturedShader_, ("uPointLightRadius[" + index + "]").c_str()), light.radius);
+        glUniform1f(glGetUniformLocation(texturedShader_, ("uPointLightIntensity[" + index + "]").c_str()), light.intensity);
+    }
 
     SceneMesh& mesh = sceneMeshes_[handle];
     if (mesh.kind == SceneMesh::Kind::Obj) {

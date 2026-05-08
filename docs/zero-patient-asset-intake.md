@@ -29,6 +29,8 @@ C:\Users\Vladimir\Desktop\с3.zip
 | Asset | Source | Runtime role | Notes |
 | --- | --- | --- | --- |
 | CRT television | `Meshy_AI_Old_1990s_CRT_televis_0506115543_texture.glb` | source reference only | Already copied as `samples/tv.glb`; very heavy at ~1.77M triangles. Runtime office scene uses the low-poly authored proxy `assets/props/office_tv.obj` instead. |
+| Office table | `Meshy_AI_Realistic_3D_model_of_0508101102_texture.glb` | office workstation prop | Imported as `assets/props/office_table_meshy.glb`; used 8 times in `data/rooms/office/room.json`. Renderer caches it as one loaded mesh. |
+| Office PC | `Meshy_AI_Realistic_3D_model_of_0508101516_texture.glb` | office workstation prop | Imported as `assets/props/office_pc_meshy.glb`; used 8 times in `data/rooms/office/room.json`. Renderer caches it as one loaded mesh. |
 | Old institution door | `Meshy_AI_A_single_old_institut_0507142921_texture.glb` | office corridor / apartment threshold | Already copied as `samples/door.glb`; pivot is centered, scene raises it by `0.951` on Y. |
 | Abandoned psychiatric room | `Meshy_AI_Abandoned_psychiatric_*_texture.glb` | clinic/late-game room candidate | Choose one variant only after visual review. |
 | Medical deprivation object | `Meshy_AI_Medical_sensory_depri_*_texture.glb` | clinic prop | Keep as candidate, not core office prop. |

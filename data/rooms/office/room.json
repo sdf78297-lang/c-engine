@@ -18,8 +18,8 @@
     "unknownFieldsIgnored": true
   },
   "walkBounds": {
-    "min": [-2.75, -0.5, -2.25],
-    "max": [2.75, 2.5, 2.25]
+    "min": [-5.0, -0.5, -3.45],
+    "max": [5.0, 2.7, 3.45]
   },
   "staticMeshes": [
     {
@@ -34,41 +34,160 @@
       }
     },
     {
-      "name": "anton_desk_tv",
-      "meshAsset": "game/props/anton_desk_tv.mesh",
-      "materialAsset": "game/props/anton_desk_tv.material",
-      "meshSource": "assets/props/office_tv.obj",
-      "transform": {
-        "position": [-1.70, 0.76, -1.76],
-        "rotation": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
-      }
+      "name": "desk_01",
+      "meshAsset": "game/props/office_table_meshy.mesh",
+      "materialAsset": "game/props/office_table_meshy.material",
+      "meshSource": "assets/props/office_table_meshy.glb",
+      "transform": {"position": [-3.6, 0.35, -1.75], "rotation": [0.0, 0.0, 0.0], "scale": [1.05, 1.05, 1.05]}
+    },
+    {
+      "name": "pc_01",
+      "meshAsset": "game/props/office_pc_meshy.mesh",
+      "materialAsset": "game/props/office_pc_meshy.material",
+      "meshSource": "assets/props/office_pc_meshy.glb",
+      "transform": {"position": [-3.6, 0.92, -1.25], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
+    },
+    {
+      "name": "desk_02",
+      "meshAsset": "game/props/office_table_meshy.mesh",
+      "materialAsset": "game/props/office_table_meshy.material",
+      "meshSource": "assets/props/office_table_meshy.glb",
+      "transform": {"position": [-1.2, 0.35, -1.75], "rotation": [0.0, 0.0, 0.0], "scale": [1.05, 1.05, 1.05]}
+    },
+    {
+      "name": "pc_02",
+      "meshAsset": "game/props/office_pc_meshy.mesh",
+      "materialAsset": "game/props/office_pc_meshy.material",
+      "meshSource": "assets/props/office_pc_meshy.glb",
+      "transform": {"position": [-1.2, 0.92, -1.25], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
+    },
+    {
+      "name": "desk_03",
+      "meshAsset": "game/props/office_table_meshy.mesh",
+      "materialAsset": "game/props/office_table_meshy.material",
+      "meshSource": "assets/props/office_table_meshy.glb",
+      "transform": {"position": [1.2, 0.35, -1.75], "rotation": [0.0, 0.0, 0.0], "scale": [1.05, 1.05, 1.05]}
+    },
+    {
+      "name": "pc_03",
+      "meshAsset": "game/props/office_pc_meshy.mesh",
+      "materialAsset": "game/props/office_pc_meshy.material",
+      "meshSource": "assets/props/office_pc_meshy.glb",
+      "transform": {"position": [1.2, 0.92, -1.25], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
+    },
+    {
+      "name": "desk_04",
+      "meshAsset": "game/props/office_table_meshy.mesh",
+      "materialAsset": "game/props/office_table_meshy.material",
+      "meshSource": "assets/props/office_table_meshy.glb",
+      "transform": {"position": [3.6, 0.35, -1.75], "rotation": [0.0, 0.0, 0.0], "scale": [1.05, 1.05, 1.05]}
+    },
+    {
+      "name": "pc_04",
+      "meshAsset": "game/props/office_pc_meshy.mesh",
+      "materialAsset": "game/props/office_pc_meshy.material",
+      "meshSource": "assets/props/office_pc_meshy.glb",
+      "transform": {"position": [3.6, 0.92, -1.25], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
+    },
+    {
+      "name": "desk_05",
+      "meshAsset": "game/props/office_table_meshy.mesh",
+      "materialAsset": "game/props/office_table_meshy.material",
+      "meshSource": "assets/props/office_table_meshy.glb",
+      "transform": {"position": [-3.6, 0.35, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [1.05, 1.05, 1.05]}
+    },
+    {
+      "name": "pc_05",
+      "meshAsset": "game/props/office_pc_meshy.mesh",
+      "materialAsset": "game/props/office_pc_meshy.material",
+      "meshSource": "assets/props/office_pc_meshy.glb",
+      "transform": {"position": [-3.6, 0.92, 1.25], "rotation": [0.0, 3.14159, 0.0], "scale": [0.34, 0.34, 0.34]}
+    },
+    {
+      "name": "desk_06",
+      "meshAsset": "game/props/office_table_meshy.mesh",
+      "materialAsset": "game/props/office_table_meshy.material",
+      "meshSource": "assets/props/office_table_meshy.glb",
+      "transform": {"position": [-1.2, 0.35, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [1.05, 1.05, 1.05]}
+    },
+    {
+      "name": "pc_06",
+      "meshAsset": "game/props/office_pc_meshy.mesh",
+      "materialAsset": "game/props/office_pc_meshy.material",
+      "meshSource": "assets/props/office_pc_meshy.glb",
+      "transform": {"position": [-1.2, 0.92, 1.25], "rotation": [0.0, 3.14159, 0.0], "scale": [0.34, 0.34, 0.34]}
+    },
+    {
+      "name": "desk_07",
+      "meshAsset": "game/props/office_table_meshy.mesh",
+      "materialAsset": "game/props/office_table_meshy.material",
+      "meshSource": "assets/props/office_table_meshy.glb",
+      "transform": {"position": [1.2, 0.35, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [1.05, 1.05, 1.05]}
+    },
+    {
+      "name": "pc_07",
+      "meshAsset": "game/props/office_pc_meshy.mesh",
+      "materialAsset": "game/props/office_pc_meshy.material",
+      "meshSource": "assets/props/office_pc_meshy.glb",
+      "transform": {"position": [1.2, 0.92, 1.25], "rotation": [0.0, 3.14159, 0.0], "scale": [0.34, 0.34, 0.34]}
+    },
+    {
+      "name": "desk_08",
+      "meshAsset": "game/props/office_table_meshy.mesh",
+      "materialAsset": "game/props/office_table_meshy.material",
+      "meshSource": "assets/props/office_table_meshy.glb",
+      "transform": {"position": [3.6, 0.35, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [1.05, 1.05, 1.05]}
+    },
+    {
+      "name": "pc_08",
+      "meshAsset": "game/props/office_pc_meshy.mesh",
+      "materialAsset": "game/props/office_pc_meshy.material",
+      "meshSource": "assets/props/office_pc_meshy.glb",
+      "transform": {"position": [3.6, 0.92, 1.25], "rotation": [0.0, 3.14159, 0.0], "scale": [0.34, 0.34, 0.34]}
     }
   ],
   "pointLights": [
     {
-      "position": [-1.72, 1.28, -1.62],
-      "color": [0.42, 0.62, 1.0],
-      "radius": 2.45,
-      "intensity": 0.95
+      "position": [-2.9, 2.45, -0.35],
+      "color": [0.58, 0.72, 1.0],
+      "radius": 5.3,
+      "intensity": 0.52
     },
     {
-      "position": [0.15, 2.28, 0.35],
-      "color": [0.88, 0.78, 0.62],
-      "radius": 5.8,
-      "intensity": 0.42
+      "position": [2.9, 2.45, -0.35],
+      "color": [0.58, 0.72, 1.0],
+      "radius": 5.3,
+      "intensity": 0.52
     },
     {
-      "position": [2.35, 1.55, -1.85],
-      "color": [0.55, 0.72, 1.0],
-      "radius": 3.2,
-      "intensity": 0.28
+      "position": [-2.4, 1.25, -1.12],
+      "color": [0.35, 0.57, 1.0],
+      "radius": 2.8,
+      "intensity": 0.45
     },
     {
-      "position": [-2.55, 0.95, 1.75],
+      "position": [2.4, 1.25, -1.12],
+      "color": [0.35, 0.57, 1.0],
+      "radius": 2.8,
+      "intensity": 0.45
+    },
+    {
+      "position": [-2.4, 1.25, 1.12],
+      "color": [0.35, 0.57, 1.0],
+      "radius": 2.8,
+      "intensity": 0.36
+    },
+    {
+      "position": [2.4, 1.25, 1.12],
+      "color": [0.35, 0.57, 1.0],
+      "radius": 2.8,
+      "intensity": 0.36
+    },
+    {
+      "position": [-4.65, 0.95, 3.05],
       "color": [1.0, 0.18, 0.12],
-      "radius": 1.7,
-      "intensity": 0.18
+      "radius": 2.1,
+      "intensity": 0.20
     }
   ],
   "fixedCameras": [
@@ -141,17 +260,17 @@
   "spawnPoints": [
     {
       "id": "from_elevator_day",
-      "position": [1.85, 0.0, 2.15],
-      "yawDeg": 225.0
+      "position": [0.0, 0.0, 3.05],
+      "yawDeg": 180.0
     },
     {
       "id": "from_restroom",
-      "position": [-2.35, 0.0, 0.85],
+      "position": [-4.55, 0.0, 0.0],
       "yawDeg": 90.0
     },
     {
       "id": "from_meeting_room",
-      "position": [2.15, 0.0, -1.2],
+      "position": [4.55, 0.0, -2.65],
       "yawDeg": 270.0
     }
   ],
