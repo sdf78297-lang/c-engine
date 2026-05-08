@@ -95,6 +95,20 @@ void transformAabb(Vec3 localMin, Vec3 localMax, const Transform& t, Vec3& outMi
     }
 }
 
+bool overlapsExpandedXz(Vec3 position, const Bounds3& bounds, float radius) {
+    return position.x >= (bounds.min.x - radius) && position.x <= (bounds.max.x + radius)
+        && position.z >= (bounds.min.z - radius) && position.z <= (bounds.max.z + radius);
+}
+
+bool blockedByRoomCollider(Vec3 position, const RoomDefinition& room, float radius) {
+    for (const RoomCollisionBox& collider : room.collisionBoxes) {
+        if (overlapsExpandedXz(position, collider.bounds, radius)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace
 
 Application::Application(ApplicationConfig config)
@@ -129,7 +143,8 @@ int Application::runHeadless() {
         Logger::info("Gameplay room loaded: " + roomManager_.currentRoom().id
             + " (" + std::to_string(roomManager_.currentRoom().interactions.size()) + " interactions, "
             + std::to_string(roomManager_.currentRoom().doors.size()) + " doors, "
-            + std::to_string(roomManager_.currentRoom().triggers.size()) + " triggers)");
+            + std::to_string(roomManager_.currentRoom().triggers.size()) + " triggers, "
+            + std::to_string(roomManager_.currentRoom().collisionBoxes.size()) + " collision boxes)");
     }
 
     ObjImporter importer;
@@ -433,9 +448,26 @@ void Application::updatePlayer(float deltaSeconds, float mouseDeltaX, float mous
         : Bounds3 {{-1.85f, 0.0f, -1.85f}, {1.85f, 2.4f, 1.85f}};
 
     if (move.length() > 0.001f) {
+        constexpr float kPlayerRadius = 0.28f;
         const bool running = (keys[SDL_SCANCODE_LSHIFT] != 0) || (keys[SDL_SCANCODE_RSHIFT] != 0);
         const float speed = running ? (kWalkSpeed * kRunMultiplier) : kWalkSpeed;
-        gameState_.playerPosition = gameState_.playerPosition + normalize(move) * (speed * deltaSeconds);
+        const Vec3 delta = normalize(move) * (speed * deltaSeconds);
+        const Vec3 startPosition = gameState_.playerPosition;
+
+        Vec3 nextPosition = startPosition;
+        Vec3 xCandidate = startPosition;
+        xCandidate.x = std::clamp(startPosition.x + delta.x, walkBounds.min.x, walkBounds.max.x);
+        if (!roomManager_.loaded() || !blockedByRoomCollider(xCandidate, roomManager_.currentRoom(), kPlayerRadius)) {
+            nextPosition.x = xCandidate.x;
+        }
+
+        Vec3 zCandidate = nextPosition;
+        zCandidate.z = std::clamp(startPosition.z + delta.z, walkBounds.min.z, walkBounds.max.z);
+        if (!roomManager_.loaded() || !blockedByRoomCollider(zCandidate, roomManager_.currentRoom(), kPlayerRadius)) {
+            nextPosition.z = zCandidate.z;
+        }
+
+        gameState_.playerPosition = nextPosition;
     }
 
     gameState_.playerPosition.x = std::clamp(gameState_.playerPosition.x, walkBounds.min.x, walkBounds.max.x);

@@ -50,6 +50,7 @@ public:
         room.interactions = readInteractions();
         room.doors = readDoors();
         room.triggers = readTriggers();
+        room.collisionBoxes = readCollisionBoxes();
 
         if (room.spawns.empty()) {
             room.spawns.push_back({});
@@ -372,6 +373,31 @@ private:
             triggers.push_back(std::move(trigger));
         }
         return triggers;
+    }
+
+    [[nodiscard]] std::vector<RoomCollisionBox> readCollisionBoxes() const {
+        const Json* boxesJson = optionalField(root_, "collisionBoxes");
+        const bool legacyColliders = boxesJson == nullptr;
+        if (boxesJson == nullptr) {
+            boxesJson = optionalField(root_, "colliders");
+        }
+        if (boxesJson == nullptr) {
+            return {};
+        }
+        expectArray(*boxesJson, legacyColliders ? "$.colliders" : "$.collisionBoxes");
+
+        std::vector<RoomCollisionBox> boxes;
+        for (std::size_t i = 0; i < boxesJson->size(); ++i) {
+            const Json& boxJson = (*boxesJson)[i];
+            const std::string path = childPath(legacyColliders ? "$.colliders" : "$.collisionBoxes", i);
+            expectObject(boxJson, path);
+
+            RoomCollisionBox box;
+            box.id = optionalString(boxJson, "id", path, "collision_box_" + std::to_string(i + 1));
+            box.bounds = bounds(requiredField(boxJson, "bounds", path), childPath(path, "bounds"));
+            boxes.push_back(std::move(box));
+        }
+        return boxes;
     }
 
     const Json& root_;

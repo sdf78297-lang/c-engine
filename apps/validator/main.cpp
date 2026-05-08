@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -171,6 +172,7 @@ private:
                 }
             }
         }
+        validateCollisionBoxes(root, path);
 
         const bool hasDoors = hasNonEmptyArray(root, "doors");
         const bool hasInteractables = hasNonEmptyArray(root, "interactables") || hasNonEmptyArray(root, "interactions");
@@ -184,6 +186,72 @@ private:
         if (!hasSpawns) {
             error(path, "room must define spawnPoints or spawns");
         }
+    }
+
+    void validateCollisionBoxes(const Json& room, const std::filesystem::path& path) {
+        const Json* boxes = find(room, "collisionBoxes");
+        if (boxes == nullptr) {
+            return;
+        }
+        if (!boxes->is_array()) {
+            error(path, "collisionBoxes must be an array");
+            return;
+        }
+
+        std::unordered_set<std::string> ids;
+        for (const Json& box : *boxes) {
+            if (!box.is_object()) {
+                error(path, "collision box must be an object");
+                continue;
+            }
+            const Json* id = find(box, "id");
+            if (id == nullptr || !id->is_string()) {
+                error(path, "collision box is missing id");
+            } else {
+                const std::string value = id->get<std::string>();
+                validateAsciiId(value, path, "collision box id");
+                if (!ids.insert(value).second) {
+                    error(path, "duplicate collision box id: " + value);
+                }
+            }
+
+            const Json* bounds = find(box, "bounds");
+            if (bounds == nullptr || !bounds->is_object()) {
+                error(path, "collision box is missing bounds");
+                continue;
+            }
+            validateBounds(*bounds, path, "collision box bounds");
+        }
+    }
+
+    void validateBounds(const Json& bounds, const std::filesystem::path& path, std::string_view label) {
+        const Json* min = find(bounds, "min");
+        const Json* max = find(bounds, "max");
+        if (!isVec3(min) || !isVec3(max)) {
+            error(path, std::string(label) + " must define min/max vec3");
+            return;
+        }
+        for (std::size_t i = 0; i < 3; ++i) {
+            if ((*min)[i].get<double>() > (*max)[i].get<double>()) {
+                error(path, std::string(label) + " min must be <= max");
+                return;
+            }
+        }
+    }
+
+    [[nodiscard]] bool isVec3(const Json* value) const {
+        if (value == nullptr || !value->is_array() || value->size() != 3) {
+            return false;
+        }
+        for (const Json& component : *value) {
+            if (!component.is_number()) {
+                return false;
+            }
+            if (!std::isfinite(component.get<double>())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     void validateStoryGraph(const std::filesystem::path& path) {

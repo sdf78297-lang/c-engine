@@ -47,6 +47,11 @@ struct RoomTrigger {
     bool once = true;
 };
 
+struct RoomCollisionBox {
+    std::string id;
+    Bounds3 bounds {};
+};
+
 struct RoomDefinition {
     std::string id = "office_open_space";
     std::string title = "Office";
@@ -57,6 +62,7 @@ struct RoomDefinition {
     std::vector<RoomInteraction> interactions;
     std::vector<RoomDoor> doors;
     std::vector<RoomTrigger> triggers;
+    std::vector<RoomCollisionBox> collisionBoxes;
 };
 
 class RoomManager {
