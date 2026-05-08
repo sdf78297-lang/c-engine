@@ -256,13 +256,13 @@
 
   /* ============ ATMOSPHERE LAYERS ============ */
   .vignette{
-    position: fixed; inset: 0; pointer-events: none; z-index: 50;
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; z-index: 50;
     background:
       radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.55) 75%, #000 100%);
     mix-blend-mode: multiply;
   }
   .scanlines{
-    position: fixed; inset: 0; pointer-events: none; z-index: 51;
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; z-index: 51;
     background: repeating-linear-gradient(
       to bottom,
       rgba(0,0,0,0) 0px,
@@ -274,7 +274,7 @@
     opacity: .6;
   }
   .grain{
-    position: fixed; inset: -50%; pointer-events: none; z-index: 52;
+    position: fixed; left: -50%; top: -50%; right: -50%; bottom: -50%; pointer-events: none; z-index: 52;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/></svg>");
     opacity: .10;
     mix-blend-mode: overlay;
@@ -288,7 +288,7 @@
     100%{ transform: translate(1%, -1%); }
   }
   .flicker{
-    position: fixed; inset: 0; pointer-events: none; z-index: 53;
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; z-index: 53;
     background: rgba(255,255,255,0.02);
     animation: flicker 4s infinite;
   }
@@ -297,7 +297,7 @@
     20%, 24%, 55%{ opacity: .35; }
   }
   .crt-curve{
-    position: fixed; inset: 0; pointer-events: none; z-index: 49;
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; z-index: 49;
     box-shadow: inset 0 0 180px rgba(0,0,0,0.9), inset 0 0 40px rgba(0,0,0,0.6);
     border-radius: 24px;
   }
@@ -337,7 +337,9 @@
 
   /* ============ SCREENS ============ */
   .screen{
-    position: fixed; inset: 0;
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+    width: 100%;
+    height: 100%;
     display: flex; align-items: center; justify-content: center;
     opacity: 0; pointer-events: none;
     transition: opacity .8s ease;
@@ -353,9 +355,15 @@
   }
 
   /* ============ MAIN MENU ============ */
+  #screen-menu{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   .menu{
-    width: min(720px, 92vw);
-    padding: 0 32px;
+    width: 660px;
+    max-width: 86vw;
+    padding: 0 24px;
   }
   .brand{
     text-align: center;
@@ -411,17 +419,21 @@
     letter-spacing: 0.32em;
     text-transform: uppercase;
     color: var(--ink-dim);
-    padding: 10px 24px;
+    width: min(540px, 78vw);
+    padding: 10px 72px;
     cursor: pointer;
     border: none;
     background: transparent;
     position: relative;
+    text-align: center;
+    white-space: nowrap;
     transition: color .25s ease, letter-spacing .25s ease;
     font-weight: 400;
+    pointer-events: auto;
   }
   .menu-item::before{
     content: ">";
-    position: absolute; left: 0; top: 50%;
+    position: absolute; left: 38px; top: 50%;
     transform: translateY(-50%) translateX(-12px);
     opacity: 0;
     color: var(--blood-bright);
@@ -435,7 +447,7 @@
   }
   .menu-item:hover::before, .menu-item:focus::before{
     opacity: 1;
-    transform: translateY(-50%) translateX(-28px);
+    transform: translateY(-50%) translateX(-18px);
   }
   @keyframes itemFlick{
     0%{ transform: translateX(0); }
@@ -444,15 +456,20 @@
     100%{ transform: translateX(0); }
   }
   .menu-item .num{
+    position: absolute;
+    left: 70px;
+    top: 50%;
+    transform: translateY(-50%);
     font-family: 'VT323', monospace;
     font-size: 14px;
     color: var(--ink-faint);
-    margin-right: 18px;
     letter-spacing: 1px;
-    vertical-align: 4px;
   }
   .menu-item.danger{ color: rgba(122,20,16,0.6); }
   .menu-item.danger:hover{ color: var(--blood-bright); }
+  .menu-item:disabled{
+    pointer-events: none;
+  }
 
   .menu-foot{
     margin-top: 56px;
@@ -483,7 +500,7 @@
   }
   .story::before{
     content: "";
-    position: absolute; inset: 0;
+    position: absolute; left: 0; top: 0; right: 0; bottom: 0;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.5  0 0 0 0 0.42  0 0 0 0.4 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.25'/></svg>");
     mix-blend-mode: overlay;
     pointer-events: none;
@@ -525,7 +542,7 @@
   }
   .photo::after{
     content: "";
-    position: absolute; inset: 0;
+    position: absolute; left: 0; top: 0; right: 0; bottom: 0;
     background: repeating-linear-gradient(transparent 0 2px, rgba(0,0,0,0.18) 2px 3px);
     pointer-events: none;
   }
@@ -696,14 +713,14 @@
 
   /* ============ TRANSITION OVERLAY ============ */
   .transition{
-    position: fixed; inset: 0; z-index: 100;
+    position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 100;
     background: #000;
     opacity: 0; pointer-events: none;
     transition: opacity .15s;
   }
   .transition.on{ opacity: 1; }
   .transition .static{
-    position: absolute; inset: 0;
+    position: absolute; left: 0; top: 0; right: 0; bottom: 0;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='2' numOctaves='3'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
     opacity: .85;
     mix-blend-mode: screen;
@@ -731,9 +748,18 @@
 </style>
 
 <script>
-  window.exoMenuBridge = window.exoMenuBridge || {};
-  window.exoMenuBridge.startGame = window.exoMenuBridge.startGame || function(){ window.location.href = 'exo://start-game'; };
-  window.exoMenuBridge.quitGame = window.exoMenuBridge.quitGame || function(){ window.location.href = 'exo://quit-game'; };
+  (function(){
+    function exoCommand(command){
+      var nonce = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      var payload = 'exo:' + command + ':' + nonce;
+      try { document.title = payload; } catch (err) {}
+      try { window.location.href = 'exo://' + command + '?nonce=' + nonce; } catch (err) {}
+    }
+
+    window.exoMenuBridge = window.exoMenuBridge || {};
+    window.exoMenuBridge.startGame = window.exoMenuBridge.startGame || function(){ exoCommand('start-game'); };
+    window.exoMenuBridge.quitGame = window.exoMenuBridge.quitGame || function(){ exoCommand('quit-game'); };
+  })();
 </script>
 </head>
 <body>
@@ -959,6 +985,8 @@
 
   document.querySelectorAll('[data-action]').forEach(el=>{
     el.addEventListener('click', (e)=>{
+      e.preventDefault();
+      if (el.disabled) return;
       const a = el.dataset.action;
       if (a === 'story')    beginGame();
       if (a === 'settings') go('screen-settings');
@@ -979,9 +1007,11 @@
     }
     if (active.id !== 'screen-menu') return;
     const items = [...active.querySelectorAll('.menu-item:not([disabled])')];
+    if (!items.length) return;
     let i = items.indexOf(document.activeElement);
-    if (e.key === 'ArrowDown'){ i = (i+1+items.length) % items.length; items[i].focus(); e.preventDefault(); }
-    if (e.key === 'ArrowUp')  { i = (i-1+items.length) % items.length; items[i<0?items.length-1:i].focus(); e.preventDefault(); }
+    if (i < 0) i = 0;
+    if (e.key === 'ArrowDown'){ i = (i+1) % items.length; items[i].focus(); e.preventDefault(); }
+    if (e.key === 'ArrowUp')  { i = (i-1+items.length) % items.length; items[i].focus(); e.preventDefault(); }
     if (e.key === 'Enter' && document.activeElement.classList.contains('menu-item')){
       document.activeElement.click();
     }
@@ -1070,7 +1100,7 @@
     document.body.style.filter = 'brightness(0)';
     setTimeout(()=>{
       const overlay = document.createElement('div');
-      overlay.style.cssText = `position:fixed;inset:0;z-index:200;background:#000;color:#c9c5bc;
+      overlay.style.cssText = `position:fixed;left:0;top:0;right:0;bottom:0;z-index:200;background:#000;color:#c9c5bc;
         display:flex;align-items:center;justify-content:center;flex-direction:column;
         font-family:'Special Elite',serif;letter-spacing:0.3em;text-align:center;padding:24px;`;
       overlay.innerHTML = `
@@ -1094,7 +1124,7 @@
     document.body.style.filter = 'brightness(2) contrast(0.2)';
     document.body.style.opacity = '0';
     setTimeout(()=>{
-      document.body.innerHTML = `<div style="position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;color:#3a3833;font-family:'VT323',monospace;font-size:14px;letter-spacing:4px;">— NO SIGNAL —</div>`;
+      document.body.innerHTML = `<div style="position:fixed;left:0;top:0;right:0;bottom:0;background:#000;display:flex;align-items:center;justify-content:center;color:#3a3833;font-family:'VT323',monospace;font-size:14px;letter-spacing:4px;">— NO SIGNAL —</div>`;
       document.body.style.opacity = '1';
       document.body.style.filter = '';
 

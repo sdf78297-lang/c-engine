@@ -126,6 +126,14 @@ void onChangeUrl(void* userData, ULView, ULString url) {
     menu->handleUrlChanged(ulStringGetData(url));
 }
 
+void onChangeTitle(void* userData, ULView, ULString title) {
+    if (userData == nullptr || title == nullptr) {
+        return;
+    }
+    auto* menu = static_cast<HtmlMenu*>(userData);
+    menu->handleBridgeMessage(ulStringGetData(title));
+}
+
 ULMouseButton toUlButton(std::uint8_t button) {
     switch (button) {
         case SDL_BUTTON_LEFT: return kMouseButton_Left;
@@ -233,6 +241,7 @@ bool HtmlMenu::initialize(const Config& config) {
     ulViewSetFinishLoadingCallback(static_cast<ULView>(view_), onFinishLoading, this);
     ulViewSetDOMReadyCallback(static_cast<ULView>(view_), onDomReady, this);
     ulViewSetChangeURLCallback(static_cast<ULView>(view_), onChangeUrl, this);
+    ulViewSetChangeTitleCallback(static_cast<ULView>(view_), onChangeTitle, this);
     ulViewFocus(static_cast<ULView>(view_));
 
     std::string relativeUrl = "file:///" + config.htmlPath.generic_string();
@@ -519,13 +528,17 @@ void HtmlMenu::evaluateScript(const std::string& script) {
 }
 
 void HtmlMenu::handleUrlChanged(const char* url) {
-    if (url == nullptr) {
+    handleBridgeMessage(url);
+}
+
+void HtmlMenu::handleBridgeMessage(const char* message) {
+    if (message == nullptr) {
         return;
     }
-    const std::string value(url);
-    if (value.rfind("exo://start-game", 0) == 0) {
+    const std::string value(message);
+    if (value.rfind("exo://start-game", 0) == 0 || value.rfind("exo:start-game", 0) == 0) {
         startRequested_ = true;
-    } else if (value.rfind("exo://quit-game", 0) == 0) {
+    } else if (value.rfind("exo://quit-game", 0) == 0 || value.rfind("exo:quit-game", 0) == 0) {
         quitRequested_ = true;
     }
 }

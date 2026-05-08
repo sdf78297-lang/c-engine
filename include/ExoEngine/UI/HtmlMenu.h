@@ -40,6 +40,7 @@ public:
     void evaluateScript(const char* script);
     void evaluateScript(const std::string& script);
     void handleUrlChanged(const char* url);
+    void handleBridgeMessage(const char* message);
 #endif
 
 private:
