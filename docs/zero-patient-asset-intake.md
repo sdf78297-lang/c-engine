@@ -35,6 +35,7 @@ C:\Users\Vladimir\Desktop\с3.zip
 | Tall hospital cabinet | `Meshy_AI_Tall_1990s_hospital_a_*_texture.glb` | office/archive prop | Good for office dressing if scale is fixed. |
 | Faceless humanoid | `Meshy_AI_tall_faceless_humanoi_0505223330_texture.glb` | the Other / silhouette | Imported as `assets/characters/other_anton/other_anton.glb`. |
 | Shadow FBX | `new_shadow.fbx`, `shadow walk.fbx` | animation source | Convert to GLB in tools; do not load FBX in runtime. |
+| Seamless PBR albedo | `c3.zip/..._texture.png` | temporary wall/floor material | Imported as `assets/textures/zero_patient/worn_institution_albedo.png`. |
 
 ## Git Policy
 
@@ -47,6 +48,10 @@ Large binary game assets must use Git LFS. `.gitattributes` now tracks:
 *.blend
 *.ktx2
 *.tga
+assets/**/*.png
+assets/**/*.jpg
+assets/**/*.jpeg
+assets/**/*.webp
 *.psd
 *.exr
 ```
@@ -68,7 +73,7 @@ Keep the source quality intact during intake:
 
 - `tv.glb` is far too dense for production and needs decimation/LOD later.
 - `door.glb` has a centered pivot; `reference_scene.json` currently compensates with Y `0.951`.
-- OBJ materials are parsed but not rendered with real textures yet.
+- OBJ materials now bind `Kd` tint and `map_Kd` albedo through submesh draw ranges.
 - The runtime shader still uses embedded GLSL in `Renderer.cpp`; `assets/shaders/world.*` is not the active shader path.
 
 ## Next Import Recommendation
@@ -85,7 +90,7 @@ Scene instance:
 other_anton_proxy
 ```
 
-Then add a scene instance named `other_anton_proxy` with a small scale pass and verify it with:
+Verify the current imported slice with:
 
 ```powershell
 C:\msys64\mingw64\bin\cmake.exe --build build

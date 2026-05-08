@@ -5,6 +5,7 @@
 #include <GL/glew.h>
 #include <stb_image.h>
 
+#include <algorithm>
 #include <fstream>
 #include <iterator>
 #include <utility>
@@ -98,6 +99,12 @@ bool Texture2D::loadFromFile(const std::filesystem::path& path, const TextureLoa
 
     if (options.generateMipmaps) {
         glGenerateMipmap(GL_TEXTURE_2D);
+    }
+
+    if (GLEW_EXT_texture_filter_anisotropic) {
+        GLfloat maxAniso = 1.0f;
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAniso);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, std::min(16.0f, maxAniso));
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);

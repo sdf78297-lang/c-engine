@@ -49,5 +49,9 @@ quality issues for render meshes.
 glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
 ```
 
+`MeshBuffer::drawRange(indexOffset, indexCount)` draws a sub-range of the shared
+index buffer. The renderer uses this for OBJ submeshes so each `usemtl` section can
+bind its own material tint and albedo texture without duplicating geometry.
+
 The caller is responsible for binding the shader, material textures, uniforms, and
 render state before calling `draw()`.

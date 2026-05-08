@@ -2,11 +2,13 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <string>
 #include <vector>
 
 #include <ExoEngine/Math/Mat4.h>
 #include <ExoEngine/Math/Vec.h>
 #include <ExoEngine/Renderer/MeshBuffer.h>
+#include <ExoEngine/Renderer/Texture2D.h>
 
 namespace Exo {
 
@@ -59,6 +61,18 @@ private:
         Vec3 aabbMax {0.0f, 0.0f, 0.0f};
     };
 
+    struct ObjMaterialBinding {
+        std::string name = "default";
+        Vec3 baseColor {0.72f, 0.72f, 0.68f};
+        std::size_t albedoTextureIndex = static_cast<std::size_t>(-1);
+    };
+
+    struct ObjDrawRange {
+        std::uint32_t indexOffset = 0;
+        std::uint32_t indexCount = 0;
+        std::size_t materialIndex = 0;
+    };
+
     struct SceneMesh {
         enum class Kind {
             Obj,
@@ -67,6 +81,9 @@ private:
 
         Kind kind = Kind::Obj;
         MeshBuffer objBuffer;
+        std::vector<Texture2D> objTextures;
+        std::vector<ObjMaterialBinding> objMaterials;
+        std::vector<ObjDrawRange> objDrawRanges;
         GltfModel gltfModel;
         Vec3 aabbMin {0.0f, 0.0f, 0.0f};
         Vec3 aabbMax {0.0f, 0.0f, 0.0f};
@@ -74,6 +91,7 @@ private:
 
     [[nodiscard]] std::int32_t loadObjMesh(const std::filesystem::path& path);
     [[nodiscard]] std::int32_t loadGltfMesh(const std::filesystem::path& path);
+    void drawObjMesh(const SceneMesh& mesh);
     void drawGltfModel(const GltfModel& model);
 
     std::uint32_t width_ = 0;

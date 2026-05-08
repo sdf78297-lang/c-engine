@@ -57,6 +57,17 @@ Duplicate material names inside one MTL file are ignored with a warning.
 Texture paths are resolved relative to the MTL file, so room folders can be
 moved without breaking material references.
 
+## Runtime Material Binding
+
+The renderer now keeps OBJ submeshes as draw ranges. Each `usemtl` section binds:
+
+- diffuse `Kd` as `uBaseColor`;
+- `map_Kd` as the albedo texture when present;
+- the white fallback texture when no albedo map exists.
+
+This means reference rooms can carry material color and albedo texture data through
+the same `meshSource` path as GLB props instead of being rendered as one flat color.
+
 ## Options
 
 `ObjImportOptions` currently includes:

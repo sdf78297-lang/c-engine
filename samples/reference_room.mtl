@@ -4,6 +4,7 @@ Kd 0.620 0.640 0.610
 Ks 0.040 0.040 0.040
 Ns 18.0
 illum 2
+map_Kd ../assets/textures/zero_patient/worn_institution_albedo.png
 
 newmtl reference_ceiling
 Ka 0.018 0.018 0.017
@@ -11,6 +12,7 @@ Kd 0.470 0.480 0.450
 Ks 0.025 0.025 0.025
 Ns 12.0
 illum 2
+map_Kd ../assets/textures/zero_patient/worn_institution_albedo.png
 
 newmtl reference_floor
 Ka 0.018 0.019 0.020
@@ -18,3 +20,4 @@ Kd 0.360 0.390 0.380
 Ks 0.060 0.060 0.055
 Ns 24.0
 illum 2
+map_Kd ../assets/textures/zero_patient/worn_institution_albedo.png

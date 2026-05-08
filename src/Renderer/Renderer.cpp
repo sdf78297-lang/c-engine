@@ -9,8 +9,10 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 namespace Exo {
@@ -139,6 +141,9 @@ bool Renderer::initialize(std::uint32_t width, std::uint32_t height) {
 void Renderer::shutdown() {
     for (SceneMesh& mesh : sceneMeshes_) {
         mesh.objBuffer.destroy();
+        for (Texture2D& texture : mesh.objTextures) {
+            texture.destroy();
+        }
         for (GltfSubMesh& sub : mesh.gltfModel.subMeshes) {
             if (sub.ebo != 0) {
                 glDeleteBuffers(1, &sub.ebo);
@@ -210,7 +215,6 @@ void Renderer::drawSceneMesh(std::int32_t handle, const Mat4& modelTransform) {
     const GLint vpLoc = glGetUniformLocation(texturedShader_, "uViewProjection");
     const GLint modelLoc = glGetUniformLocation(texturedShader_, "uModel");
     const GLint texLoc = glGetUniformLocation(texturedShader_, "uAlbedo");
-    const GLint baseLoc = glGetUniformLocation(texturedShader_, "uBaseColor");
 
     glUniformMatrix4fv(vpLoc, 1, GL_FALSE, currentViewProjection_.data());
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, modelTransform.data());
@@ -219,10 +223,7 @@ void Renderer::drawSceneMesh(std::int32_t handle, const Mat4& modelTransform) {
 
     SceneMesh& mesh = sceneMeshes_[handle];
     if (mesh.kind == SceneMesh::Kind::Obj) {
-        glUniform3f(baseLoc, 0.72f, 0.72f, 0.68f);
-        glBindTexture(GL_TEXTURE_2D, whiteTexture_);
-        mesh.objBuffer.draw();
-        ++stats_.drawCalls;
+        drawObjMesh(mesh);
     } else {
         drawGltfModel(mesh.gltfModel);
     }
@@ -304,6 +305,72 @@ std::int32_t Renderer::loadObjMesh(const std::filesystem::path& path) {
     if (!mesh.objBuffer.upload(result.mesh)) {
         return -1;
     }
+
+    mesh.objMaterials.reserve(result.mesh.materials.size() + 1);
+    mesh.objMaterials.push_back({});
+
+    std::unordered_map<std::string, std::size_t> materialIndices;
+    std::unordered_map<std::string, std::size_t> textureIndices;
+    materialIndices.emplace(mesh.objMaterials.front().name, 0);
+
+    for (const MaterialAsset& material : result.mesh.materials) {
+        ObjMaterialBinding binding;
+        binding.name = material.name.empty() ? "default" : material.name;
+        binding.baseColor = material.diffuse;
+
+        if (!material.textures.albedo.empty()) {
+            const std::string textureKey = material.textures.albedo.lexically_normal().string();
+            if (const auto it = textureIndices.find(textureKey); it != textureIndices.end()) {
+                binding.albedoTextureIndex = it->second;
+            } else {
+                Texture2D albedo;
+                TextureLoadOptions textureOptions;
+                textureOptions.flipVertically = false;
+                textureOptions.generateMipmaps = true;
+                textureOptions.srgb = true;
+                if (albedo.loadFromFile(material.textures.albedo, textureOptions)) {
+                    binding.albedoTextureIndex = mesh.objTextures.size();
+                    textureIndices.emplace(textureKey, binding.albedoTextureIndex);
+                    mesh.objTextures.push_back(std::move(albedo));
+                } else {
+                    Logger::warn("OBJ material albedo fallback: " + binding.name);
+                }
+            }
+        }
+
+        const std::size_t materialIndex = mesh.objMaterials.size();
+        materialIndices[binding.name] = materialIndex;
+        mesh.objMaterials.push_back(std::move(binding));
+    }
+
+    mesh.objDrawRanges.reserve(result.mesh.submeshes.size());
+    for (const MeshSubmesh& submesh : result.mesh.submeshes) {
+        if (submesh.indexCount == 0) {
+            continue;
+        }
+
+        std::size_t materialIndex = 0;
+        if (const auto it = materialIndices.find(submesh.materialName); it != materialIndices.end()) {
+            materialIndex = it->second;
+        } else {
+            Logger::warn("OBJ submesh uses missing material '" + submesh.materialName + "': " + path.filename().string());
+        }
+
+        mesh.objDrawRanges.push_back({
+            .indexOffset = submesh.indexOffset,
+            .indexCount = submesh.indexCount,
+            .materialIndex = materialIndex,
+        });
+    }
+
+    if (mesh.objDrawRanges.empty() && result.mesh.indices.size() <= static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())) {
+        mesh.objDrawRanges.push_back({
+            .indexOffset = 0,
+            .indexCount = static_cast<std::uint32_t>(result.mesh.indices.size()),
+            .materialIndex = 0,
+        });
+    }
+
     mesh.aabbMin = result.mesh.bounds.valid ? result.mesh.bounds.min : Vec3 {};
     mesh.aabbMax = result.mesh.bounds.valid ? result.mesh.bounds.max : Vec3 {};
 
@@ -388,7 +455,7 @@ std::int32_t Renderer::loadGltfMesh(const std::filesystem::path& path) {
             glTexImage2D(
                 GL_TEXTURE_2D,
                 0,
-                GL_RGBA8,
+                GL_SRGB8_ALPHA8,
                 prim.textureWidth,
                 prim.textureHeight,
                 0,
@@ -420,6 +487,26 @@ std::int32_t Renderer::loadGltfMesh(const std::filesystem::path& path) {
         + std::to_string(totalVerts) + " verts, "
         + std::to_string(totalTris) + " tris)");
     return static_cast<std::int32_t>(sceneMeshes_.size() - 1);
+}
+
+void Renderer::drawObjMesh(const SceneMesh& mesh) {
+    const GLint baseLoc = glGetUniformLocation(texturedShader_, "uBaseColor");
+
+    for (const ObjDrawRange& range : mesh.objDrawRanges) {
+        const ObjMaterialBinding& material = range.materialIndex < mesh.objMaterials.size()
+            ? mesh.objMaterials[range.materialIndex]
+            : mesh.objMaterials.front();
+
+        glUniform3f(baseLoc, material.baseColor.x, material.baseColor.y, material.baseColor.z);
+        if (material.albedoTextureIndex < mesh.objTextures.size() && mesh.objTextures[material.albedoTextureIndex].valid()) {
+            mesh.objTextures[material.albedoTextureIndex].bind(0);
+        } else {
+            glBindTexture(GL_TEXTURE_2D, whiteTexture_);
+        }
+
+        mesh.objBuffer.drawRange(range.indexOffset, range.indexCount);
+        ++stats_.drawCalls;
+    }
 }
 
 void Renderer::drawGltfModel(const GltfModel& model) {

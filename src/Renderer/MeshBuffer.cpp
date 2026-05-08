@@ -5,6 +5,7 @@
 #include <GL/glew.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <string>
 #include <utility>
@@ -236,6 +237,24 @@ void MeshBuffer::draw() const {
 
     glBindVertexArray(vao_);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount_), GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(0);
+}
+
+void MeshBuffer::drawRange(std::uint32_t indexOffset, std::uint32_t indexCount) const {
+    if (!valid() || indexCount == 0 || indexOffset >= indexCount_) {
+        return;
+    }
+
+    const std::uint32_t clampedCount = std::min(indexCount, indexCount_ - indexOffset);
+    const auto byteOffset = static_cast<std::uintptr_t>(indexOffset) * sizeof(std::uint32_t);
+
+    glBindVertexArray(vao_);
+    glDrawElements(
+        GL_TRIANGLES,
+        static_cast<GLsizei>(clampedCount),
+        GL_UNSIGNED_INT,
+        reinterpret_cast<void*>(byteOffset)
+    );
     glBindVertexArray(0);
 }
 

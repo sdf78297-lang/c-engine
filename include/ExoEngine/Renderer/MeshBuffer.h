@@ -21,6 +21,7 @@ public:
     [[nodiscard]] bool upload(const MeshAsset& mesh);
     void destroy();
     void draw() const;
+    void drawRange(std::uint32_t indexOffset, std::uint32_t indexCount) const;
 
     [[nodiscard]] bool valid() const;
     [[nodiscard]] std::uint32_t indexCount() const;
