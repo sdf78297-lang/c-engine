@@ -1,44 +1,195 @@
-# Live HTML Menu Integration
+# HTML Menu Integration
 
-The menu is transferred as a live HTML/CSS/JS interface, not as a screenshot.
+Этот документ описывает, как в движок встроено живое HTML-меню `VOID ECHO`.
+Меню не является картинкой или видео. Это настоящий HTML/CSS/JS-интерфейс,
+который рендерится внутри C++/OpenGL приложения и может запускать игру.
 
-## Runtime Path
+## Где лежит
 
-- Source bundle: `assets/ui/main_menu/void_echo_menu_source.html`
-- Engine-ready HTML: `assets/ui/main_menu/web/index.html`
-- Extracted font assets: `assets/ui/main_menu/web/assets/*.woff2`
-- C++ bridge: `Exo::HtmlMenu`
-- Build flag: `EXO_ENABLE_HTML_UI=ON`
-- Local SDK path: `local_deps/ultralight-sdk`
+- Исходный HTML-экспорт: `assets/ui/main_menu/void_echo_menu_source.html`
+- Рабочий HTML для движка: `assets/ui/main_menu/web/index.html`
+- Шрифты меню: `assets/ui/main_menu/web/assets/*.woff2`
+- C++-обертка меню: `include/ExoEngine/UI/HtmlMenu.h`
+- Реализация меню: `src/UI/HtmlMenu.cpp`
+- Точка подключения в игре: `src/Core/Application.cpp`
+- CMake-флаг: `EXO_ENABLE_HTML_UI=ON`
+- Локальный SDK: `local_deps/ultralight-sdk`
 
-## Architecture
+`local_deps/` не коммитится в Git. В репозитории хранится код интеграции,
+HTML, ассеты меню и runtime DLL, нужные для запуска собранного `ExoEngine.exe`.
 
-`Application` starts in menu mode when running normally. `HtmlMenu` creates an Ultralight offscreen view, loads `file:///assets/ui/main_menu/web/index.html`, advances CSS/JS animations each frame, uploads the Ultralight BGRA bitmap into an OpenGL texture, and draws it fullscreen before the 3D game loop starts.
+## Как это работает
 
-Mouse movement, mouse clicks, and basic keyboard navigation are forwarded into the HTML view. The HTML page keeps its own transitions, hover effects, typewriter effect, VHS layers, and settings interactions.
+Движок использует Ultralight как встроенный offscreen-браузер:
 
-The bridge from HTML back to C++ is URL-based:
+1. `Application` при запуске создает `Exo::HtmlMenu`.
+2. `HtmlMenu` создает Ultralight renderer и offscreen view размером с окно игры.
+3. В view загружается `file:///assets/ui/main_menu/web/index.html`.
+4. Каждый кадр Ultralight обновляет HTML, CSS-анимации и JavaScript.
+5. Полученная BGRA-картинка копируется в OpenGL texture.
+6. Texture рисуется fullscreen поверх окна игры.
+7. Пока меню активно, 3D-управление игроком отключено.
+8. После `Новая игра` меню закрывается, и C++ запускает 3D-сцену.
 
-- `exo://start-game` closes the menu and enables player control.
-- `exo://quit-game` exits after the menu's quit effect.
+Так меню остается живым: hover, анимации, VHS-слои, переходы и JS работают
+как в обычном браузере, но поверх нашего C++ движка.
 
-This avoids hard-coded click zones in C++ and lets menu layout stay controlled by HTML.
+## Ввод
 
-## Library Choice
+`HtmlMenu::handleEvent` пересылает события SDL в Ultralight:
 
-Ultralight is the preferred path for this project because it supports embedding web content into C/C++ games and can render through a CPU bitmap or custom GPU path. WebView2 can also host HTML/CSS/JS in native Windows apps, but it is a child-window overlay rather than an OpenGL texture. CEF supports offscreen rendering too, but it is much heavier for this engine.
+- движение мыши;
+- левый/правый/средний клик;
+- `ArrowUp`;
+- `ArrowDown`;
+- `Enter`;
+- `Escape`.
 
-## Rules
+HTML сам решает, какой пункт выбран и что делать при клике. C++ не знает
+координаты кнопок и не содержит ручных click-zone.
 
-- Do not use PNG screenshots for this menu.
-- Do not edit C++ for one menu label or visual adjustment; edit `web/index.html`.
-- Keep the standalone source file as reference, but ship the unpacked runtime HTML.
-- If the HTML export changes, unpack it again and keep the `exo://` bridge.
-- Do not commit `local_deps/`; the SDK is a local build dependency.
+## Bridge HTML -> C++
 
-## Verification
+Кнопки меню отправляют команды в движок через маленький bridge.
 
-- Open `assets/ui/main_menu/web/index.html` in a browser and confirm the menu animates.
-- Build with `-DEXO_ENABLE_HTML_UI=ON`.
-- Start `ExoEngine.exe`; the animated HTML menu should appear first.
-- Click `Новая игра`, then `Войти в клинику`; after the menu transition, the 3D room should start and mouse look should be captured.
+В HTML:
+
+- `Новая игра` вызывает `window.exoMenuBridge.startGame()`;
+- `Выход` вызывает `window.exoMenuBridge.quitGame()`;
+- команда отправляется двумя способами:
+  - через `document.title = "exo:start-game:<nonce>"`;
+  - через `window.location.href = "exo://start-game?nonce=<nonce>"`.
+
+В C++:
+
+- `ulViewSetChangeURLCallback` ловит переходы `exo://...`;
+- `ulViewSetChangeTitleCallback` ловит `exo:...` через title;
+- оба пути идут в `HtmlMenu::handleBridgeMessage`;
+- `start-game` ставит `startRequested_ = true`;
+- `quit-game` ставит `quitRequested_ = true`.
+
+Два канала нужны специально. В embedded-браузерах custom URL scheme иногда
+ведет себя по-разному, а title callback срабатывает стабильно. Поэтому кнопки
+не завязаны на один хрупкий механизм.
+
+## Что делает Application
+
+В `Application::runWindowed`:
+
+- если обычный запуск или `--menu`, создается `HtmlMenu`;
+- пока `mainMenuActive == true`, события уходят в меню;
+- каждый кадр вызывается `mainMenu.update()` и `mainMenu.render()`;
+- если `mainMenu.startRequested()`:
+  - меню уничтожается;
+  - `mainMenuActive = false`;
+  - при обычном запуске включается relative mouse mode;
+  - начинается 3D-геймплей;
+- если `mainMenu.quitRequested()`:
+  - главный цикл завершается;
+  - игра закрывается.
+
+## Центрирование меню
+
+В Ultralight оказалась проблема с CSS-сокращением `inset: 0`: слой `.screen`
+не всегда растягивался на весь viewport, из-за чего меню выглядело сдвинутым
+влево.
+
+Поэтому в runtime HTML используется явное позиционирование:
+
+```css
+.screen {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+```
+
+То же правило применено к VHS-слоям, transition overlay и fullscreen overlay.
+Это надежнее для Ultralight, чем `inset`.
+
+Пункты меню выровнены отдельно: номер и стрелка стоят absolute-слева, а сам
+текст кнопки центрируется внутри фиксированной ширины. Поэтому визуальная ось
+логотипа и пунктов совпадает.
+
+## Почему не screenshot
+
+Скриншот потерял бы главное:
+
+- hover;
+- VHS-анимации;
+- flicker/glitch;
+- переходы;
+- клики;
+- настройки;
+- возможность запускать игру из меню.
+
+Поэтому меню перенесено как живой HTML, а не как фон-картинка.
+
+## Как менять меню дальше
+
+Если нужно поменять внешний вид, текст, расположение или анимации:
+
+1. Менять `assets/ui/main_menu/web/index.html`.
+2. Не трогать C++ ради одной надписи или отступа.
+3. Не удалять `window.exoMenuBridge`.
+4. Не менять команды `start-game` и `quit-game` без правки C++.
+5. После правки проверять реальное SDL-окно, а не только браузер.
+
+Если нужно добавить новую кнопку:
+
+1. Добавить кнопку в HTML с `data-action`.
+2. Добавить обработку в JS.
+3. Если кнопка должна влиять на движок, добавить новую команду в
+   `exoCommand(...)`.
+4. Добавить обработку команды в `HtmlMenu::handleBridgeMessage`.
+
+## Сборка
+
+```powershell
+$env:Path = 'C:\msys64\mingw64\bin;' + $env:Path
+cmake -S . -B build -G Ninja -DEXO_ENABLE_HTML_UI=ON -DEXO_ULTRALIGHT_SDK="C:/Users/Vladimir/Desktop/exo1/local_deps/ultralight-sdk"
+cmake --build build
+```
+
+После сборки корневой exe обновляется так:
+
+```powershell
+Copy-Item .\build\exo_sandbox.exe .\ExoEngine.exe -Force
+```
+
+## Проверка
+
+Минимальный набор проверок:
+
+```powershell
+$env:Path = 'C:\msys64\mingw64\bin;' + $env:Path
+.\build\exo_validate_content.exe
+.\ExoEngine.exe --headless --frames 1
+.\ExoEngine.exe --menu --frames 60
+```
+
+Ручная проверка:
+
+- запустить `ExoEngine.exe`;
+- убедиться, что меню стоит по центру;
+- нажать `Новая игра`;
+- убедиться, что запускается 3D-сцена;
+- запустить снова;
+- нажать `Выход`;
+- убедиться, что игра закрывается.
+
+Автоматическая проверка, которую делал Codex:
+
+- нашел реальное SDL-окно процесса;
+- сделал крупный скриншот именно этого окна;
+- кликнул по `Новая игра`;
+- проверил лог `HTML menu requested game start`;
+- кликнул по `Выход`;
+- проверил, что процесс завершился.
