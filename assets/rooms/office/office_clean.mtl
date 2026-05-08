@@ -1,0 +1,41 @@
+newmtl office_wall
+Ka 0.020 0.022 0.025
+Kd 0.420 0.440 0.430
+Ks 0.020 0.020 0.020
+Ns 10.0
+illum 2
+
+newmtl office_floor
+Ka 0.018 0.018 0.018
+Kd 0.260 0.285 0.280
+Ks 0.035 0.035 0.030
+Ns 20.0
+illum 2
+
+newmtl office_ceiling
+Ka 0.018 0.018 0.018
+Kd 0.360 0.365 0.355
+Ks 0.015 0.015 0.015
+Ns 8.0
+illum 2
+
+newmtl office_furniture
+Ka 0.020 0.018 0.016
+Kd 0.210 0.180 0.145
+Ks 0.025 0.020 0.018
+Ns 12.0
+illum 2
+
+newmtl office_dark
+Ka 0.010 0.011 0.012
+Kd 0.060 0.065 0.070
+Ks 0.010 0.010 0.010
+Ns 6.0
+illum 2
+
+newmtl office_glass
+Ka 0.010 0.014 0.018
+Kd 0.120 0.170 0.210
+Ks 0.080 0.090 0.100
+Ns 28.0
+illum 2

@@ -262,13 +262,9 @@ int Application::runWindowed() {
         return 1;
     }
 
-    if (!debugOverlay_.initialize(window_.nativeHandle(), nullptr)) {
-        Logger::warn("Debug overlay is not available");
-    }
-
     reloadSceneMeshes();
 
-    Logger::info("Sandbox running. W/S move, A/D turn, E interact, F5 save, F9 load, Esc quit.");
+    Logger::info("Runtime running. W/S move, A/D turn, E interact, F5 save, F9 load, Esc quit.");
 
     bool running = true;
     auto lastTime = SDL_GetPerformanceCounter();
@@ -281,8 +277,6 @@ int Application::runWindowed() {
 
         SDL_Event event {};
         while (SDL_PollEvent(&event) != 0) {
-            debugOverlay_.handleEvent(event);
-
             switch (event.type) {
                 case SDL_QUIT:
                     running = false;
@@ -315,15 +309,6 @@ int Application::runWindowed() {
                         } else {
                             Logger::error(error);
                         }
-                    } else if (event.key.keysym.sym == SDLK_1 || event.key.keysym.sym == SDLK_KP_1) {
-                        story_.choose(0);
-                        syncStoryToGameState();
-                    } else if (event.key.keysym.sym == SDLK_2 || event.key.keysym.sym == SDLK_KP_2) {
-                        story_.choose(1);
-                        syncStoryToGameState();
-                    } else if (event.key.keysym.sym == SDLK_3 || event.key.keysym.sym == SDLK_KP_3) {
-                        story_.choose(2);
-                        syncStoryToGameState();
                     }
                     break;
                 case SDL_WINDOWEVENT:
@@ -355,11 +340,6 @@ int Application::runWindowed() {
             }
         }
         renderer_.endFrame();
-        debugOverlay_.beginFrame();
-        debugOverlay_.drawEngineOverlay(scene_, renderer_.stats());
-        debugOverlay_.drawStoryOverlay(story_);
-        debugOverlay_.drawGameOverlay(roomManager_, gameState_, currentFocusPrompt_);
-        debugOverlay_.endFrame();
         window_.swapBuffers();
 
         if (config_.maxFrames != 0 && renderer_.stats().frameIndex >= config_.maxFrames) {
@@ -370,7 +350,6 @@ int Application::runWindowed() {
     }
 
     SDL_SetRelativeMouseMode(SDL_FALSE);
-    debugOverlay_.shutdown();
     renderer_.shutdown();
     window_.destroy();
     return 0;

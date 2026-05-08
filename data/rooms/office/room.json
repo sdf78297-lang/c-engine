@@ -19,34 +19,12 @@
   },
   "staticMeshes": [
     {
-      "name": "office_blockout_room",
-      "meshAsset": "game/rooms/office/office_blockout_room.mesh",
-      "materialAsset": "game/rooms/office/office_blockout_room.material",
-      "meshSource": "samples/reference_room.obj",
+      "name": "office_clean_blockout",
+      "meshAsset": "game/rooms/office/office_clean_blockout.mesh",
+      "materialAsset": "game/rooms/office/office_clean_blockout.material",
+      "meshSource": "assets/rooms/office/office_clean.obj",
       "transform": {
         "position": [0.0, 0.0, 0.0],
-        "rotation": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
-      }
-    },
-    {
-      "name": "anton_monitor_proxy",
-      "meshAsset": "game/props/anton_monitor_proxy.mesh",
-      "materialAsset": "game/props/anton_monitor_proxy.material",
-      "meshSource": "samples/tv.glb",
-      "transform": {
-        "position": [-1.45, 0.222, -1.25],
-        "rotation": [0.0, 0.7853981, 0.0],
-        "scale": [0.22, 0.22, 0.22]
-      }
-    },
-    {
-      "name": "service_door_proxy",
-      "meshAsset": "game/props/service_door_proxy.mesh",
-      "materialAsset": "game/props/service_door_proxy.material",
-      "meshSource": "samples/door.glb",
-      "transform": {
-        "position": [0.05, 0.951, 0.1],
         "rotation": [0.0, 0.0, 0.0],
         "scale": [1.0, 1.0, 1.0]
       }
