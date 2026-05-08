@@ -13,6 +13,8 @@ runtime, renderer, scene layer, and asset pipeline as separate systems.
 - JSON scene loading for rooms, lights, meshes and fixed cameras.
 - Texture loading through `stb_image`.
 - Dear ImGui debug overlay for engine/runtime inspection.
+- `НУЛЕВОЙ ПАЦИЕНТ` story runtime with choices and the `Я` identity scale.
+- Git LFS policy for heavy GLB/FBX/source texture assets.
 - Runtime assets separated from game-specific content.
 
 ## Dependencies
@@ -46,6 +48,12 @@ Run the render sandbox:
 .\build\exo_sandbox.exe
 ```
 
+Story controls in the sandbox:
+
+- `1`, `2`, `3` select the visible story choice.
+- `Tab` releases or captures the mouse.
+- `Esc` closes the sandbox.
+
 For a short OpenGL smoke test that closes automatically:
 
 ```powershell
@@ -56,5 +64,5 @@ For a short OpenGL smoke test that closes automatically:
 
 The engine is being prepared around source-quality assets: OBJ/MTL meshes,
 stable material names, authored normals, authored UVs, and lossless texture
-handoff. The game concept can be added later without mixing story content into
-the engine layer.
+handoff. Large runtime candidates are tracked through Git LFS, and source asset
+decisions are documented before importing whole desktop folders.

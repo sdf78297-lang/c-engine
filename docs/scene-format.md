@@ -44,6 +44,7 @@ Camera bounds are axis-aligned world-space boxes:
   "name": "reference_room",
   "meshAsset": "engine/reference_room.mesh",
   "materialAsset": "engine/reference_room.material",
+  "meshSource": "samples/reference_room.obj",
   "transform": {
     "position": [0.0, 0.0, 0.0],
     "rotation": [0.0, 0.0, 0.0],
@@ -52,9 +53,10 @@ Camera bounds are axis-aligned world-space boxes:
 }
 ```
 
-`name` and `meshAsset` are required. `materialAsset` is optional and defaults to an
-empty string. `transform` is optional; missing transform values default to identity.
-Scale components must be greater than zero.
+`name` and `meshAsset` are required. `materialAsset` and `meshSource` are optional
+and default to an empty string. The runtime renderer currently uses `meshSource` to
+load `.obj`, `.glb` or `.gltf` files. `transform` is optional; missing transform
+values default to identity. Scale components must be greater than zero.
 
 ## Point Lights
 

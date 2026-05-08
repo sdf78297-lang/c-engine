@@ -110,8 +110,14 @@ int Application::runHeadless() {
     if (!loadStartupScene(true)) {
         return 3;
     }
+    if (!loadStartupStory(true)) {
+        return 4;
+    }
 
     Logger::info("Scene loaded: " + scene_.name());
+    Logger::info("Story loaded: " + story_.title()
+        + " (" + std::to_string(story_.nodes().size()) + " nodes, identity "
+        + std::to_string(story_.identity()) + "%)");
     Logger::info("Fixed camera shots: " + std::to_string(scene_.cameraRig().shots().size()));
     Logger::info("Static mesh slots: " + std::to_string(scene_.staticMeshes().size()));
     Logger::info("Point lights: " + std::to_string(scene_.pointLights().size()));
@@ -230,6 +236,9 @@ int Application::runWindowed() {
     if (!loadStartupScene(false)) {
         Logger::warn("Using built-in reference scene");
     }
+    if (!loadStartupStory(false)) {
+        Logger::warn("Story overlay is not available");
+    }
 
     WindowConfig windowConfig;
     windowConfig.title = config_.name;
@@ -294,6 +303,12 @@ int Application::runWindowed() {
                     } else if (event.key.keysym.sym == SDLK_TAB) {
                         const SDL_bool wasRelative = SDL_GetRelativeMouseMode();
                         SDL_SetRelativeMouseMode(wasRelative == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
+                    } else if (event.key.keysym.sym == SDLK_1 || event.key.keysym.sym == SDLK_KP_1) {
+                        story_.choose(0);
+                    } else if (event.key.keysym.sym == SDLK_2 || event.key.keysym.sym == SDLK_KP_2) {
+                        story_.choose(1);
+                    } else if (event.key.keysym.sym == SDLK_3 || event.key.keysym.sym == SDLK_KP_3) {
+                        story_.choose(2);
                     }
                     break;
                 case SDL_WINDOWEVENT:
@@ -332,6 +347,7 @@ int Application::runWindowed() {
         renderer_.endFrame();
         debugOverlay_.beginFrame();
         debugOverlay_.drawEngineOverlay(scene_, renderer_.stats());
+        debugOverlay_.drawStoryOverlay(story_);
         debugOverlay_.endFrame();
         window_.swapBuffers();
 
@@ -427,6 +443,18 @@ bool Application::loadStartupScene(bool required) {
 
     scene_ = Scene::createReferenceScene();
     return false;
+}
+
+bool Application::loadStartupStory(bool required) {
+    const std::filesystem::path storyPath = std::filesystem::path(EXO_ENGINE_ROOT) / "samples" / "zero_patient_story.json";
+
+    if (story_.loadFromFile(storyPath)) {
+        Logger::info("Story JSON loaded: " + storyPath.string());
+        return true;
+    }
+
+    Logger::error(story_.lastError());
+    return !required;
 }
 
 RenderView Application::makeCurrentView() const {

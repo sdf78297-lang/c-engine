@@ -6,6 +6,7 @@ struct SDL_Window;
 namespace Exo {
 
 class Scene;
+class StoryRuntime;
 struct RenderStats;
 
 class DebugOverlay {
@@ -22,6 +23,7 @@ public:
     void handleEvent(const SDL_Event& event);
     void beginFrame();
     void drawEngineOverlay(const Scene& scene, const RenderStats& stats);
+    void drawStoryOverlay(const StoryRuntime& story);
     void endFrame();
 
     [[nodiscard]] bool isInitialized() const;

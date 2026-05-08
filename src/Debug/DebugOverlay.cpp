@@ -3,8 +3,10 @@
 #include <ExoEngine/Renderer/Renderer.h>
 #include <ExoEngine/Scene/FixedCameraRig.h>
 #include <ExoEngine/Scene/Scene.h>
+#include <ExoEngine/Story/StoryRuntime.h>
 
 #include <cstddef>
+#include <string>
 
 #if defined(EXO_DEBUG_UI_WITH_IMGUI)
 #if !__has_include(<imgui.h>)
@@ -86,6 +88,15 @@ void applyDebugStyle() {
     colors[ImGuiCol_TitleBgActive] = ImVec4(0.11f, 0.13f, 0.12f, 1.00f);
 }
 
+void loadReadableFonts(ImGuiIO& io) {
+    ImFontConfig config;
+    config.OversampleH = 2;
+    config.OversampleV = 2;
+    if (io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf", 16.0f, &config, io.Fonts->GetGlyphRangesCyrillic()) == nullptr) {
+        io.Fonts->AddFontDefault();
+    }
+}
+
 void drawMetric(const char* label, const char* value) {
     ImGui::TextDisabled("%s", label);
     ImGui::SameLine(140.0f);
@@ -138,6 +149,7 @@ void drawStaticMeshes(const Scene& scene) {
         if (ImGui::TreeNode(label)) {
             drawMetric("Mesh asset", mesh.meshAsset.empty() ? "<none>" : mesh.meshAsset.c_str());
             drawMetric("Material asset", mesh.materialAsset.empty() ? "<none>" : mesh.materialAsset.c_str());
+            drawMetric("Mesh source", mesh.meshSource.empty() ? "<none>" : mesh.meshSource.c_str());
             drawTransform(mesh.transform);
             ImGui::TreePop();
         }
@@ -200,6 +212,12 @@ void drawCameraRig(const Scene& scene) {
     }
 }
 
+void drawWrappedParagraph(const std::string& text) {
+    ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
+    ImGui::TextUnformatted(text.c_str());
+    ImGui::PopTextWrapPos();
+}
+
 } // namespace
 #endif
 
@@ -231,6 +249,7 @@ bool DebugOverlay::initialize(SDL_Window* window, void* glContext) {
     setCurrentContext(imguiContext_);
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    loadReadableFonts(io);
     applyDebugStyle();
 
     if (!ImGui_ImplSDL2_InitForOpenGL(window, resolvedContext)) {
@@ -343,6 +362,62 @@ void DebugOverlay::drawEngineOverlay(const Scene& scene, const RenderStats& stat
 #else
     (void)scene;
     (void)stats;
+#endif
+}
+
+void DebugOverlay::drawStoryOverlay(const StoryRuntime& story) {
+#if EXO_DEBUG_OVERLAY_HAS_IMGUI
+    if (!initialized_ || !frameOpen_) {
+        return;
+    }
+
+    setCurrentContext(imguiContext_);
+    ImGui::SetNextWindowPos(ImVec2(452.0f, 16.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(520.0f, 560.0f), ImGuiCond_FirstUseEver);
+
+    if (ImGui::Begin("НУЛЕВОЙ ПАЦИЕНТ")) {
+        if (!story.loaded()) {
+            ImGui::TextWrapped("Story runtime is not loaded.");
+            ImGui::TextWrapped("%s", story.lastError().c_str());
+            ImGui::End();
+            return;
+        }
+
+        const StoryNode& node = story.currentNode();
+        ImGui::TextUnformatted(story.title().c_str());
+        ImGui::SameLine();
+        ImGui::TextDisabled("Я: %d%%", story.identity());
+        ImGui::ProgressBar(static_cast<float>(story.identity()) / 100.0f, ImVec2(-1.0f, 8.0f), "");
+
+        ImGui::Separator();
+        ImGui::TextUnformatted(node.title.c_str());
+        if (!node.location.empty()) {
+            ImGui::TextDisabled("%s", node.location.c_str());
+        }
+
+        ImGui::Spacing();
+        for (const std::string& paragraph : node.body) {
+            drawWrappedParagraph(paragraph);
+            ImGui::Spacing();
+        }
+
+        if (!node.choices.empty()) {
+            ImGui::Separator();
+            ImGui::TextDisabled("Выбор: нажми 1, 2 или 3");
+            for (std::size_t i = 0; i < node.choices.size(); ++i) {
+                const StoryChoice& choice = node.choices[i];
+                const std::string label = std::to_string(i + 1) + ". " + choice.label;
+                drawWrappedParagraph(label);
+            }
+        } else if (node.ending) {
+            ImGui::Separator();
+            ImGui::TextDisabled("Концовка зафиксирована.");
+        }
+    }
+
+    ImGui::End();
+#else
+    (void)story;
 #endif
 }
 

@@ -29,8 +29,19 @@
       "materialAsset": "engine/door.material",
       "meshSource": "samples/door.glb",
       "transform": {
-        "position": [0.0, 0.0, 0.0],
+        "position": [0.0, 0.951, 0.0],
         "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    },
+    {
+      "name": "other_anton_proxy",
+      "meshAsset": "characters/other_anton.mesh",
+      "materialAsset": "characters/other_anton.material",
+      "meshSource": "assets/characters/other_anton/other_anton.glb",
+      "transform": {
+        "position": [1.25, 0.953, -1.35],
+        "rotation": [0.0, -0.55, 0.0],
         "scale": [1.0, 1.0, 1.0]
       }
     }

@@ -8,6 +8,7 @@
 #include <ExoEngine/Platform/Window.h>
 #include <ExoEngine/Renderer/Renderer.h>
 #include <ExoEngine/Scene/Scene.h>
+#include <ExoEngine/Story/StoryRuntime.h>
 
 namespace Exo {
 
@@ -29,6 +30,7 @@ private:
     int runHeadless();
     int runWindowed();
     [[nodiscard]] bool loadStartupScene(bool required);
+    [[nodiscard]] bool loadStartupStory(bool required);
     [[nodiscard]] RenderView makeCurrentView() const;
     void updatePlayer(float deltaSeconds, float mouseDeltaX, float mouseDeltaY);
 
@@ -37,6 +39,7 @@ private:
     Window window_;
     Renderer renderer_;
     DebugOverlay debugOverlay_;
+    StoryRuntime story_;
 
     Vec3 playerPosition_ {0.0f, 1.65f, 1.5f};
     float playerYaw_ = 0.0f;
