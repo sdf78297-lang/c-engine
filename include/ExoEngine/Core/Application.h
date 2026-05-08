@@ -38,7 +38,7 @@ private:
     [[nodiscard]] bool loadStartupStory(bool required);
     [[nodiscard]] bool loadRoomScene(const std::string& roomId, const std::string& spawnId, bool required);
     [[nodiscard]] RenderView makeCurrentView() const;
-    void updatePlayer(float deltaSeconds);
+    void updatePlayer(float deltaSeconds, float mouseDeltaX, float mouseDeltaY);
     void reloadSceneMeshes();
     void activateCurrentFocus();
     void evaluateCurrentTrigger();

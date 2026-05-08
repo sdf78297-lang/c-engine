@@ -1,0 +1,24 @@
+newmtl tv_frame
+Kd 0.015 0.017 0.020
+Ks 0.180 0.190 0.210
+Ns 64.0
+
+newmtl tv_stand
+Kd 0.030 0.030 0.034
+Ks 0.120 0.120 0.130
+Ns 48.0
+
+newmtl tv_screen
+Kd 0.030 0.100 0.180
+Ks 0.450 0.620 0.800
+Ns 96.0
+
+newmtl tv_button
+Kd 0.110 0.115 0.120
+Ks 0.220 0.220 0.230
+Ns 48.0
+
+newmtl tv_led
+Kd 0.650 0.045 0.025
+Ks 0.650 0.080 0.050
+Ns 96.0

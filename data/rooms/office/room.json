@@ -17,6 +17,10 @@
     ],
     "unknownFieldsIgnored": true
   },
+  "walkBounds": {
+    "min": [-2.75, -0.5, -2.25],
+    "max": [2.75, 2.5, 2.25]
+  },
   "staticMeshes": [
     {
       "name": "office_clean_blockout",
@@ -28,26 +32,43 @@
         "rotation": [0.0, 0.0, 0.0],
         "scale": [1.0, 1.0, 1.0]
       }
+    },
+    {
+      "name": "anton_desk_tv",
+      "meshAsset": "game/props/anton_desk_tv.mesh",
+      "materialAsset": "game/props/anton_desk_tv.material",
+      "meshSource": "assets/props/office_tv.obj",
+      "transform": {
+        "position": [-1.70, 0.76, -1.76],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
     }
   ],
   "pointLights": [
     {
-      "position": [0.0, 1.82, 0.6],
-      "color": [0.92, 0.82, 0.66],
-      "radius": 5.2,
-      "intensity": 0.88
+      "position": [-1.72, 1.28, -1.62],
+      "color": [0.42, 0.62, 1.0],
+      "radius": 2.45,
+      "intensity": 0.95
     },
     {
-      "position": [-2.2, 1.05, -1.45],
-      "color": [0.44, 0.58, 1.0],
-      "radius": 2.8,
-      "intensity": 0.32
+      "position": [0.15, 2.28, 0.35],
+      "color": [0.88, 0.78, 0.62],
+      "radius": 5.8,
+      "intensity": 0.42
     },
     {
-      "position": [1.75, 1.45, -1.75],
-      "color": [0.8, 0.95, 1.0],
-      "radius": 2.1,
-      "intensity": 0.2
+      "position": [2.35, 1.55, -1.85],
+      "color": [0.55, 0.72, 1.0],
+      "radius": 3.2,
+      "intensity": 0.28
+    },
+    {
+      "position": [-2.55, 0.95, 1.75],
+      "color": [1.0, 0.18, 0.12],
+      "radius": 1.7,
+      "intensity": 0.18
     }
   ],
   "fixedCameras": [

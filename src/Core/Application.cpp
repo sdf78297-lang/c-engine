@@ -10,6 +10,7 @@
 
 #include <SDL2/SDL.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -165,8 +166,14 @@ int Application::runHeadless() {
     Logger::info("=== Scene info ===");
     Logger::info("Engine root: " + std::string(EXO_ENGINE_ROOT));
     Logger::info("Reference room AABB (world): min=(-2.000, 0.000, -2.000) max=(2.000, 2.400, 2.000) size=4.000 x 2.400 x 4.000");
-    Logger::info("Player spawn: pos=(0.000, 1.650, 1.500) yaw=0.000 pitch=0.000 (eye height 1.65 m)");
-    Logger::info("Walkable bounds (XZ clamp): [-1.850, 1.850]");
+    Logger::info("Player spawn: pos=" + formatVec3(gameState_.playerPosition)
+        + " yaw=" + std::to_string(gameState_.playerYaw)
+        + " pitch=" + std::to_string(playerPitch_)
+        + " (eye height 1.65 m)");
+    if (roomManager_.loaded()) {
+        const Bounds3& walkBounds = roomManager_.currentRoom().walkBounds;
+        Logger::info("Walkable bounds: min=" + formatVec3(walkBounds.min) + " max=" + formatVec3(walkBounds.max));
+    }
 
     const std::filesystem::path engineRoot(EXO_ENGINE_ROOT);
     Logger::info("Static meshes (" + std::to_string(scene_.staticMeshes().size()) + "):");
@@ -264,7 +271,11 @@ int Application::runWindowed() {
 
     reloadSceneMeshes();
 
-    Logger::info("Runtime running. W/S move, A/D turn, E interact, F5 save, F9 load, Esc quit.");
+    if (config_.maxFrames == 0) {
+        SDL_SetRelativeMouseMode(SDL_TRUE);
+    }
+
+    Logger::info("Runtime running. WASD move, mouse look, Shift run, Tab mouse capture, E interact, F5 save, F9 load, Esc quit.");
 
     bool running = true;
     auto lastTime = SDL_GetPerformanceCounter();
@@ -274,6 +285,9 @@ int Application::runWindowed() {
         const auto now = SDL_GetPerformanceCounter();
         const float deltaSeconds = static_cast<float>(now - lastTime) / perfFreq;
         lastTime = now;
+
+        float mouseDeltaX = 0.0f;
+        float mouseDeltaY = 0.0f;
 
         SDL_Event event {};
         while (SDL_PollEvent(&event) != 0) {
@@ -319,13 +333,19 @@ int Application::runWindowed() {
                         );
                     }
                     break;
+                case SDL_MOUSEMOTION:
+                    if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
+                        mouseDeltaX += static_cast<float>(event.motion.xrel);
+                        mouseDeltaY += static_cast<float>(event.motion.yrel);
+                    }
+                    break;
                 default:
                     break;
             }
         }
 
         if (config_.maxFrames == 0) {
-            updatePlayer(deltaSeconds);
+            updatePlayer(deltaSeconds, mouseDeltaX, mouseDeltaY);
             evaluateCurrentTrigger();
         }
 
@@ -355,32 +375,61 @@ int Application::runWindowed() {
     return 0;
 }
 
-void Application::updatePlayer(float deltaSeconds) {
+void Application::updatePlayer(float deltaSeconds, float mouseDeltaX, float mouseDeltaY) {
+    constexpr float kMouseSensitivity = 0.0022f;
+    constexpr float kMaxPitch = 1.35f;
+    constexpr float kWalkSpeed = 2.2f;
+    constexpr float kRunMultiplier = 1.65f;
+    constexpr float kEyeHeight = 1.65f;
+
+    gameState_.playerYaw += mouseDeltaX * kMouseSensitivity;
+    playerPitch_ -= mouseDeltaY * kMouseSensitivity;
+    playerPitch_ = std::clamp(playerPitch_, -kMaxPitch, kMaxPitch);
+
     const std::uint8_t* keys = SDL_GetKeyboardState(nullptr);
     if (keys == nullptr) {
         return;
     }
 
-    PlayerInput input;
+    Vec3 move {0.0f, 0.0f, 0.0f};
+    const float sinYaw = std::sin(gameState_.playerYaw);
+    const float cosYaw = std::cos(gameState_.playerYaw);
+    const Vec3 forward {sinYaw, 0.0f, -cosYaw};
+    const Vec3 right {cosYaw, 0.0f, sinYaw};
+
     if (keys[SDL_SCANCODE_W] != 0) {
-        input.forwardAxis += 1.0f;
+        move = move + forward;
     }
     if (keys[SDL_SCANCODE_S] != 0) {
-        input.forwardAxis -= 1.0f;
+        move = move - forward;
     }
-    if (keys[SDL_SCANCODE_A] != 0 || keys[SDL_SCANCODE_LEFT] != 0) {
-        input.turnAxis -= 1.0f;
+    if (keys[SDL_SCANCODE_A] != 0) {
+        move = move - right;
     }
-    if (keys[SDL_SCANCODE_D] != 0 || keys[SDL_SCANCODE_RIGHT] != 0) {
-        input.turnAxis += 1.0f;
+    if (keys[SDL_SCANCODE_D] != 0) {
+        move = move + right;
     }
-    input.run = (keys[SDL_SCANCODE_LSHIFT] != 0) || (keys[SDL_SCANCODE_RSHIFT] != 0);
+
+    if (keys[SDL_SCANCODE_LEFT] != 0) {
+        gameState_.playerYaw -= 1.8f * deltaSeconds;
+    }
+    if (keys[SDL_SCANCODE_RIGHT] != 0) {
+        gameState_.playerYaw += 1.8f * deltaSeconds;
+    }
 
     const Bounds3 walkBounds = roomManager_.loaded()
         ? roomManager_.currentRoom().walkBounds
         : Bounds3 {{-1.85f, 0.0f, -1.85f}, {1.85f, 2.4f, 1.85f}};
 
-    playerMotor_.update(gameState_.playerPosition, gameState_.playerYaw, input, walkBounds, deltaSeconds);
+    if (move.length() > 0.001f) {
+        const bool running = (keys[SDL_SCANCODE_LSHIFT] != 0) || (keys[SDL_SCANCODE_RSHIFT] != 0);
+        const float speed = running ? (kWalkSpeed * kRunMultiplier) : kWalkSpeed;
+        gameState_.playerPosition = gameState_.playerPosition + normalize(move) * (speed * deltaSeconds);
+    }
+
+    gameState_.playerPosition.x = std::clamp(gameState_.playerPosition.x, walkBounds.min.x, walkBounds.max.x);
+    gameState_.playerPosition.z = std::clamp(gameState_.playerPosition.z, walkBounds.min.z, walkBounds.max.z);
+    gameState_.playerPosition.y = kEyeHeight;
 
     currentFocusPrompt_.clear();
     if (roomManager_.loaded()) {
@@ -583,7 +632,21 @@ RenderView Application::makeCurrentView() const {
         ? 16.0f / 9.0f
         : static_cast<float>(window_.width()) / static_cast<float>(window_.height());
 
-    return cameraDirector_.makeView(scene_, gameState_.playerPosition, gameState_.playerYaw, aspect);
+    const float cosPitch = std::cos(playerPitch_);
+    const float sinPitch = std::sin(playerPitch_);
+    const float sinYaw = std::sin(gameState_.playerYaw);
+    const float cosYaw = std::cos(gameState_.playerYaw);
+    const Vec3 forward {
+        sinYaw * cosPitch,
+        sinPitch,
+        -cosYaw * cosPitch,
+    };
+
+    RenderView view;
+    view.view = Mat4::lookAt(gameState_.playerPosition, gameState_.playerPosition + forward, {0.0f, 1.0f, 0.0f});
+    view.projection = Mat4::perspective(1.134464f, aspect, 0.05f, 90.0f);
+    view.cameraPosition = gameState_.playerPosition;
+    return view;
 }
 
 } // namespace Exo
