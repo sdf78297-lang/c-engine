@@ -1,0 +1,215 @@
+{
+  "schema": "zero_patient.puzzles.v1",
+  "catalogId": "zero_patient_core_puzzles",
+  "title": "Каталог загадок",
+  "body": [
+    "Загадки первого слоя строятся вокруг офиса: доступ, питание, рабочее место, отражение и фотография. Каждая загадка должна ощущаться как действие в реальном пространстве, а не как отдельная мини-игра."
+  ],
+  "puzzles": [
+    {
+      "id": "office_badge_repair",
+      "roomId": "office_open_space_3f",
+      "type": "inventory_combine",
+      "status": "active",
+      "requiredItems": [
+        "employee_badge_shell",
+        "bent_paperclip"
+      ],
+      "consumesItems": [
+        "employee_badge_shell",
+        "bent_paperclip"
+      ],
+      "rewards": [
+        "temporary_access_badge"
+      ],
+      "setsFlags": [
+        "flag_office_badge_repaired"
+      ],
+      "unlocks": [
+        "door_office_service"
+      ],
+      "title": "Временный пропуск",
+      "body": [
+        "Считыватель не требует идеального бейджа. Ему нужен пластик, метка и немного контакта."
+      ],
+      "steps": [
+        {
+          "id": "inspect_badge_shell",
+          "choiceText": "Осмотреть пустой бейдж.",
+          "success": {
+            "body": [
+              "Внутри держателя видна тонкая щель. Метка не потеряна, она просто не достает до контакта."
+            ]
+          }
+        },
+        {
+          "id": "combine_with_paperclip",
+          "choiceText": "Поджать метку скрепкой.",
+          "success": {
+            "body": [
+              "Скрепка фиксирует метку на месте. Бейдж выглядит чужим, но теперь он должен отвечать считывателю."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "office_power_panel",
+      "roomId": "office_open_space_3f",
+      "type": "item_socket",
+      "status": "active",
+      "requiredItems": [
+        "service_fuse"
+      ],
+      "requiredFlags": [
+        "flag_office_badge_repaired"
+      ],
+      "setsFlags": [
+        "flag_office_power_restored",
+        "flag_office_service_route_open"
+      ],
+      "unlocks": [
+        "door_office_meeting",
+        "door_office_restroom"
+      ],
+      "title": "Питание служебной линии",
+      "body": [
+        "Часть этажа сидит на отдельной линии. Без предохранителя двери открываются, но не туда."
+      ],
+      "interactions": [
+        {
+          "id": "inspect_panel_empty",
+          "targetId": "office_power_panel",
+          "choiceText": "Осмотреть щиток.",
+          "fail": {
+            "body": [
+              "В щитке пустое гнездо. Рядом карандашом выведено: line_c."
+            ]
+          }
+        },
+        {
+          "id": "insert_service_fuse",
+          "targetId": "office_power_panel",
+          "choiceText": "Вставить предохранитель.",
+          "success": {
+            "body": [
+              "Свет гаснет на полсекунды и возвращается холоднее. Где-то в стеклянной переговорной щелкает замок."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "workstation_login",
+      "roomId": "office_open_space_3f",
+      "type": "clue_sequence",
+      "status": "planned",
+      "requiredFlags": [
+        "flag_inspected_clinic_results",
+        "flag_viewed_corporate_photo"
+      ],
+      "setsFlags": [
+        "flag_workstation_unlocked",
+        "flag_calendar_anomaly_seen"
+      ],
+      "unlocks": [
+        "story_node_meeting_room"
+      ],
+      "title": "Рабочий стол Антона",
+      "body": [
+        "Пароль не спрятан на стикере. Он собран из дат, которые Антон пытается не помнить."
+      ],
+      "steps": [
+        {
+          "id": "inspect_calendar",
+          "choiceText": "Посмотреть календарь.",
+          "success": {
+            "body": [
+              "Пятница отмечена дважды. В одной записи стоит прием у врача, в другой - встреча, которой Антон не назначал."
+            ]
+          }
+        },
+        {
+          "id": "enter_memory_code",
+          "choiceText": "Ввести дату приема.",
+          "success": {
+            "body": [
+              "Система принимает пароль. На экране открыта почта с черновиком: Антон уже написал Наде, но не отправил."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "mirror_delay_observation",
+      "roomId": "office_restroom",
+      "type": "observation",
+      "status": "planned",
+      "requiredFlags": [
+        "flag_office_power_restored"
+      ],
+      "setsFlags": [
+        "flag_mirror_delay_seen"
+      ],
+      "rewards": [
+        "mirror_shard"
+      ],
+      "title": "Задержка отражения",
+      "body": [
+        "Отражение не повторяет Антона. Оно ждет, пока он решит, что видел ошибку."
+      ],
+      "steps": [
+        {
+          "id": "wait_without_turning",
+          "choiceText": "Остаться и смотреть.",
+          "success": {
+            "body": [
+              "Отражение моргает первым. Потом улыбается так, как Антон не умеет."
+            ]
+          }
+        },
+        {
+          "id": "break_mirror",
+          "choiceText": "Разбить зеркало.",
+          "success": {
+            "body": [
+              "Осколки падают в раковину. Один кусок отражает не потолок, а темное окно офиса."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "corporate_photo_reveal",
+      "roomId": "office_open_space_3f",
+      "type": "state_reveal",
+      "status": "active",
+      "requiredFlags": [
+        "flag_workstation_unlocked"
+      ],
+      "setsFlags": [
+        "flag_viewed_corporate_photo",
+        "flag_other_marked_in_photo"
+      ],
+      "unlocks": [
+        "event_other_seen_in_window"
+      ],
+      "title": "Фотография отдела",
+      "body": [
+        "На снимке тридцать семь человек. Антон помнит тридцать шесть."
+      ],
+      "interactions": [
+        {
+          "id": "inspect_photo",
+          "targetId": "corporate_photo",
+          "choiceText": "Рассмотреть фотографию.",
+          "success": {
+            "body": [
+              "Рядом с Антоном стоит мужчина в такой же рубашке. Его лицо чуть смазано, но галстук завязан иначе."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

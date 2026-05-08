@@ -305,6 +305,10 @@ const StoryNode& StoryRuntime::currentNode() const {
     return nodes_.front();
 }
 
+const std::string& StoryRuntime::currentNodeId() const {
+    return currentNode_;
+}
+
 const std::vector<StoryNode>& StoryRuntime::nodes() const {
     return nodes_;
 }
@@ -330,6 +334,28 @@ bool StoryRuntime::choose(std::size_t choiceIndex) {
 
     identity_ = std::clamp(identity_ + choice.identityDelta, 0, 100);
     return enterNode(choice.nextNode);
+}
+
+bool StoryRuntime::jumpTo(const std::string& nodeId) {
+    if (!loaded_ || nodeId.empty()) {
+        return false;
+    }
+    return enterNode(nodeId);
+}
+
+bool StoryRuntime::restoreState(const std::string& nodeId, int identity) {
+    if (!loaded_) {
+        return false;
+    }
+    if (!enterNode(nodeId)) {
+        return false;
+    }
+    identity_ = std::clamp(identity, 0, 100);
+    return true;
+}
+
+void StoryRuntime::applyIdentityDelta(int delta) {
+    identity_ = std::clamp(identity_ + delta, 0, 100);
 }
 
 const StoryNode* StoryRuntime::findNode(const std::string& id) const {

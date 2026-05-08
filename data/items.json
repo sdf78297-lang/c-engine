@@ -1,0 +1,309 @@
+{
+  "schema": "zero_patient.items.v1",
+  "catalogId": "zero_patient_core_items",
+  "title": "Каталог предметов",
+  "body": [
+    "Первый набор предметов поддерживает офисный старт: документы диагноза, служебный доступ, мелкие инструменты, ограниченное лечение и будущий ресурсный слой."
+  ],
+  "items": [
+    {
+      "id": "clinic_results",
+      "type": "document",
+      "category": "story_key",
+      "tags": [
+        "diagnosis",
+        "identity",
+        "prologue"
+      ],
+      "title": "Результаты обследования",
+      "body": [
+        "Лист сложен вчетверо. Антон знает каждую строку, но все равно читает только последнюю.",
+        "Дата приема подчеркнута сильнее, чем нужно. Бумага пахнет машиной и холодным кофе."
+      ],
+      "choiceText": "Осмотреть результаты.",
+      "inventory": {
+        "stackable": false,
+        "maxStack": 1,
+        "canDiscard": false,
+        "inspectable": true
+      },
+      "flags": {
+        "onPickup": "flag_item_clinic_results",
+        "onInspect": "flag_inspected_clinic_results"
+      },
+      "uses": [
+        {
+          "targetId": "anton_desk",
+          "effect": "unlock_story_node",
+          "storyNodeId": "office_arrival"
+        }
+      ]
+    },
+    {
+      "id": "employee_badge_shell",
+      "type": "key_item",
+      "category": "access",
+      "tags": [
+        "office",
+        "badge",
+        "broken"
+      ],
+      "title": "Пустой бейдж",
+      "body": [
+        "Пластиковая карта без активной метки. На краю осталась серая царапина, будто ее вытащили из держателя слишком резко."
+      ],
+      "choiceText": "Взять бейдж.",
+      "inventory": {
+        "stackable": false,
+        "maxStack": 1,
+        "canDiscard": false,
+        "inspectable": true
+      },
+      "flags": {
+        "onPickup": "flag_item_employee_badge_shell",
+        "onUse": "flag_used_employee_badge_shell"
+      },
+      "combineRules": [
+        {
+          "withItemId": "bent_paperclip",
+          "resultItemId": "temporary_access_badge",
+          "setsFlag": "flag_office_badge_repaired"
+        }
+      ]
+    },
+    {
+      "id": "bent_paperclip",
+      "type": "tool",
+      "category": "small_tool",
+      "tags": [
+        "office",
+        "repair",
+        "combine"
+      ],
+      "title": "Согнутая скрепка",
+      "body": [
+        "Обычная канцелярская скрепка. Один конец уже загнут так, будто кто-то пытался достать из щели что-то тонкое."
+      ],
+      "choiceText": "Взять скрепку.",
+      "inventory": {
+        "stackable": false,
+        "maxStack": 1,
+        "canDiscard": true,
+        "inspectable": true
+      },
+      "flags": {
+        "onPickup": "flag_item_bent_paperclip"
+      },
+      "combineRules": [
+        {
+          "withItemId": "employee_badge_shell",
+          "resultItemId": "temporary_access_badge",
+          "setsFlag": "flag_office_badge_repaired"
+        }
+      ]
+    },
+    {
+      "id": "temporary_access_badge",
+      "type": "key_item",
+      "category": "access",
+      "tags": [
+        "office",
+        "badge",
+        "repaired"
+      ],
+      "title": "Временный пропуск",
+      "body": [
+        "Бейдж держится на согнутой скрепке. Решение выглядит ненадежно, но считывателю у служебной двери может хватить и этого."
+      ],
+      "choiceText": "Использовать пропуск.",
+      "inventory": {
+        "stackable": false,
+        "maxStack": 1,
+        "canDiscard": false,
+        "inspectable": true
+      },
+      "flags": {
+        "onCreate": "flag_item_temporary_access_badge",
+        "onUse": "flag_used_temporary_access_badge"
+      },
+      "uses": [
+        {
+          "targetId": "service_door_reader",
+          "effect": "unlock_door",
+          "doorId": "door_office_service"
+        }
+      ]
+    },
+    {
+      "id": "service_fuse",
+      "type": "key_item",
+      "category": "power",
+      "tags": [
+        "office",
+        "power",
+        "puzzle"
+      ],
+      "title": "Предохранитель",
+      "body": [
+        "Маленький керамический цилиндр с темной полосой на боку. На корпусе отпечаток пальца, слишком четкий для такой пыли."
+      ],
+      "choiceText": "Взять предохранитель.",
+      "inventory": {
+        "stackable": false,
+        "maxStack": 1,
+        "canDiscard": false,
+        "inspectable": true
+      },
+      "flags": {
+        "onPickup": "flag_item_service_fuse",
+        "onUse": "flag_used_service_fuse"
+      },
+      "uses": [
+        {
+          "targetId": "office_power_panel",
+          "effect": "set_flag",
+          "flag": "flag_office_power_restored"
+        }
+      ]
+    },
+    {
+      "id": "mirror_shard",
+      "type": "key_item",
+      "category": "evidence",
+      "tags": [
+        "mirror",
+        "identity",
+        "evidence"
+      ],
+      "title": "Осколок зеркала",
+      "body": [
+        "В осколке отражение появляется с задержкой. Если держать его неподвижно, лицо Антона на мгновение смотрит не туда."
+      ],
+      "choiceText": "Поднять осколок.",
+      "inventory": {
+        "stackable": false,
+        "maxStack": 1,
+        "canDiscard": false,
+        "inspectable": true
+      },
+      "flags": {
+        "onPickup": "flag_item_mirror_shard",
+        "onInspect": "flag_inspected_mirror_shard"
+      },
+      "uses": [
+        {
+          "targetId": "window_reflection",
+          "effect": "unlock_event",
+          "eventId": "event_other_seen_in_window"
+        }
+      ]
+    },
+    {
+      "id": "recorder_tape_office",
+      "type": "document",
+      "category": "audio_log",
+      "tags": [
+        "office",
+        "voice",
+        "identity"
+      ],
+      "title": "Кассета с диктофона",
+      "body": [
+        "На наклейке написано имя Антона, но почерк не его. Пленка перемотана ровно на середину."
+      ],
+      "choiceText": "Взять кассету.",
+      "inventory": {
+        "stackable": false,
+        "maxStack": 1,
+        "canDiscard": false,
+        "inspectable": true
+      },
+      "flags": {
+        "onPickup": "flag_item_recorder_tape_office"
+      },
+      "uses": [
+        {
+          "targetId": "meeting_room_recorder",
+          "effect": "play_audio_log",
+          "audioId": "audio_anton_answering_first"
+        }
+      ]
+    },
+    {
+      "id": "antiseptic_spray",
+      "type": "consumable",
+      "category": "healing",
+      "tags": [
+        "medical",
+        "minor_heal"
+      ],
+      "title": "Антисептик",
+      "body": [
+        "Карманный флакон из офисной аптечки. Резкий запах помогает вернуться в тело хотя бы на несколько секунд."
+      ],
+      "choiceText": "Взять антисептик.",
+      "inventory": {
+        "stackable": true,
+        "maxStack": 3,
+        "canDiscard": true,
+        "inspectable": true
+      },
+      "effects": [
+        {
+          "id": "minor_health_restore",
+          "value": 20
+        }
+      ],
+      "flags": {
+        "onPickup": "flag_item_antiseptic_spray"
+      }
+    },
+    {
+      "id": "office_handgun",
+      "type": "weapon",
+      "category": "firearm",
+      "tags": [
+        "future_combat",
+        "scarce_resource"
+      ],
+      "title": "Служебный пистолет",
+      "body": [
+        "Оружие из сейфа охраны. Слишком тяжелое для решения, которое Антон хотел бы принять."
+      ],
+      "choiceText": "Взять пистолет.",
+      "inventory": {
+        "stackable": false,
+        "maxStack": 1,
+        "canDiscard": false,
+        "inspectable": true
+      },
+      "ammoItemId": "handgun_ammo_9mm",
+      "flags": {
+        "onPickup": "flag_item_office_handgun"
+      }
+    },
+    {
+      "id": "handgun_ammo_9mm",
+      "type": "ammo",
+      "category": "firearm_ammo",
+      "tags": [
+        "future_combat",
+        "scarce_resource"
+      ],
+      "title": "Патроны 9 мм",
+      "body": [
+        "Небольшая коробка. Внутри меньше патронов, чем обещает вес."
+      ],
+      "choiceText": "Взять патроны.",
+      "inventory": {
+        "stackable": true,
+        "maxStack": 30,
+        "canDiscard": true,
+        "inspectable": true
+      },
+      "flags": {
+        "onPickup": "flag_item_handgun_ammo_9mm"
+      }
+    }
+  ]
+}

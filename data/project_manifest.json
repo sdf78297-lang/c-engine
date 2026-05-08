@@ -1,0 +1,96 @@
+{
+  "schema": "zero_patient.project_manifest.v1",
+  "dataVersion": "0.1.0",
+  "project": {
+    "id": "zero_patient",
+    "title": "Нулевой пациент",
+    "body": [
+      "Камерный survival horror о человеке, который пытается прожить обычный день, пока мир постепенно отдает его место Другому."
+    ],
+    "engine": "ExoEngine",
+    "runtimeLanguage": "cpp20",
+    "contentLanguage": "ru-RU",
+    "genre": "classic_fixed_camera_survival_horror"
+  },
+  "entry": {
+    "startRoomId": "office_open_space_3f",
+    "startSpawnId": "from_elevator_day",
+    "startStoryNodeId": "office_arrival",
+    "startIdentity": 100
+  },
+  "canonicalFiles": {
+    "aiBible": "docs/AI_PROJECT_BIBLE.md",
+    "aiWorkflow": "docs/ai-workflow.md",
+    "aiContext": "data/ai_context.json",
+    "items": "data/items.json",
+    "puzzles": "data/puzzles.json",
+    "rooms": [
+      "data/rooms/office/room.json",
+      "data/rooms/office_restroom/room.json",
+      "data/rooms/office_meeting_room/room.json",
+      "data/rooms/office_service_nook/room.json"
+    ]
+  },
+  "contentRules": {
+    "idFormat": "snake_case_ascii",
+    "allowedRussianFields": [
+      "title",
+      "body",
+      "choiceText"
+    ],
+    "forbiddenEditZones": [
+      "CMakeLists.txt",
+      "cmake",
+      "src",
+      "include",
+      "samples",
+      "assets",
+      "apps",
+      "build"
+    ],
+    "dataFirst": true,
+    "unknownRoomFieldsAllowed": true
+  },
+  "classicResidentEvilPlan": {
+    "cameraStyle": "fixed_directed_cameras",
+    "roomStructure": "room_based_streaming",
+    "progression": "keys_puzzles_backtracking",
+    "resourceModel": "scarce_items_and_risk_routes",
+    "interactionStyle": "short_diegetic_prompts",
+    "combatStyle": "pressure_over_power_fantasy",
+    "saveModel": "future_limited_safe_points"
+  },
+  "milestones": [
+    {
+      "id": "m01_content_contract",
+      "status": "active",
+      "outputs": [
+        "manifest",
+        "ai_context",
+        "items_catalog",
+        "puzzles_catalog",
+        "office_room"
+      ]
+    },
+    {
+      "id": "m02_runtime_binding",
+      "status": "planned",
+      "outputs": [
+        "data_loader",
+        "inventory_runtime",
+        "puzzle_runtime",
+        "interaction_runtime"
+      ]
+    },
+    {
+      "id": "m03_first_playable_office",
+      "status": "planned",
+      "outputs": [
+        "office_navigation",
+        "office_interactions",
+        "first_puzzle_loop",
+        "identity_event_hooks"
+      ]
+    }
+  ]
+}

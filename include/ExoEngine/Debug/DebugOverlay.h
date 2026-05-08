@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 union SDL_Event;
 struct SDL_Window;
 
@@ -7,6 +9,8 @@ namespace Exo {
 
 class Scene;
 class StoryRuntime;
+class RoomManager;
+struct GameState;
 struct RenderStats;
 
 class DebugOverlay {
@@ -24,6 +28,7 @@ public:
     void beginFrame();
     void drawEngineOverlay(const Scene& scene, const RenderStats& stats);
     void drawStoryOverlay(const StoryRuntime& story);
+    void drawGameOverlay(const RoomManager& roomManager, const GameState& state, const std::string& focusPrompt);
     void endFrame();
 
     [[nodiscard]] bool isInitialized() const;

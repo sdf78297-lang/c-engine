@@ -30,10 +30,14 @@ public:
     [[nodiscard]] const std::string& title() const;
     [[nodiscard]] const std::string& lastError() const;
     [[nodiscard]] const StoryNode& currentNode() const;
+    [[nodiscard]] const std::string& currentNodeId() const;
     [[nodiscard]] const std::vector<StoryNode>& nodes() const;
     [[nodiscard]] int identity() const;
 
     bool choose(std::size_t choiceIndex);
+    bool jumpTo(const std::string& nodeId);
+    bool restoreState(const std::string& nodeId, int identity);
+    void applyIdentityDelta(int delta);
 
 private:
     [[nodiscard]] const StoryNode* findNode(const std::string& id) const;

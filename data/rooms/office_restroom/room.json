@@ -1,0 +1,81 @@
+{
+  "schema": "zero_patient.room.v1",
+  "id": "office_restroom",
+  "title": "Туалет офиса",
+  "body": [
+    "Белая плитка, холодный свет и зеркало, которое не всегда повторяет движение сразу."
+  ],
+  "scene": "samples/reference_scene.json",
+  "walkBounds": {
+    "min": [-1.85, -0.5, -1.85],
+    "max": [1.85, 2.5, 1.85]
+  },
+  "spawns": [
+    {
+      "id": "from_office",
+      "position": [0.0, 1.65, 1.25],
+      "yaw": 3.1415926
+    }
+  ],
+  "staticMeshes": [
+    {
+      "name": "restroom_blockout_room",
+      "meshAsset": "game/rooms/office_restroom/restroom_blockout_room.mesh",
+      "materialAsset": "game/rooms/office_restroom/restroom_blockout_room.material",
+      "meshSource": "samples/reference_room.obj",
+      "transform": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    }
+  ],
+  "pointLights": [
+    {
+      "position": [0.0, 1.85, 0.25],
+      "color": [0.72, 0.82, 1.0],
+      "radius": 4.8,
+      "intensity": 0.78
+    }
+  ],
+  "fixedCameras": [
+    {
+      "name": "restroom_mirror_angle",
+      "bounds": {
+        "min": [-3.0, -0.5, -3.0],
+        "max": [3.0, 2.5, 3.0]
+      },
+      "position": [1.35, 1.55, 1.35],
+      "target": [-0.35, 0.8, -0.45],
+      "fovDeg": 46.0,
+      "near": 0.05,
+      "far": 70.0,
+      "priority": 10,
+      "blendSeconds": 0.0
+    }
+  ],
+  "doors": [
+    {
+      "id": "door_restroom_office",
+      "bounds": {
+        "min": [-0.45, -0.5, 1.1],
+        "max": [0.45, 2.5, 1.85]
+      },
+      "targetRoomId": "office_open_space_3f",
+      "targetSpawnId": "from_restroom",
+      "choiceText": "Вернуться в офис."
+    }
+  ],
+  "interactables": [
+    {
+      "id": "office_restroom_mirror",
+      "type": "mirror",
+      "position": [0.0, 1.15, -1.35],
+      "radius": 0.85,
+      "storyNode": "restroom_mirror",
+      "identityDelta": -15,
+      "setsFlags": ["flag_mirror_delay_seen"],
+      "choiceText": "Посмотреть в зеркало."
+    }
+  ]
+}

@@ -1,0 +1,503 @@
+{
+  "schema": "zero_patient.room.v1",
+  "id": "office_open_space_3f",
+  "name": "office_open_space_3f",
+  "title": "Офис, третий этаж",
+  "body": [
+    "Первый игровой узел: обычный open space, который постепенно начинает спорить с памятью Антона.",
+    "Комната учит фиксированным камерам, коротким взаимодействиям, сбору предметов, первой цепочке доступа и осторожному чтению аномалий."
+  ],
+  "runtimeCompatibility": {
+    "sceneLoader": "ExoEngine.SceneLoader.v1",
+    "compatibleFields": [
+      "name",
+      "staticMeshes",
+      "pointLights",
+      "fixedCameras"
+    ],
+    "unknownFieldsIgnored": true
+  },
+  "staticMeshes": [
+    {
+      "name": "office_blockout_room",
+      "meshAsset": "game/rooms/office/office_blockout_room.mesh",
+      "materialAsset": "game/rooms/office/office_blockout_room.material",
+      "meshSource": "samples/reference_room.obj",
+      "transform": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    },
+    {
+      "name": "anton_monitor_proxy",
+      "meshAsset": "game/props/anton_monitor_proxy.mesh",
+      "materialAsset": "game/props/anton_monitor_proxy.material",
+      "meshSource": "samples/tv.glb",
+      "transform": {
+        "position": [-1.45, 0.222, -1.25],
+        "rotation": [0.0, 0.7853981, 0.0],
+        "scale": [0.22, 0.22, 0.22]
+      }
+    },
+    {
+      "name": "service_door_proxy",
+      "meshAsset": "game/props/service_door_proxy.mesh",
+      "materialAsset": "game/props/service_door_proxy.material",
+      "meshSource": "samples/door.glb",
+      "transform": {
+        "position": [0.05, 0.951, 0.1],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    }
+  ],
+  "pointLights": [
+    {
+      "position": [0.0, 1.82, 0.6],
+      "color": [0.92, 0.82, 0.66],
+      "radius": 5.2,
+      "intensity": 0.88
+    },
+    {
+      "position": [-2.2, 1.05, -1.45],
+      "color": [0.44, 0.58, 1.0],
+      "radius": 2.8,
+      "intensity": 0.32
+    },
+    {
+      "position": [1.75, 1.45, -1.75],
+      "color": [0.8, 0.95, 1.0],
+      "radius": 2.1,
+      "intensity": 0.2
+    }
+  ],
+  "fixedCameras": [
+    {
+      "name": "office_entry_angle",
+      "bounds": {
+        "min": [-3.0, -0.5, -3.0],
+        "max": [3.0, 2.5, 3.0]
+      },
+      "position": [1.45, 1.55, 1.55],
+      "target": [-0.45, 0.78, -0.55],
+      "fovDeg": 52.0,
+      "near": 0.05,
+      "far": 80.0,
+      "priority": 10,
+      "blendSeconds": 0.0
+    },
+    {
+      "name": "office_desk_pressure",
+      "bounds": {
+        "min": [-3.0, -0.5, -3.0],
+        "max": [-0.55, 2.5, 0.75]
+      },
+      "position": [-1.45, 1.5, 1.45],
+      "target": [0.55, 0.82, -0.55],
+      "fovDeg": 46.0,
+      "near": 0.05,
+      "far": 70.0,
+      "priority": 20,
+      "blendSeconds": 0.12
+    },
+    {
+      "name": "office_window_reveal",
+      "bounds": {
+        "min": [0.35, -0.5, -2.85],
+        "max": [3.0, 2.5, -0.2]
+      },
+      "position": [2.3, 1.68, 1.25],
+      "target": [0.85, 0.9, -1.55],
+      "fovDeg": 43.0,
+      "near": 0.05,
+      "far": 80.0,
+      "priority": 30,
+      "blendSeconds": 0.0
+    }
+  ],
+  "cameraDesign": [
+    {
+      "cameraId": "office_entry_angle",
+      "title": "Входной ракурс",
+      "body": [
+        "Первый кадр дает игроку рабочий маршрут: стол Антона слева, служебная дверь впереди, стеклянная зона в глубине."
+      ]
+    },
+    {
+      "cameraId": "office_desk_pressure",
+      "title": "Давление рабочего места",
+      "body": [
+        "Камера приближает стол и монитор так, чтобы игрок чувствовал неуютную близость к личным вещам Антона."
+      ]
+    },
+    {
+      "cameraId": "office_window_reveal",
+      "title": "Окно и отражение",
+      "body": [
+        "Ракурс держит окно в кадре и позволяет позднему событию показать Другого без прямой атаки."
+      ]
+    }
+  ],
+  "spawnPoints": [
+    {
+      "id": "from_elevator_day",
+      "position": [1.85, 0.0, 2.15],
+      "yawDeg": 225.0
+    },
+    {
+      "id": "from_restroom",
+      "position": [-2.35, 0.0, 0.85],
+      "yawDeg": 90.0
+    },
+    {
+      "id": "from_meeting_room",
+      "position": [2.15, 0.0, -1.2],
+      "yawDeg": 270.0
+    }
+  ],
+  "doors": [
+    {
+      "id": "door_office_restroom",
+      "bounds": {
+        "min": [-2.0, -0.5, 0.55],
+        "max": [-1.25, 2.5, 1.55]
+      },
+      "targetRoomId": "office_restroom",
+      "targetSpawnId": "from_office",
+      "lockState": "power_locked",
+      "requiredFlag": "flag_office_power_restored",
+      "transition": "classic_door_cut",
+      "title": "Дверь в туалет",
+      "body": [
+        "Считыватель светится красным. За дверью слышна вода, хотя кранов здесь не видно."
+      ],
+      "choiceText": "Открыть дверь."
+    },
+    {
+      "id": "door_office_meeting",
+      "bounds": {
+        "min": [1.35, -0.5, -1.85],
+        "max": [2.0, 2.5, -0.75]
+      },
+      "targetRoomId": "office_meeting_room",
+      "targetSpawnId": "from_open_space",
+      "lockState": "power_locked",
+      "requiredFlag": "flag_office_power_restored",
+      "transition": "classic_door_cut",
+      "title": "Стеклянная переговорная",
+      "body": [
+        "За стеклом темно. На столе внутри лежит телефон Антона, хотя телефон у него в кармане."
+      ],
+      "choiceText": "Войти в переговорную."
+    },
+    {
+      "id": "door_office_service",
+      "bounds": {
+        "min": [-0.35, -0.5, -0.25],
+        "max": [0.55, 2.5, 0.65]
+      },
+      "targetRoomId": "office_service_nook",
+      "targetSpawnId": "from_open_space",
+      "lockState": "badge_locked",
+      "requiredItemId": "temporary_access_badge",
+      "transition": "short_black_cut",
+      "title": "Служебная дверь",
+      "body": [
+        "На двери нет таблички. Только считыватель и узкая царапина на пластике рядом с ним."
+      ],
+      "choiceText": "Приложить пропуск."
+    }
+  ],
+  "interactables": [
+    {
+      "id": "anton_desk",
+      "type": "desk",
+      "position": [-1.55, 0.78, -1.15],
+      "radius": 0.9,
+      "cameraHint": "office_desk_pressure",
+      "title": "Стол Антона",
+      "body": [
+        "Ноутбук открыт, почта не загружена. Рядом с клавиатурой лежит распечатка из клиники, аккуратно повернутая лицом вниз."
+      ],
+      "choiceText": "Осмотреть стол.",
+      "itemRefs": [
+        "clinic_results"
+      ],
+      "puzzleRefs": [
+        "workstation_login"
+      ],
+      "setsFlags": [
+        "flag_seen_anton_desk"
+      ]
+    },
+    {
+      "id": "chair_next_to_anton",
+      "type": "chair",
+      "position": [-0.65, 0.45, -1.35],
+      "radius": 0.65,
+      "cameraHint": "office_desk_pressure",
+      "title": "Соседний стул",
+      "body": [
+        "Стул немного отодвинут. На сиденье нет пыли, хотя Антон не помнит, чтобы рядом кто-то садился."
+      ],
+      "choiceText": "Проверить стул.",
+      "setsFlags": [
+        "flag_empty_chair_seen"
+      ]
+    },
+    {
+      "id": "security_terminal",
+      "type": "terminal",
+      "position": [0.35, 0.95, 0.45],
+      "radius": 0.75,
+      "title": "Терминал доступа",
+      "body": [
+        "Экран показывает схему этажа. Часть линий мигает серым, будто их стерли из плана, но не из здания."
+      ],
+      "choiceText": "Открыть схему этажа.",
+      "puzzleRefs": [
+        "office_badge_repair",
+        "office_power_panel"
+      ],
+      "setsFlags": [
+        "flag_seen_security_terminal"
+      ]
+    },
+    {
+      "id": "office_power_panel",
+      "type": "power_panel",
+      "position": [0.25, 1.0, 0.05],
+      "radius": 0.55,
+      "requiredItemId": "service_fuse",
+      "title": "Щиток",
+      "body": [
+        "Крышка не закрыта до конца. Внутри пустое гнездо и тонкий запах нагретого пластика."
+      ],
+      "choiceText": "Осмотреть щиток.",
+      "puzzleRefs": [
+        "office_power_panel"
+      ]
+    },
+    {
+      "id": "service_door_reader",
+      "type": "card_reader",
+      "position": [0.18, 1.05, 0.38],
+      "radius": 0.45,
+      "requiredItemId": "temporary_access_badge",
+      "title": "Считыватель",
+      "body": [
+        "Красный индикатор горит ровно. Пластик вокруг него поцарапан так, будто пропуск прикладывали слишком много раз."
+      ],
+      "choiceText": "Приложить пропуск.",
+      "puzzleRefs": [
+        "office_badge_repair"
+      ]
+    },
+    {
+      "id": "corporate_photo",
+      "type": "photo",
+      "position": [1.2, 1.35, -1.95],
+      "radius": 0.6,
+      "cameraHint": "office_window_reveal",
+      "title": "Фотография отдела",
+      "body": [
+        "Все улыбаются одинаково устало. Антон стоит в нижнем ряду. Рядом с ним оставлено слишком много места."
+      ],
+      "choiceText": "Рассмотреть фотографию.",
+      "puzzleRefs": [
+        "corporate_photo_reveal"
+      ],
+      "setsFlags": [
+        "flag_viewed_corporate_photo"
+      ]
+    },
+    {
+      "id": "window_reflection",
+      "type": "reflection",
+      "position": [1.85, 1.1, -2.25],
+      "radius": 0.85,
+      "cameraHint": "office_window_reveal",
+      "title": "Темное окно",
+      "body": [
+        "В стекле отражаются столы и лампы. За спиной Антона на мгновение появляется человек в такой же рубашке."
+      ],
+      "choiceText": "Посмотреть в окно.",
+      "requiredFlag": "flag_other_marked_in_photo",
+      "eventRefs": [
+        "event_other_seen_in_window"
+      ]
+    },
+    {
+      "id": "supply_drawer",
+      "type": "drawer",
+      "position": [-2.25, 0.55, -0.35],
+      "radius": 0.55,
+      "title": "Канцелярский ящик",
+      "body": [
+        "Внутри ручки, стикеры и скрепки. Одна скрепка лежит отдельно, уже согнутая."
+      ],
+      "choiceText": "Открыть ящик.",
+      "itemRefs": [
+        "bent_paperclip"
+      ]
+    },
+    {
+      "id": "service_locker",
+      "type": "locker",
+      "position": [0.55, 0.8, 0.15],
+      "radius": 0.65,
+      "requiredFlag": "flag_office_service_route_open",
+      "title": "Служебный шкаф",
+      "body": [
+        "На нижней полке лежит предохранитель. Кто-то положил его на чистую салфетку."
+      ],
+      "choiceText": "Осмотреть шкаф.",
+      "itemRefs": [
+        "service_fuse"
+      ]
+    }
+  ],
+  "placedItems": [
+    {
+      "itemId": "clinic_results",
+      "spawnId": "clinic_results_on_desk",
+      "interactableId": "anton_desk",
+      "initialState": "visible"
+    },
+    {
+      "itemId": "employee_badge_shell",
+      "spawnId": "badge_shell_under_keyboard",
+      "interactableId": "anton_desk",
+      "initialState": "hidden_until_flag",
+      "requiredFlag": "flag_seen_anton_desk"
+    },
+    {
+      "itemId": "bent_paperclip",
+      "spawnId": "paperclip_in_supply_drawer",
+      "interactableId": "supply_drawer",
+      "initialState": "visible"
+    },
+    {
+      "itemId": "service_fuse",
+      "spawnId": "fuse_in_service_locker",
+      "interactableId": "service_locker",
+      "initialState": "requires_flag",
+      "requiredFlag": "flag_office_service_route_open"
+    },
+    {
+      "itemId": "antiseptic_spray",
+      "spawnId": "antiseptic_near_terminal",
+      "interactableId": "security_terminal",
+      "initialState": "optional"
+    }
+  ],
+  "puzzleRefs": [
+    "office_badge_repair",
+    "office_power_panel",
+    "workstation_login",
+    "corporate_photo_reveal"
+  ],
+  "actors": [
+    {
+      "id": "other_anton_window_silhouette",
+      "type": "staged_actor",
+      "assetRef": "assets/characters/other_anton/other_anton.glb",
+      "spawnCondition": "flag_other_marked_in_photo",
+      "initialState": "hidden",
+      "position": [1.55, 0.0, -2.35],
+      "yawDeg": 180.0,
+      "title": "Силуэт в окне",
+      "body": [
+        "Он появляется не в комнате, а в отражении. Если игрок обернется, там никого нет."
+      ]
+    }
+  ],
+  "scriptedEvents": [
+    {
+      "id": "event_office_first_entry",
+      "trigger": "on_room_enter",
+      "runOnce": true,
+      "setsFlags": [
+        "flag_office_entered"
+      ],
+      "cameraOverride": "office_entry_angle",
+      "title": "Первый вход",
+      "body": [
+        "Офис работает как обычно: клавиатуры, вентиляция, далекий смех. Только лампа над столом Антона мигает один раз."
+      ]
+    },
+    {
+      "id": "event_other_seen_in_window",
+      "trigger": "on_interact_window_reflection",
+      "runOnce": true,
+      "requiresFlags": [
+        "flag_other_marked_in_photo"
+      ],
+      "identityDelta": -8,
+      "cameraOverride": "office_window_reveal",
+      "setsFlags": [
+        "flag_other_seen_in_window"
+      ],
+      "title": "Отражение у окна",
+      "body": [
+        "В стекле Другой стоит за плечом Антона. В комнате за плечом никого нет."
+      ]
+    },
+    {
+      "id": "event_power_restored",
+      "trigger": "on_flag_set",
+      "flag": "flag_office_power_restored",
+      "runOnce": true,
+      "cameraOverride": "office_desk_pressure",
+      "setsFlags": [
+        "flag_meeting_room_phone_ready"
+      ],
+      "title": "Питание вернулось",
+      "body": [
+        "Мониторы просыпаются не одновременно. На одном экране на секунду открывается черновик письма Наде."
+      ]
+    }
+  ],
+  "audio": {
+    "ambientId": "office_day_hvac",
+    "ambientPath": "audio/ambience/office_day_hvac_loop.ogg",
+    "stingers": [
+      {
+        "id": "stinger_lamp_blink",
+        "path": "audio/stingers/lamp_blink_soft.ogg",
+        "eventId": "event_office_first_entry"
+      },
+      {
+        "id": "stinger_window_presence",
+        "path": "audio/stingers/window_presence_low.ogg",
+        "eventId": "event_other_seen_in_window"
+      }
+    ]
+  },
+  "stateFlags": [
+    "flag_office_entered",
+    "flag_seen_anton_desk",
+    "flag_item_clinic_results",
+    "flag_item_employee_badge_shell",
+    "flag_item_bent_paperclip",
+    "flag_office_badge_repaired",
+    "flag_office_service_route_open",
+    "flag_item_service_fuse",
+    "flag_office_power_restored",
+    "flag_viewed_corporate_photo",
+    "flag_other_marked_in_photo",
+    "flag_other_seen_in_window"
+  ],
+  "validation": {
+    "requiresFixedCameras": true,
+    "requiresAtLeastOneDoor": true,
+    "requiresAtLeastOneInteractable": true,
+    "requiresLatinTechnicalIds": true,
+    "russianFields": [
+      "title",
+      "body",
+      "choiceText"
+    ]
+  }
+}

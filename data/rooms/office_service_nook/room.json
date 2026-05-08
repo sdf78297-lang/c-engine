@@ -1,0 +1,80 @@
+{
+  "schema": "zero_patient.room.v1",
+  "id": "office_service_nook",
+  "title": "Служебная ниша",
+  "body": [
+    "Тесное место за дверью без таблички. Здесь офис показывает техническую сторону."
+  ],
+  "scene": "samples/reference_scene.json",
+  "walkBounds": {
+    "min": [-1.85, -0.5, -1.85],
+    "max": [1.85, 2.5, 1.85]
+  },
+  "spawns": [
+    {
+      "id": "from_open_space",
+      "position": [0.0, 1.65, 1.25],
+      "yaw": 3.1415926
+    }
+  ],
+  "staticMeshes": [
+    {
+      "name": "service_nook_blockout_room",
+      "meshAsset": "game/rooms/office_service_nook/service_nook_blockout_room.mesh",
+      "materialAsset": "game/rooms/office_service_nook/service_nook_blockout_room.material",
+      "meshSource": "samples/reference_room.obj",
+      "transform": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    }
+  ],
+  "pointLights": [
+    {
+      "position": [0.0, 1.65, 0.25],
+      "color": [0.95, 0.78, 0.58],
+      "radius": 3.8,
+      "intensity": 0.5
+    }
+  ],
+  "fixedCameras": [
+    {
+      "name": "service_locker_angle",
+      "bounds": {
+        "min": [-3.0, -0.5, -3.0],
+        "max": [3.0, 2.5, 3.0]
+      },
+      "position": [1.25, 1.45, 1.25],
+      "target": [-0.45, 0.82, -0.55],
+      "fovDeg": 42.0,
+      "near": 0.05,
+      "far": 70.0,
+      "priority": 10,
+      "blendSeconds": 0.0
+    }
+  ],
+  "doors": [
+    {
+      "id": "door_service_office",
+      "bounds": {
+        "min": [-0.45, -0.5, 1.1],
+        "max": [0.45, 2.5, 1.85]
+      },
+      "targetRoomId": "office_open_space_3f",
+      "targetSpawnId": "from_elevator_day",
+      "choiceText": "Вернуться в офис."
+    }
+  ],
+  "interactables": [
+    {
+      "id": "service_nook_fuse",
+      "type": "item_pickup",
+      "position": [-0.8, 0.8, -1.0],
+      "radius": 0.75,
+      "addItem": "service_fuse",
+      "setsFlags": ["flag_item_service_fuse"],
+      "choiceText": "Взять предохранитель."
+    }
+  ]
+}

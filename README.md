@@ -11,9 +11,13 @@ runtime, renderer, scene layer, and asset pipeline as separate systems.
 - Fixed-camera scene foundation for classic survival horror staging.
 - OBJ/MTL import pipeline prepared for high-quality 3D assets.
 - JSON scene loading for rooms, lights, meshes and fixed cameras.
+- Data-driven room runtime for room transitions, tank controls, interactions,
+  triggers and save/load state.
 - Texture loading through `stb_image`.
 - Dear ImGui debug overlay for engine/runtime inspection.
 - `НУЛЕВОЙ ПАЦИЕНТ` story runtime with choices and the `Я` identity scale.
+- AI-readable content bible and manifests in `docs/AI_PROJECT_BIBLE.md` and `data/**`.
+- Standalone content validator target: `exo_validate_content`.
 - Git LFS policy for heavy GLB/FBX/source texture assets.
 - Runtime assets separated from game-specific content.
 
@@ -42,6 +46,12 @@ Run the headless project check:
 .\build\exo_sandbox.exe --headless
 ```
 
+Validate AI/content data:
+
+```powershell
+.\build\exo_validate_content.exe
+```
+
 Run the render sandbox:
 
 ```powershell
@@ -51,6 +61,9 @@ Run the render sandbox:
 Story controls in the sandbox:
 
 - `1`, `2`, `3` select the visible story choice.
+- `W`/`S` move and `A`/`D` turn with classic fixed-camera tank controls.
+- `E` activates the current door, prop, item or story interaction.
+- `F5` saves and `F9` loads `saves/zero_patient_slot_1.json`.
 - `Tab` releases or captures the mouse.
 - `Esc` closes the sandbox.
 

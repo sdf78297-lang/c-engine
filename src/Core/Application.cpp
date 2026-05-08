@@ -3,6 +3,9 @@
 #include <ExoEngine/Assets/GltfLoader.h>
 #include <ExoEngine/Assets/ObjImporter.h>
 #include <ExoEngine/Core/Logger.h>
+#include <ExoEngine/Game/InteractionSystem.h>
+#include <ExoEngine/Game/InventorySystem.h>
+#include <ExoEngine/Game/SaveSystem.h>
 #include <ExoEngine/Scene/SceneLoader.h>
 
 #include <SDL2/SDL.h>
@@ -121,6 +124,12 @@ int Application::runHeadless() {
     Logger::info("Fixed camera shots: " + std::to_string(scene_.cameraRig().shots().size()));
     Logger::info("Static mesh slots: " + std::to_string(scene_.staticMeshes().size()));
     Logger::info("Point lights: " + std::to_string(scene_.pointLights().size()));
+    if (roomManager_.loaded()) {
+        Logger::info("Gameplay room loaded: " + roomManager_.currentRoom().id
+            + " (" + std::to_string(roomManager_.currentRoom().interactions.size()) + " interactions, "
+            + std::to_string(roomManager_.currentRoom().doors.size()) + " doors, "
+            + std::to_string(roomManager_.currentRoom().triggers.size()) + " triggers)");
+    }
 
     ObjImporter importer;
     const std::array<std::filesystem::path, 2> sampleObjs {
@@ -257,25 +266,9 @@ int Application::runWindowed() {
         Logger::warn("Debug overlay is not available");
     }
 
-    sceneMeshHandles_.assign(scene_.staticMeshes().size(), -1);
-    const std::filesystem::path engineRoot(EXO_ENGINE_ROOT);
-    for (std::size_t i = 0; i < scene_.staticMeshes().size(); ++i) {
-        const StaticMeshInstance& instance = scene_.staticMeshes()[i];
-        if (instance.meshSource.empty()) {
-            continue;
-        }
-        std::filesystem::path source(instance.meshSource);
-        if (!source.is_absolute()) {
-            source = engineRoot / source;
-        }
-        sceneMeshHandles_[i] = renderer_.loadSceneMesh(source);
-    }
+    reloadSceneMeshes();
 
-    if (config_.maxFrames == 0) {
-        SDL_SetRelativeMouseMode(SDL_TRUE);
-    }
-
-    Logger::info("Sandbox running. WASD to move, mouse to look, Esc to quit.");
+    Logger::info("Sandbox running. W/S move, A/D turn, E interact, F5 save, F9 load, Esc quit.");
 
     bool running = true;
     auto lastTime = SDL_GetPerformanceCounter();
@@ -285,9 +278,6 @@ int Application::runWindowed() {
         const auto now = SDL_GetPerformanceCounter();
         const float deltaSeconds = static_cast<float>(now - lastTime) / perfFreq;
         lastTime = now;
-
-        float mouseDeltaX = 0.0f;
-        float mouseDeltaY = 0.0f;
 
         SDL_Event event {};
         while (SDL_PollEvent(&event) != 0) {
@@ -303,12 +293,37 @@ int Application::runWindowed() {
                     } else if (event.key.keysym.sym == SDLK_TAB) {
                         const SDL_bool wasRelative = SDL_GetRelativeMouseMode();
                         SDL_SetRelativeMouseMode(wasRelative == SDL_TRUE ? SDL_FALSE : SDL_TRUE);
+                    } else if (event.key.keysym.sym == SDLK_e) {
+                        activateCurrentFocus();
+                    } else if (event.key.keysym.sym == SDLK_F5) {
+                        syncStoryToGameState();
+                        std::string error;
+                        if (SaveSystem::saveToFile(savePath(), gameState_, error)) {
+                            Logger::info("Saved game state: " + savePath().string());
+                        } else {
+                            Logger::error(error);
+                        }
+                    } else if (event.key.keysym.sym == SDLK_F9) {
+                        std::string error;
+                        if (SaveSystem::loadFromFile(savePath(), gameState_, error)) {
+                            const GameState loadedState = gameState_;
+                            if (loadRoomScene(loadedState.roomId, loadedState.spawnId, false)) {
+                                gameState_ = loadedState;
+                                syncGameStateToStory();
+                                Logger::info("Loaded game state: " + savePath().string());
+                            }
+                        } else {
+                            Logger::error(error);
+                        }
                     } else if (event.key.keysym.sym == SDLK_1 || event.key.keysym.sym == SDLK_KP_1) {
                         story_.choose(0);
+                        syncStoryToGameState();
                     } else if (event.key.keysym.sym == SDLK_2 || event.key.keysym.sym == SDLK_KP_2) {
                         story_.choose(1);
+                        syncStoryToGameState();
                     } else if (event.key.keysym.sym == SDLK_3 || event.key.keysym.sym == SDLK_KP_3) {
                         story_.choose(2);
+                        syncStoryToGameState();
                     }
                     break;
                 case SDL_WINDOWEVENT:
@@ -319,19 +334,14 @@ int Application::runWindowed() {
                         );
                     }
                     break;
-                case SDL_MOUSEMOTION:
-                    if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-                        mouseDeltaX += static_cast<float>(event.motion.xrel);
-                        mouseDeltaY += static_cast<float>(event.motion.yrel);
-                    }
-                    break;
                 default:
                     break;
             }
         }
 
         if (config_.maxFrames == 0) {
-            updatePlayer(deltaSeconds, mouseDeltaX, mouseDeltaY);
+            updatePlayer(deltaSeconds);
+            evaluateCurrentTrigger();
         }
 
         renderer_.beginFrame(makeCurrentView());
@@ -348,6 +358,7 @@ int Application::runWindowed() {
         debugOverlay_.beginFrame();
         debugOverlay_.drawEngineOverlay(scene_, renderer_.stats());
         debugOverlay_.drawStoryOverlay(story_);
+        debugOverlay_.drawGameOverlay(roomManager_, gameState_, currentFocusPrompt_);
         debugOverlay_.endFrame();
         window_.swapBuffers();
 
@@ -365,70 +376,53 @@ int Application::runWindowed() {
     return 0;
 }
 
-void Application::updatePlayer(float deltaSeconds, float mouseDeltaX, float mouseDeltaY) {
-    constexpr float kMouseSensitivity = 0.0025f;
-    constexpr float kMaxPitch = 1.5f;
-    constexpr float kWalkSpeed = 2.5f;
-    constexpr float kRunMultiplier = 1.8f;
-    constexpr float kEyeHeight = 1.65f;
-    constexpr float kRoomHalfExtent = 1.85f;
-
-    playerYaw_ += mouseDeltaX * kMouseSensitivity;
-    playerPitch_ -= mouseDeltaY * kMouseSensitivity;
-    if (playerPitch_ > kMaxPitch) {
-        playerPitch_ = kMaxPitch;
-    } else if (playerPitch_ < -kMaxPitch) {
-        playerPitch_ = -kMaxPitch;
-    }
-
+void Application::updatePlayer(float deltaSeconds) {
     const std::uint8_t* keys = SDL_GetKeyboardState(nullptr);
     if (keys == nullptr) {
-        playerPosition_.y = kEyeHeight;
         return;
     }
 
-    const float sinYaw = std::sin(playerYaw_);
-    const float cosYaw = std::cos(playerYaw_);
-    const Vec3 forwardXZ {sinYaw, 0.0f, -cosYaw};
-    const Vec3 right {cosYaw, 0.0f, sinYaw};
-
-    Vec3 move {0.0f, 0.0f, 0.0f};
+    PlayerInput input;
     if (keys[SDL_SCANCODE_W] != 0) {
-        move = move + forwardXZ;
+        input.forwardAxis += 1.0f;
     }
     if (keys[SDL_SCANCODE_S] != 0) {
-        move = move - forwardXZ;
+        input.forwardAxis -= 1.0f;
     }
-    if (keys[SDL_SCANCODE_D] != 0) {
-        move = move + right;
+    if (keys[SDL_SCANCODE_A] != 0 || keys[SDL_SCANCODE_LEFT] != 0) {
+        input.turnAxis -= 1.0f;
     }
-    if (keys[SDL_SCANCODE_A] != 0) {
-        move = move - right;
+    if (keys[SDL_SCANCODE_D] != 0 || keys[SDL_SCANCODE_RIGHT] != 0) {
+        input.turnAxis += 1.0f;
     }
+    input.run = (keys[SDL_SCANCODE_LSHIFT] != 0) || (keys[SDL_SCANCODE_RSHIFT] != 0);
 
-    if (move.length() > 0.001f) {
-        const bool running = (keys[SDL_SCANCODE_LSHIFT] != 0) || (keys[SDL_SCANCODE_RSHIFT] != 0);
-        const float speed = running ? (kWalkSpeed * kRunMultiplier) : kWalkSpeed;
-        const Vec3 step = normalize(move) * (speed * deltaSeconds);
-        playerPosition_.x += step.x;
-        playerPosition_.z += step.z;
-    }
+    const Bounds3 walkBounds = roomManager_.loaded()
+        ? roomManager_.currentRoom().walkBounds
+        : Bounds3 {{-1.85f, 0.0f, -1.85f}, {1.85f, 2.4f, 1.85f}};
 
-    if (playerPosition_.x > kRoomHalfExtent) {
-        playerPosition_.x = kRoomHalfExtent;
-    } else if (playerPosition_.x < -kRoomHalfExtent) {
-        playerPosition_.x = -kRoomHalfExtent;
+    playerMotor_.update(gameState_.playerPosition, gameState_.playerYaw, input, walkBounds, deltaSeconds);
+
+    currentFocusPrompt_.clear();
+    if (roomManager_.loaded()) {
+        if (const RoomDoor* door = roomManager_.doorAt(gameState_.playerPosition)) {
+            currentFocusPrompt_ = door->prompt.empty() ? door->id : door->prompt;
+        } else if (const RoomInteraction* interaction = roomManager_.interactionAt(gameState_.playerPosition)) {
+            currentFocusPrompt_ = interaction->prompt.empty() ? interaction->id : interaction->prompt;
+        }
     }
-    if (playerPosition_.z > kRoomHalfExtent) {
-        playerPosition_.z = kRoomHalfExtent;
-    } else if (playerPosition_.z < -kRoomHalfExtent) {
-        playerPosition_.z = -kRoomHalfExtent;
-    }
-    playerPosition_.y = kEyeHeight;
 }
 
 bool Application::loadStartupScene(bool required) {
-    const std::filesystem::path scenePath = std::filesystem::path(EXO_ENGINE_ROOT) / "samples" / "reference_scene.json";
+    if (loadRoomScene(gameState_.roomId, gameState_.spawnId, false)) {
+        return true;
+    }
+
+    if (!roomManager_.lastError().empty()) {
+        Logger::warn(roomManager_.lastError());
+    }
+
+    const std::filesystem::path scenePath = engineRoot() / "samples" / "reference_scene.json";
 
     try {
         scene_ = SceneLoader::loadFromFile(scenePath);
@@ -445,11 +439,49 @@ bool Application::loadStartupScene(bool required) {
     return false;
 }
 
+bool Application::loadRoomScene(const std::string& roomId, const std::string& spawnId, bool required) {
+    if (!roomManager_.loadRoom(dataRoot(), roomId, spawnId)) {
+        if (required) {
+            Logger::error(roomManager_.lastError());
+        }
+        return false;
+    }
+
+    gameState_.roomId = roomManager_.currentRoom().id;
+    gameState_.spawnId = roomManager_.activeSpawn().id;
+    gameState_.playerPosition = roomManager_.activeSpawn().position;
+    gameState_.playerYaw = roomManager_.activeSpawn().yaw;
+
+    std::filesystem::path scenePath = roomManager_.currentRoom().scenePath;
+    if (scenePath.empty()) {
+        scenePath = roomManager_.currentRoom().sourcePath;
+    }
+    if (!scenePath.is_absolute()) {
+        scenePath = engineRoot() / scenePath;
+    }
+
+    try {
+        scene_ = SceneLoader::loadFromFile(scenePath);
+        Logger::info("Room loaded: " + roomManager_.currentRoom().id + " -> " + scenePath.string());
+        if (renderer_.stats().frameIndex > 0 || !sceneMeshHandles_.empty()) {
+            reloadSceneMeshes();
+        }
+        return true;
+    } catch (const std::exception& error) {
+        Logger::error(error.what());
+        return !required;
+    }
+}
+
 bool Application::loadStartupStory(bool required) {
-    const std::filesystem::path storyPath = std::filesystem::path(EXO_ENGINE_ROOT) / "samples" / "zero_patient_story.json";
+    std::filesystem::path storyPath = engineRoot() / "data" / "story" / "zero_patient.story.json";
+    if (!std::filesystem::exists(storyPath)) {
+        storyPath = engineRoot() / "samples" / "zero_patient_story.json";
+    }
 
     if (story_.loadFromFile(storyPath)) {
         Logger::info("Story JSON loaded: " + storyPath.string());
+        syncStoryToGameState();
         return true;
     }
 
@@ -457,28 +489,122 @@ bool Application::loadStartupStory(bool required) {
     return !required;
 }
 
+void Application::reloadSceneMeshes() {
+    sceneMeshHandles_.assign(scene_.staticMeshes().size(), -1);
+    const std::filesystem::path root = engineRoot();
+    for (std::size_t i = 0; i < scene_.staticMeshes().size(); ++i) {
+        const StaticMeshInstance& instance = scene_.staticMeshes()[i];
+        if (instance.meshSource.empty()) {
+            continue;
+        }
+        std::filesystem::path source(instance.meshSource);
+        if (!source.is_absolute()) {
+            source = root / source;
+        }
+        sceneMeshHandles_[i] = renderer_.loadSceneMesh(source);
+    }
+}
+
+void Application::activateCurrentFocus() {
+    if (!roomManager_.loaded()) {
+        return;
+    }
+
+    if (const RoomDoor* door = roomManager_.doorAt(gameState_.playerPosition)) {
+        if (door->locked && !InventorySystem::hasItem(gameState_, door->requiredItem)) {
+            Logger::warn("Door locked: " + door->id);
+            return;
+        }
+
+        const std::string doorId = door->id;
+        const std::string targetRoom = door->targetRoom;
+        const std::string targetSpawn = door->targetSpawn;
+        const std::string storyNode = door->storyNode;
+
+        if (!storyNode.empty() && story_.jumpTo(storyNode)) {
+            syncStoryToGameState();
+        }
+
+        if (loadRoomScene(targetRoom, targetSpawn, false)) {
+            Logger::info("Door transition: " + doorId + " -> " + targetRoom + "." + targetSpawn);
+        } else {
+            Logger::warn("Door transition failed: " + doorId + " -> " + targetRoom);
+        }
+        return;
+    }
+
+    if (const RoomInteraction* interaction = roomManager_.interactionAt(gameState_.playerPosition)) {
+        InteractionResult result = InteractionSystem::activate(gameState_, *interaction);
+        if (!result.activated) {
+            Logger::warn(result.message);
+            return;
+        }
+
+        if (!result.storyNode.empty() && story_.jumpTo(result.storyNode)) {
+            story_.restoreState(story_.currentNodeId(), gameState_.identity);
+            syncStoryToGameState();
+        }
+        Logger::info("Interaction: " + interaction->id);
+    }
+}
+
+void Application::evaluateCurrentTrigger() {
+    if (!roomManager_.loaded()) {
+        return;
+    }
+
+    const RoomTrigger* trigger = roomManager_.triggerAt(gameState_.playerPosition);
+    if (trigger == nullptr) {
+        return;
+    }
+
+    InteractionResult result = InteractionSystem::enterTrigger(gameState_, *trigger);
+    if (!result.activated) {
+        return;
+    }
+
+    if (!result.storyNode.empty() && story_.jumpTo(result.storyNode)) {
+        story_.restoreState(story_.currentNodeId(), gameState_.identity);
+        syncStoryToGameState();
+    }
+    Logger::info("Trigger: " + trigger->id);
+}
+
+void Application::syncStoryToGameState() {
+    if (!story_.loaded()) {
+        return;
+    }
+    gameState_.storyNodeId = story_.currentNodeId();
+    gameState_.identity = story_.identity();
+}
+
+void Application::syncGameStateToStory() {
+    if (!story_.loaded() || gameState_.storyNodeId.empty()) {
+        return;
+    }
+    if (!story_.restoreState(gameState_.storyNodeId, gameState_.identity)) {
+        Logger::warn("Unable to restore story state: " + gameState_.storyNodeId);
+    }
+}
+
+std::filesystem::path Application::engineRoot() const {
+    return std::filesystem::path(EXO_ENGINE_ROOT);
+}
+
+std::filesystem::path Application::dataRoot() const {
+    return engineRoot() / "data";
+}
+
+std::filesystem::path Application::savePath() const {
+    return engineRoot() / "saves" / "zero_patient_slot_1.json";
+}
+
 RenderView Application::makeCurrentView() const {
-    const float cosPitch = std::cos(playerPitch_);
-    const float sinPitch = std::sin(playerPitch_);
-    const float sinYaw = std::sin(playerYaw_);
-    const float cosYaw = std::cos(playerYaw_);
-
-    const Vec3 forward {
-        sinYaw * cosPitch,
-        sinPitch,
-        -cosYaw * cosPitch,
-    };
-    const Vec3 target = playerPosition_ + forward;
-
     const float aspect = window_.height() == 0
         ? 16.0f / 9.0f
         : static_cast<float>(window_.width()) / static_cast<float>(window_.height());
 
-    RenderView view;
-    view.view = Mat4::lookAt(playerPosition_, target, {0.0f, 1.0f, 0.0f});
-    view.projection = Mat4::perspective(1.221730f, aspect, 0.05f, 80.0f);
-    view.cameraPosition = playerPosition_;
-    return view;
+    return cameraDirector_.makeView(scene_, gameState_.playerPosition, gameState_.playerYaw, aspect);
 }
 
 } // namespace Exo

@@ -1,0 +1,92 @@
+{
+  "schema": "zero_patient.room.v1",
+  "id": "office_meeting_room",
+  "title": "Переговорная",
+  "body": [
+    "Стеклянная комната для звонков, где голос Антона может прозвучать раньше него."
+  ],
+  "scene": "samples/reference_scene.json",
+  "walkBounds": {
+    "min": [-1.85, -0.5, -1.85],
+    "max": [1.85, 2.5, 1.85]
+  },
+  "spawns": [
+    {
+      "id": "from_open_space",
+      "position": [0.0, 1.65, 1.25],
+      "yaw": 3.1415926
+    }
+  ],
+  "staticMeshes": [
+    {
+      "name": "meeting_blockout_room",
+      "meshAsset": "game/rooms/office_meeting_room/meeting_blockout_room.mesh",
+      "materialAsset": "game/rooms/office_meeting_room/meeting_blockout_room.material",
+      "meshSource": "samples/reference_room.obj",
+      "transform": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    },
+    {
+      "name": "meeting_phone_proxy",
+      "meshAsset": "game/props/meeting_phone_proxy.mesh",
+      "materialAsset": "game/props/meeting_phone_proxy.material",
+      "meshSource": "samples/tv.glb",
+      "transform": {
+        "position": [-1.2, 0.222, -1.2],
+        "rotation": [0.0, 0.4, 0.0],
+        "scale": [0.16, 0.16, 0.16]
+      }
+    }
+  ],
+  "pointLights": [
+    {
+      "position": [0.0, 1.85, 0.3],
+      "color": [0.88, 0.94, 1.0],
+      "radius": 4.4,
+      "intensity": 0.62
+    }
+  ],
+  "fixedCameras": [
+    {
+      "name": "meeting_phone_angle",
+      "bounds": {
+        "min": [-3.0, -0.5, -3.0],
+        "max": [3.0, 2.5, 3.0]
+      },
+      "position": [1.4, 1.5, 1.3],
+      "target": [-0.55, 0.82, -0.65],
+      "fovDeg": 44.0,
+      "near": 0.05,
+      "far": 70.0,
+      "priority": 10,
+      "blendSeconds": 0.0
+    }
+  ],
+  "doors": [
+    {
+      "id": "door_meeting_office",
+      "bounds": {
+        "min": [-0.45, -0.5, 1.1],
+        "max": [0.45, 2.5, 1.85]
+      },
+      "targetRoomId": "office_open_space_3f",
+      "targetSpawnId": "from_meeting_room",
+      "choiceText": "Вернуться в офис."
+    }
+  ],
+  "interactables": [
+    {
+      "id": "meeting_room_phone",
+      "type": "phone",
+      "position": [-1.2, 1.0, -1.2],
+      "radius": 0.75,
+      "storyNode": "meeting_room",
+      "identityDelta": -5,
+      "setsFlags": ["flag_meeting_room_phone_ready"],
+      "choiceText": "Позвонить в клинику."
+    }
+  ]
+}

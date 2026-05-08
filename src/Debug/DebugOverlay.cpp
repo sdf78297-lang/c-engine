@@ -1,5 +1,7 @@
 #include <ExoEngine/Debug/DebugOverlay.h>
 
+#include <ExoEngine/Game/GameState.h>
+#include <ExoEngine/Game/RoomManager.h>
 #include <ExoEngine/Renderer/Renderer.h>
 #include <ExoEngine/Scene/FixedCameraRig.h>
 #include <ExoEngine/Scene/Scene.h>
@@ -418,6 +420,62 @@ void DebugOverlay::drawStoryOverlay(const StoryRuntime& story) {
     ImGui::End();
 #else
     (void)story;
+#endif
+}
+
+void DebugOverlay::drawGameOverlay(const RoomManager& roomManager, const GameState& state, const std::string& focusPrompt) {
+#if EXO_DEBUG_OVERLAY_HAS_IMGUI
+    if (!initialized_ || !frameOpen_) {
+        return;
+    }
+
+    setCurrentContext(imguiContext_);
+    ImGui::SetNextWindowPos(ImVec2(984.0f, 16.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(360.0f, 300.0f), ImGuiCond_FirstUseEver);
+
+    if (ImGui::Begin("Gameplay Runtime")) {
+        ImGui::TextDisabled("Room");
+        ImGui::SameLine(110.0f);
+        if (roomManager.loaded()) {
+            ImGui::TextUnformatted(roomManager.currentRoom().id.c_str());
+        } else {
+            ImGui::TextUnformatted("<fallback scene>");
+        }
+
+        ImGui::TextDisabled("Spawn");
+        ImGui::SameLine(110.0f);
+        ImGui::TextUnformatted(state.spawnId.c_str());
+
+        ImGui::TextDisabled("Player");
+        ImGui::SameLine(110.0f);
+        ImGui::Text("%.2f, %.2f, %.2f", state.playerPosition.x, state.playerPosition.y, state.playerPosition.z);
+
+        ImGui::TextDisabled("Yaw");
+        ImGui::SameLine(110.0f);
+        ImGui::Text("%.2f", state.playerYaw);
+
+        ImGui::TextDisabled("Inventory");
+        ImGui::SameLine(110.0f);
+        ImGui::Text("%llu", static_cast<unsigned long long>(state.inventory.size()));
+
+        ImGui::TextDisabled("Flags");
+        ImGui::SameLine(110.0f);
+        ImGui::Text("%llu", static_cast<unsigned long long>(state.flags.size()));
+
+        ImGui::Separator();
+        if (!focusPrompt.empty()) {
+            ImGui::TextWrapped("E: %s", focusPrompt.c_str());
+        } else {
+            ImGui::TextDisabled("No interaction in range.");
+        }
+        ImGui::TextDisabled("F5 save / F9 load");
+    }
+
+    ImGui::End();
+#else
+    (void)roomManager;
+    (void)state;
+    (void)focusPrompt;
 #endif
 }
 

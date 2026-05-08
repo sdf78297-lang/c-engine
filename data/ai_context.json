@@ -1,0 +1,139 @@
+{
+  "schema": "zero_patient.ai_context.v1",
+  "contextId": "zero_patient_core_context",
+  "title": "Контекст для AI-агентов",
+  "body": [
+    "Проект строится вокруг тревожного офисного дня Антона Громова. Ужас начинается не с катастрофы, а с деталей, которые нельзя объяснить: лишний пропуск, задержка отражения, чужое место за его столом, голос, который отвечает раньше него.",
+    "AI должен писать и проектировать так, будто офис, дом и клиника являются реальными пространствами, а не набором хоррор-декораций."
+  ],
+  "canon": {
+    "protagonist": {
+      "id": "anton_gromov",
+      "title": "Антон Громов",
+      "body": [
+        "Антон держится за работу и привычный порядок, потому что боится признать диагноз и потерю контроля. Его главный конфликт не в том, чтобы победить монстра, а в том, чтобы остаться собой достаточно долго, чтобы сказать правду."
+      ]
+    },
+    "primaryThreat": {
+      "id": "other_anton",
+      "title": "Другой",
+      "body": [
+        "Другой выглядит как версия Антона, которая уже заняла его место. Он не обязан нападать сразу. Его сила в спокойствии: он стоит там, где Антон должен был быть, и ведет себя так, будто это нормально."
+      ]
+    },
+    "identityScale": {
+      "id": "identity",
+      "min": 0,
+      "max": 100,
+      "title": "Я",
+      "body": [
+        "Шкала показывает, насколько Антон еще удерживает собственную личность. Решения, где он скрывает правду, игнорирует очевидное или отказывается действовать, снижают значение. Решения, где он признает происходящее и ищет контакт с реальностью, могут вернуть контроль."
+      ]
+    }
+  },
+  "designPillars": [
+    {
+      "id": "ordinary_place_under_pressure",
+      "title": "Обычное место под давлением",
+      "body": [
+        "Офис должен сначала выглядеть убедительно: рабочие столы, стеклянные переговорные, шум вентиляции, служебные двери. Аномалия сильнее, когда она нарушает порядок, которому игрок уже поверил."
+      ]
+    },
+    {
+      "id": "camera_as_director",
+      "title": "Камера как режиссер",
+      "body": [
+        "Фиксированная камера выбирает, что игрок чувствует: контроль, слежку, уязвимость или раскрытие угрозы. Ракурс не должен быть случайным."
+      ]
+    },
+    {
+      "id": "items_with_memory",
+      "title": "Предметы с памятью",
+      "body": [
+        "Предметы должны не только открывать замки, но и говорить о жизни Антона: работа, диагноз, Надя, попытки скрыть страх, мелкие привычки."
+      ]
+    },
+    {
+      "id": "puzzles_inside_world",
+      "title": "Загадки внутри мира",
+      "body": [
+        "Загадка не выглядит как отдельная мини-игра. Это действие с понятным объектом: восстановить питание, собрать временный пропуск, сверить фотографию, поймать момент в отражении."
+      ]
+    }
+  ],
+  "toneRules": {
+    "pace": "slow_pressure_then_precise_reveal",
+    "dialogue": "short_human_understated",
+    "horror": "psychological_spatial_identity",
+    "avoid": [
+      "lore_dump",
+      "generic_monster_exposition",
+      "random_gore",
+      "quest_marker_language",
+      "tutorial_voice"
+    ],
+    "prefer": [
+      "physical_details",
+      "small_contradictions",
+      "diegetic_clues",
+      "uncomfortable_silence",
+      "camera_led_reveals"
+    ]
+  },
+  "dataRules": {
+    "technicalIds": "latin_snake_case",
+    "allowedRussianFields": [
+      "title",
+      "body",
+      "choiceText"
+    ],
+    "roomFilePattern": "data/rooms/<room_id>/room.json",
+    "doNotEdit": [
+      "CMakeLists.txt",
+      "cmake",
+      "src",
+      "include",
+      "samples",
+      "assets",
+      "apps",
+      "build"
+    ]
+  },
+  "firstPlayableIntent": {
+    "roomId": "office_open_space_3f",
+    "title": "Первый офисный узел",
+    "body": [
+      "Игрок получает контроль в офисе третьего этажа. Пространство учит читать fixed cameras, взаимодействовать с предметами, замечать аномалии и решать первую маленькую цепочку: найти основу бейджа, согнуть скрепку, собрать временный пропуск, открыть служебный доступ к щитку и восстановить питание двери."
+    ],
+    "requiredPlayerTakeaways": [
+      "fixed_camera_language",
+      "short_interaction_prompts",
+      "inventory_pickup",
+      "item_combination",
+      "puzzle_state_change",
+      "identity_pressure"
+    ]
+  },
+  "futureSystems": [
+    {
+      "id": "inventory_runtime",
+      "status": "planned"
+    },
+    {
+      "id": "interaction_runtime",
+      "status": "planned"
+    },
+    {
+      "id": "puzzle_runtime",
+      "status": "planned"
+    },
+    {
+      "id": "identity_event_runtime",
+      "status": "planned"
+    },
+    {
+      "id": "room_state_save_runtime",
+      "status": "planned"
+    }
+  ]
+}
