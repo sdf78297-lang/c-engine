@@ -4,6 +4,8 @@
 
 `web/index.html` is the runtime version used by the engine. It is unpacked from the standalone bundle so Ultralight can load it directly without the temporary bundler bootstrap, `Blob` URLs, or `DecompressionStream`.
 
+Never copy a standalone export directly into `web/index.html`. Put the export into `void_echo_menu_source.html` and run `node tools/extract_html_menu_bundle.mjs .`; the extractor now rejects bundled runtime code if it leaks into the generated file.
+
 The runtime contract with C++ is URL-based:
 
 - `Новая игра` opens the prehistory/diagnosis screen inside the live HTML menu.
@@ -11,6 +13,8 @@ The runtime contract with C++ is URL-based:
 - `exo://quit-game` closes the game after the menu's quit animation.
 
 The diagnosis screen uses the original typewriter-style reveal with a frame-batched renderer and a lighter `story-mode` effect profile. Do not bring back one-timeout-per-character DOM writes or an internal draggable story scrollbar there; Ultralight stutters when the letter, card, fullscreen VHS layers, and text scrolling repaint at the same time.
+
+While `story-mode` is open, animations on inactive screens are paused. Keep this guard: the hidden main menu still has SVG, EKG, glitch, and title animations that can run even when the screen is invisible.
 
 The C++ bridge uploads only the dirty Ultralight surface rectangle to the menu texture after the first full upload. Do not change it back to full-surface `glTexSubImage2D` for every small HTML update.
 

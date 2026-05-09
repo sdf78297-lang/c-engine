@@ -30,6 +30,16 @@ const extByMime = {
   'application/javascript': '.js',
 };
 
+const generatedExtensions = new Set(Object.values(extByMime));
+for (const entry of fs.readdirSync(assetDir, { withFileTypes: true })) {
+  if (!entry.isFile()) {
+    continue;
+  }
+  if (generatedExtensions.has(path.extname(entry.name).toLowerCase())) {
+    fs.rmSync(path.join(assetDir, entry.name));
+  }
+}
+
 let extractedAssets = 0;
 for (const [uuid, entry] of Object.entries(manifest)) {
   let bytes = Buffer.from(entry.data, 'base64');
@@ -103,7 +113,7 @@ template = template.replace(
 
 template = template.replace(
   "  @keyframes caret{ 50%{ opacity: 0; } }\n\n  .story-foot{",
-  "  @keyframes caret{ 50%{ opacity: 0; } }\n\n  .story-mode .grain,\n  .story-mode .flicker,\n  .story-mode .tape-line,\n  .story-mode .crt-curve{\n    display: none;\n  }\n  .story-mode .scanlines{ opacity: .12; }\n  .story-mode .vignette{ mix-blend-mode: normal; opacity: .82; }\n\n  .story-foot{",
+  "  @keyframes caret{ 50%{ opacity: 0; } }\n\n  .story-mode .grain,\n  .story-mode .flicker,\n  .story-mode .tape-line,\n  .story-mode .crt-curve{\n    display: none;\n  }\n  .story-mode .scanlines{ opacity: .12; }\n  .story-mode .vignette{ mix-blend-mode: normal; opacity: .82; }\n  .story-mode .screen:not(.active) *,\n  .story-mode .screen:not(.active)::before,\n  .story-mode .screen:not(.active)::after{\n    animation-play-state: paused !important;\n  }\n\n  .story-foot{",
 );
 
 template = template.replace(
@@ -362,6 +372,11 @@ for (const [from, to] of [
 }
 
 fs.mkdirSync(outDir, { recursive: true });
+
+if (/__bundler\/(?:manifest|template)|__bundler_loading|__bundler_thumbnail|DecompressionStream|createObjectURL|DOMParser/.test(template)) {
+  throw new Error('Extracted menu still contains the standalone bundler runtime. Use void_echo_menu_source.html as source and keep web/index.html as generated runtime.');
+}
+
 fs.writeFileSync(path.join(outDir, 'index.html'), template, 'utf8');
 
 console.log(`Extracted ${extractedAssets} assets to ${outDir}`);

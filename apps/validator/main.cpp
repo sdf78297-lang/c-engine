@@ -31,6 +31,7 @@ public:
     int run() {
         validateProjectManifest();
         validateAiContext();
+        validateHtmlMenuRuntime();
         validateCatalog(root_ / "data" / "items.json", "items");
         validateCatalog(root_ / "data" / "puzzles.json", "puzzles");
         validateRooms();
@@ -117,6 +118,39 @@ private:
         Json root = parseJsonFile(path);
         if (root.is_object()) {
             requireString(root, path, "schema");
+        }
+    }
+
+    void validateHtmlMenuRuntime() {
+        const std::filesystem::path path = root_ / "assets" / "ui" / "main_menu" / "web" / "index.html";
+        const std::string text = readFile(path);
+        if (text.empty()) {
+            return;
+        }
+
+        for (const std::string_view marker : {
+                 "__bundler/manifest",
+                 "__bundler/template",
+                 "__bundler_loading",
+                 "__bundler_thumbnail",
+                 "DecompressionStream",
+                 "createObjectURL",
+                 "DOMParser",
+                 "atob(",
+             }) {
+            if (text.find(marker) != std::string::npos) {
+                error(path, "HTML menu runtime still contains standalone bundle marker: " + std::string(marker));
+            }
+        }
+
+        if (text.find(".story-mode .screen:not(.active)") == std::string::npos) {
+            error(path, "story-mode must pause inactive screen animations");
+        }
+        if (text.find("scrollTop") != std::string::npos) {
+            error(path, "story typewriter must not force scrollTop on every character");
+        }
+        if (text.find("insertAdjacentHTML") != std::string::npos) {
+            error(path, "story typewriter must not rebuild HTML fragments per character");
         }
     }
 

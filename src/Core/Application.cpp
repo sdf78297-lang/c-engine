@@ -310,6 +310,7 @@ int Application::runWindowed() {
     bool running = true;
     auto lastTime = SDL_GetPerformanceCounter();
     const float perfFreq = static_cast<float>(SDL_GetPerformanceFrequency());
+    const auto frameLoopStart = lastTime;
 
     while (running) {
         const auto now = SDL_GetPerformanceCounter();
@@ -452,6 +453,19 @@ int Application::runWindowed() {
     }
 
     SDL_SetRelativeMouseMode(SDL_FALSE);
+
+    if (config_.maxFrames != 0) {
+        const auto frameLoopEnd = SDL_GetPerformanceCounter();
+        const double elapsedSeconds = static_cast<double>(frameLoopEnd - frameLoopStart)
+            / static_cast<double>(SDL_GetPerformanceFrequency());
+        const double averageFps = elapsedSeconds > 0.0
+            ? static_cast<double>(renderer_.stats().frameIndex) / elapsedSeconds
+            : 0.0;
+        Logger::info("Frame run: " + std::to_string(renderer_.stats().frameIndex)
+            + " frames in " + std::to_string(elapsedSeconds)
+            + " sec (" + std::to_string(averageFps) + " fps)");
+    }
+
     renderer_.shutdown();
     window_.destroy();
     return 0;
