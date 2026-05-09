@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include <ExoEngine/Audio/AudioSystem.h>
 #include <ExoEngine/Debug/DebugOverlay.h>
 #include <ExoEngine/Game/CameraDirector.h>
 #include <ExoEngine/Game/GameState.h>
@@ -43,6 +44,9 @@ private:
     void reloadSceneMeshes();
     void activateCurrentFocus();
     void evaluateCurrentTrigger();
+    void processRoomEnterEvents();
+    void playAudioCue(const std::string& cueId);
+    [[nodiscard]] bool isStaticMeshVisible(const StaticMeshInstance& instance) const;
     void syncStoryToGameState();
     void syncGameStateToStory();
     [[nodiscard]] std::filesystem::path engineRoot() const;
@@ -53,6 +57,7 @@ private:
     Scene scene_;
     Window window_;
     Renderer renderer_;
+    AudioSystem audioSystem_;
     DebugOverlay debugOverlay_;
     StoryRuntime story_;
     RoomManager roomManager_;

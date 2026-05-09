@@ -280,7 +280,13 @@ int Application::runWindowed() {
         return 1;
     }
 
+    const bool audioReady = audioSystem_.initialize();
+    if (!audioReady) {
+        Logger::warn("Audio system unavailable; continuing without voice cues");
+    }
+
     if (!renderer_.initialize(window_.width(), window_.height())) {
+        audioSystem_.shutdown();
         return 1;
     }
 
@@ -302,6 +308,9 @@ int Application::runWindowed() {
         SDL_SetRelativeMouseMode(SDL_TRUE);
     } else {
         SDL_SetRelativeMouseMode(SDL_FALSE);
+    }
+    if (!mainMenuActive) {
+        processRoomEnterEvents();
     }
 
     Logger::info("Runtime running. HTML menu: mouse/Enter start, Esc back. Game: WASD move, mouse look, Shift run, Tab mouse capture, E interact, F5 save, F9 load, Esc quit.");
@@ -408,6 +417,7 @@ int Application::runWindowed() {
                 if (config_.maxFrames == 0) {
                     SDL_SetRelativeMouseMode(SDL_TRUE);
                 }
+                processRoomEnterEvents();
                 Logger::info("HTML menu requested game start");
                 continue;
             }
@@ -462,6 +472,9 @@ int Application::runWindowed() {
         renderer_.beginFrame(makeCurrentView());
         for (std::size_t i = 0; i < scene_.staticMeshes().size(); ++i) {
             const StaticMeshInstance& instance = scene_.staticMeshes()[i];
+            if (!isStaticMeshVisible(instance)) {
+                continue;
+            }
             const Mat4 model = Mat4::translate(instance.transform.position)
                 * Mat4::rotateY(instance.transform.rotation.y)
                 * Mat4::scale(instance.transform.scale);
@@ -504,6 +517,7 @@ int Application::runWindowed() {
     }
 
     renderer_.shutdown();
+    audioSystem_.shutdown();
     window_.destroy();
     return 0;
 }
@@ -644,6 +658,9 @@ bool Application::loadRoomScene(const std::string& roomId, const std::string& sp
         if (renderer_.stats().frameIndex > 0 || !sceneMeshHandles_.empty()) {
             reloadSceneMeshes();
         }
+        if (audioSystem_.available()) {
+            processRoomEnterEvents();
+        }
         return true;
     } catch (const std::exception& error) {
         Logger::error(error.what());
@@ -745,7 +762,58 @@ void Application::evaluateCurrentTrigger() {
         story_.restoreState(story_.currentNodeId(), gameState_.identity);
         syncStoryToGameState();
     }
+    playAudioCue(trigger->audioCue);
     Logger::info("Trigger: " + trigger->id);
+}
+
+void Application::processRoomEnterEvents() {
+    if (!roomManager_.loaded()) {
+        return;
+    }
+
+    for (const RoomEnterEvent& event : roomManager_.currentRoom().roomEnterEvents) {
+        if (event.once && !event.setFlag.empty() && gameState_.flags.contains(event.setFlag)) {
+            continue;
+        }
+
+        if (!event.setFlag.empty()) {
+            gameState_.flags.insert(event.setFlag);
+        }
+        playAudioCue(event.audioCue);
+        Logger::info("Room enter event: " + event.id);
+    }
+}
+
+void Application::playAudioCue(const std::string& cueId) {
+    if (cueId.empty() || !roomManager_.loaded()) {
+        return;
+    }
+
+    const auto& cues = roomManager_.currentRoom().audioCues;
+    const auto it = cues.find(cueId);
+    if (it == cues.end()) {
+        Logger::warn("Missing audio cue in room '" + roomManager_.currentRoom().id + "': " + cueId);
+        return;
+    }
+
+    std::filesystem::path path = it->second;
+    if (!path.is_absolute()) {
+        path = engineRoot() / path;
+    }
+    const bool played = audioSystem_.playOneShot(path);
+    if (!played && audioSystem_.available()) {
+        Logger::warn("Audio cue did not play: " + cueId);
+    }
+}
+
+bool Application::isStaticMeshVisible(const StaticMeshInstance& instance) const {
+    if (!instance.visibleWhenFlag.empty() && !gameState_.flags.contains(instance.visibleWhenFlag)) {
+        return false;
+    }
+    if (!instance.hiddenWhenFlag.empty() && gameState_.flags.contains(instance.hiddenWhenFlag)) {
+        return false;
+    }
+    return true;
 }
 
 void Application::syncStoryToGameState() {

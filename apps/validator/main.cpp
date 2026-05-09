@@ -204,9 +204,14 @@ private:
                 if (source != nullptr && source->is_string()) {
                     requireExists(resolve(source->get<std::string>()), path, "meshSource missing");
                 }
+                validateOptionalFlag(mesh, path, "visibleWhenFlag");
+                validateOptionalFlag(mesh, path, "hiddenWhenFlag");
             }
         }
         validateCollisionBoxes(root, path);
+        const std::unordered_set<std::string> audioCueIds = validateAudioCues(root, path);
+        validateRoomTriggers(root, path, audioCueIds);
+        validateRoomEnterEvents(root, path, audioCueIds);
 
         const bool hasDoors = hasNonEmptyArray(root, "doors");
         const bool hasInteractables = hasNonEmptyArray(root, "interactables") || hasNonEmptyArray(root, "interactions");
@@ -220,6 +225,140 @@ private:
         if (!hasSpawns) {
             error(path, "room must define spawnPoints or spawns");
         }
+    }
+
+    [[nodiscard]] std::unordered_set<std::string> validateAudioCues(
+        const Json& room,
+        const std::filesystem::path& path) {
+        std::unordered_set<std::string> ids;
+        const Json* audio = find(room, "audio");
+        if (audio == nullptr) {
+            return ids;
+        }
+        if (!audio->is_object()) {
+            error(path, "audio must be an object");
+            return ids;
+        }
+
+        const Json* cues = find(*audio, "cues");
+        if (cues == nullptr) {
+            return ids;
+        }
+        if (!cues->is_array()) {
+            error(path, "audio.cues must be an array");
+            return ids;
+        }
+
+        for (const Json& cue : *cues) {
+            if (!cue.is_object()) {
+                error(path, "audio cue must be an object");
+                continue;
+            }
+
+            const Json* id = find(cue, "id");
+            if (id == nullptr || !id->is_string()) {
+                error(path, "audio cue is missing id");
+                continue;
+            }
+            const std::string value = id->get<std::string>();
+            validateAsciiId(value, path, "audio cue id");
+            if (!ids.insert(value).second) {
+                error(path, "duplicate audio cue id: " + value);
+            }
+
+            const Json* audioPath = find(cue, "path");
+            if (audioPath == nullptr || !audioPath->is_string()) {
+                error(path, "audio cue is missing path");
+                continue;
+            }
+            requireExists(resolve(audioPath->get<std::string>()), path, "audio cue file missing");
+        }
+
+        return ids;
+    }
+
+    void validateRoomTriggers(
+        const Json& room,
+        const std::filesystem::path& path,
+        const std::unordered_set<std::string>& audioCueIds) {
+        const Json* triggers = find(room, "triggers");
+        if (triggers == nullptr) {
+            return;
+        }
+        if (!triggers->is_array()) {
+            error(path, "triggers must be an array");
+            return;
+        }
+
+        for (const Json& trigger : *triggers) {
+            if (!trigger.is_object()) {
+                error(path, "trigger must be an object");
+                continue;
+            }
+            validateOptionalFlag(trigger, path, "setFlag");
+            validateAudioCueRef(trigger, path, audioCueIds);
+            const Json* bounds = find(trigger, "bounds");
+            if (bounds == nullptr || !bounds->is_object()) {
+                error(path, "trigger is missing bounds");
+            } else {
+                validateBounds(*bounds, path, "trigger bounds");
+            }
+        }
+    }
+
+    void validateRoomEnterEvents(
+        const Json& room,
+        const std::filesystem::path& path,
+        const std::unordered_set<std::string>& audioCueIds) {
+        const Json* events = find(room, "roomEnterEvents");
+        if (events == nullptr) {
+            return;
+        }
+        if (!events->is_array()) {
+            error(path, "roomEnterEvents must be an array");
+            return;
+        }
+
+        for (const Json& event : *events) {
+            if (!event.is_object()) {
+                error(path, "room enter event must be an object");
+                continue;
+            }
+            validateOptionalFlag(event, path, "setFlag");
+            validateAudioCueRef(event, path, audioCueIds);
+        }
+    }
+
+    void validateAudioCueRef(
+        const Json& object,
+        const std::filesystem::path& path,
+        const std::unordered_set<std::string>& audioCueIds) {
+        const Json* cue = find(object, "audioCue");
+        if (cue == nullptr) {
+            return;
+        }
+        if (!cue->is_string()) {
+            error(path, "audioCue must be a string");
+            return;
+        }
+
+        const std::string value = cue->get<std::string>();
+        validateAsciiId(value, path, "audioCue");
+        if (!audioCueIds.contains(value)) {
+            error(path, "audioCue points to missing audio.cues id: " + value);
+        }
+    }
+
+    void validateOptionalFlag(const Json& object, const std::filesystem::path& path, std::string_view field) {
+        const Json* flag = find(object, field);
+        if (flag == nullptr) {
+            return;
+        }
+        if (!flag->is_string()) {
+            error(path, std::string(field) + " must be a string");
+            return;
+        }
+        validateAsciiId(flag->get<std::string>(), path, field);
     }
 
     void validateCollisionBoxes(const Json& room, const std::filesystem::path& path) {

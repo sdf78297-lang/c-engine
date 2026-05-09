@@ -19,6 +19,8 @@ struct StaticMeshInstance {
     std::string meshAsset;
     std::string materialAsset;
     std::string meshSource;
+    std::string visibleWhenFlag;
+    std::string hiddenWhenFlag;
     Transform transform {};
 };
 

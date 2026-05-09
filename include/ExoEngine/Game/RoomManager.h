@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <ExoEngine/Scene/FixedCameraRig.h>
@@ -43,7 +44,15 @@ struct RoomTrigger {
     Bounds3 bounds {};
     std::string storyNode;
     std::string setFlag;
+    std::string audioCue;
     int identityDelta = 0;
+    bool once = true;
+};
+
+struct RoomEnterEvent {
+    std::string id;
+    std::string setFlag;
+    std::string audioCue;
     bool once = true;
 };
 
@@ -62,6 +71,8 @@ struct RoomDefinition {
     std::vector<RoomInteraction> interactions;
     std::vector<RoomDoor> doors;
     std::vector<RoomTrigger> triggers;
+    std::vector<RoomEnterEvent> roomEnterEvents;
+    std::unordered_map<std::string, std::filesystem::path> audioCues;
     std::vector<RoomCollisionBox> collisionBoxes;
 };
 

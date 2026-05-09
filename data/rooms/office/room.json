@@ -145,6 +145,79 @@
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
       "transform": {"position": [3.6, 0.92, 1.36], "rotation": [0.0, 3.14159, 0.0], "scale": [0.34, 0.34, 0.34]}
+    },
+    {
+      "name": "office_chair_pc_01",
+      "meshAsset": "game/props/office_chair_grey_fabric.mesh",
+      "materialAsset": "game/props/office_chair_grey_fabric.material",
+      "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "transform": {"position": [-3.6, 0.456, -2.69], "rotation": [0.0, 0.0, 0.0], "scale": [0.48, 0.48, 0.48]}
+    },
+    {
+      "name": "office_chair_pc_02",
+      "meshAsset": "game/props/office_chair_grey_fabric.mesh",
+      "materialAsset": "game/props/office_chair_grey_fabric.material",
+      "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "transform": {"position": [-1.2, 0.456, -2.69], "rotation": [0.0, 0.0, 0.0], "scale": [0.48, 0.48, 0.48]}
+    },
+    {
+      "name": "office_chair_pc_03",
+      "meshAsset": "game/props/office_chair_grey_fabric.mesh",
+      "materialAsset": "game/props/office_chair_grey_fabric.material",
+      "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "transform": {"position": [1.2, 0.456, -2.69], "rotation": [0.0, 0.0, 0.0], "scale": [0.48, 0.48, 0.48]}
+    },
+    {
+      "name": "office_chair_pc_04_occupied",
+      "meshAsset": "game/props/office_chair_grey_fabric.mesh",
+      "materialAsset": "game/props/office_chair_grey_fabric.material",
+      "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "hiddenWhenFlag": "office_person_vanished",
+      "transform": {"position": [3.6, 0.456, -2.69], "rotation": [0.0, 0.0, 0.0], "scale": [0.48, 0.48, 0.48]}
+    },
+    {
+      "name": "office_business_man_pc_04",
+      "meshAsset": "game/characters/office_business_man.mesh",
+      "materialAsset": "game/characters/office_business_man.material",
+      "meshSource": "assets/characters/office_business_man.glb",
+      "hiddenWhenFlag": "office_person_vanished",
+      "transform": {"position": [3.6, 0.86, -3.02], "rotation": [0.0, 0.0, 0.0], "scale": [0.90, 0.90, 0.90]}
+    },
+    {
+      "name": "office_chair_pc_04_empty",
+      "meshAsset": "game/props/office_chair_grey_fabric.mesh",
+      "materialAsset": "game/props/office_chair_grey_fabric.material",
+      "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "visibleWhenFlag": "office_person_vanished",
+      "transform": {"position": [3.6, 0.456, -2.69], "rotation": [0.0, 0.0, 0.0], "scale": [0.48, 0.48, 0.48]}
+    },
+    {
+      "name": "office_chair_pc_05",
+      "meshAsset": "game/props/office_chair_grey_fabric.mesh",
+      "materialAsset": "game/props/office_chair_grey_fabric.material",
+      "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "transform": {"position": [-3.6, 0.456, 2.69], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
+    },
+    {
+      "name": "office_chair_pc_06",
+      "meshAsset": "game/props/office_chair_grey_fabric.mesh",
+      "materialAsset": "game/props/office_chair_grey_fabric.material",
+      "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "transform": {"position": [-1.2, 0.456, 2.69], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
+    },
+    {
+      "name": "office_chair_pc_07",
+      "meshAsset": "game/props/office_chair_grey_fabric.mesh",
+      "materialAsset": "game/props/office_chair_grey_fabric.material",
+      "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "transform": {"position": [1.2, 0.456, 2.69], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
+    },
+    {
+      "name": "office_chair_pc_08",
+      "meshAsset": "game/props/office_chair_grey_fabric.mesh",
+      "materialAsset": "game/props/office_chair_grey_fabric.material",
+      "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "transform": {"position": [3.6, 0.456, 2.69], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
     }
   ],
   "collisionBoxes": [
@@ -278,7 +351,7 @@
     {
       "id": "from_elevator_day",
       "position": [0.0, 0.0, 3.05],
-      "yawDeg": 180.0
+      "yawDeg": 0.0
     },
     {
       "id": "from_restroom",
@@ -342,6 +415,18 @@
         "На двери нет таблички. Только считыватель и узкая царапина на пластике рядом с ним."
       ],
       "choiceText": "Приложить пропуск."
+    }
+  ],
+  "triggers": [
+    {
+      "id": "trigger_office_person_pc_04_vanish",
+      "bounds": {
+        "min": [2.45, -0.5, -3.45],
+        "max": [4.75, 2.5, -2.62]
+      },
+      "setFlag": "office_person_vanished",
+      "audioCue": "office_maybe_imagined",
+      "once": true
     }
   ],
   "interactables": [
@@ -594,9 +679,27 @@
       ]
     }
   ],
+  "roomEnterEvents": [
+    {
+      "id": "event_office_person_intro_voice",
+      "setFlag": "office_person_intro_played",
+      "audioCue": "office_person_appears",
+      "once": true
+    }
+  ],
   "audio": {
     "ambientId": "office_day_hvac",
     "ambientPath": "audio/ambience/office_day_hvac_loop.ogg",
+    "cues": [
+      {
+        "id": "office_person_appears",
+        "path": "assets/audio/voice/office_person_appears.mp3"
+      },
+      {
+        "id": "office_maybe_imagined",
+        "path": "assets/audio/voice/office_maybe_imagined.mp3"
+      }
+    ],
     "stingers": [
       {
         "id": "stinger_lamp_blink",
@@ -622,7 +725,9 @@
     "flag_office_power_restored",
     "flag_viewed_corporate_photo",
     "flag_other_marked_in_photo",
-    "flag_other_seen_in_window"
+    "flag_other_seen_in_window",
+    "office_person_intro_played",
+    "office_person_vanished"
   ],
   "validation": {
     "requiresFixedCameras": true,

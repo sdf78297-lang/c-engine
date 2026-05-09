@@ -50,6 +50,8 @@ public:
         room.interactions = readInteractions();
         room.doors = readDoors();
         room.triggers = readTriggers();
+        room.roomEnterEvents = readRoomEnterEvents();
+        room.audioCues = readAudioCues();
         room.collisionBoxes = readCollisionBoxes();
 
         if (room.spawns.empty()) {
@@ -368,11 +370,70 @@ private:
             trigger.bounds = bounds(requiredField(triggerJson, "bounds", path), childPath(path, "bounds"));
             trigger.storyNode = optionalString(triggerJson, "storyNode", path, "");
             trigger.setFlag = optionalString(triggerJson, "setFlag", path, "");
+            trigger.audioCue = optionalString(triggerJson, "audioCue", path, "");
             trigger.identityDelta = optionalInt(triggerJson, "identityDelta", path, 0);
             trigger.once = optionalBool(triggerJson, "once", path, true);
             triggers.push_back(std::move(trigger));
         }
         return triggers;
+    }
+
+    [[nodiscard]] std::vector<RoomEnterEvent> readRoomEnterEvents() const {
+        const Json* eventsJson = optionalField(root_, "roomEnterEvents");
+        if (eventsJson == nullptr) {
+            return {};
+        }
+        expectArray(*eventsJson, "$.roomEnterEvents");
+
+        std::vector<RoomEnterEvent> events;
+        for (std::size_t i = 0; i < eventsJson->size(); ++i) {
+            const Json& eventJson = (*eventsJson)[i];
+            const std::string path = childPath("$.roomEnterEvents", i);
+            expectObject(eventJson, path);
+
+            RoomEnterEvent event;
+            event.id = requiredString(eventJson, "id", path);
+            event.setFlag = optionalString(eventJson, "setFlag", path, "");
+            if (event.setFlag.empty()) {
+                if (const Json* flags = optionalField(eventJson, "setsFlags");
+                    flags != nullptr && flags->is_array() && !flags->empty() && (*flags)[0].is_string()) {
+                    event.setFlag = (*flags)[0].get<std::string>();
+                }
+            }
+            event.audioCue = optionalString(eventJson, "audioCue", path, "");
+            event.once = optionalBool(eventJson, "once", path, true);
+            events.push_back(std::move(event));
+        }
+        return events;
+    }
+
+    [[nodiscard]] std::unordered_map<std::string, std::filesystem::path> readAudioCues() const {
+        const Json* audioJson = optionalField(root_, "audio");
+        if (audioJson == nullptr) {
+            return {};
+        }
+        expectObject(*audioJson, "$.audio");
+
+        const Json* cuesJson = optionalField(*audioJson, "cues");
+        if (cuesJson == nullptr) {
+            return {};
+        }
+        expectArray(*cuesJson, "$.audio.cues");
+
+        std::unordered_map<std::string, std::filesystem::path> cues;
+        for (std::size_t i = 0; i < cuesJson->size(); ++i) {
+            const Json& cueJson = (*cuesJson)[i];
+            const std::string path = childPath("$.audio.cues", i);
+            expectObject(cueJson, path);
+
+            const std::string id = requiredString(cueJson, "id", path);
+            const std::filesystem::path filePath = optionalPath(cueJson, "path", path);
+            if (filePath.empty()) {
+                fail(childPath(path, "path"), "missing required field");
+            }
+            cues[id] = filePath;
+        }
+        return cues;
     }
 
     [[nodiscard]] std::vector<RoomCollisionBox> readCollisionBoxes() const {

@@ -43,6 +43,8 @@ Scene Scene::createReferenceScene() {
         .meshAsset = "engine/reference_room.mesh",
         .materialAsset = "engine/reference_room.material",
         .meshSource = "",
+        .visibleWhenFlag = "",
+        .hiddenWhenFlag = "",
     });
 
     scene.addPointLight({
