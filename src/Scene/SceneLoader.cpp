@@ -304,6 +304,28 @@ private:
             if (const Json* transform = optionalField(mesh, "transform")) {
                 instance.transform = transformValue(*transform, childPath(meshPath, "transform"));
             }
+            if (const Json* renderOverrides = optionalField(mesh, "renderOverrides")) {
+                const std::string overridePath = childPath(meshPath, "renderOverrides");
+                expectObject(*renderOverrides, overridePath);
+                instance.materialOverride.colorTint = optionalVec3Field(
+                    *renderOverrides,
+                    "colorTint",
+                    overridePath,
+                    instance.materialOverride.colorTint);
+                instance.materialOverride.emissiveColor = optionalVec3Field(
+                    *renderOverrides,
+                    "emissiveColor",
+                    overridePath,
+                    instance.materialOverride.emissiveColor);
+                instance.materialOverride.emissiveIntensity = optionalNumberField(
+                    *renderOverrides,
+                    "emissiveIntensity",
+                    overridePath,
+                    instance.materialOverride.emissiveIntensity);
+                validateNonNegative(instance.materialOverride.colorTint, childPath(overridePath, "colorTint"));
+                validateNonNegative(instance.materialOverride.emissiveColor, childPath(overridePath, "emissiveColor"));
+                validateNonNegative(instance.materialOverride.emissiveIntensity, childPath(overridePath, "emissiveIntensity"));
+            }
 
             scene.addStaticMesh(std::move(instance));
         }

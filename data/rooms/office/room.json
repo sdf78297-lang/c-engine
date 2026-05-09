@@ -44,6 +44,7 @@
       "meshAsset": "game/rooms/office/office_clean_blockout.mesh",
       "materialAsset": "game/rooms/office/office_clean_blockout.material",
       "meshSource": "assets/rooms/office/office_clean.obj",
+      "renderOverrides": {"colorTint": [0.62, 0.70, 0.74]},
       "transform": {
         "position": [0.0, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0],
@@ -55,6 +56,7 @@
       "meshAsset": "game/props/office_table_meshy.mesh",
       "materialAsset": "game/props/office_table_meshy.material",
       "meshSource": "assets/props/office_table_meshy.glb",
+      "renderOverrides": {"colorTint": [0.70, 0.58, 0.50]},
       "transform": {"position": [-3.6, 0.35, -1.75], "rotation": [0.0, 0.0, 0.0], "scale": [1.05, 1.05, 1.05]}
     },
     {
@@ -62,6 +64,7 @@
       "meshAsset": "game/props/office_pc_meshy.mesh",
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
+      "renderOverrides": {"colorTint": [0.74, 0.88, 1.0], "emissiveColor": [0.34, 0.62, 1.0], "emissiveIntensity": 0.34},
       "transform": {"position": [-3.6, 0.92, -2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
@@ -69,6 +72,7 @@
       "meshAsset": "game/props/office_table_meshy.mesh",
       "materialAsset": "game/props/office_table_meshy.material",
       "meshSource": "assets/props/office_table_meshy.glb",
+      "renderOverrides": {"colorTint": [0.70, 0.58, 0.50]},
       "transform": {"position": [-1.2, 0.35, -1.75], "rotation": [0.0, 0.0, 0.0], "scale": [1.05, 1.05, 1.05]}
     },
     {
@@ -76,6 +80,7 @@
       "meshAsset": "game/props/office_pc_meshy.mesh",
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
+      "renderOverrides": {"colorTint": [0.74, 0.88, 1.0], "emissiveColor": [0.34, 0.62, 1.0], "emissiveIntensity": 0.34},
       "transform": {"position": [-1.2, 0.92, -2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
@@ -83,6 +88,7 @@
       "meshAsset": "game/props/office_table_meshy.mesh",
       "materialAsset": "game/props/office_table_meshy.material",
       "meshSource": "assets/props/office_table_meshy.glb",
+      "renderOverrides": {"colorTint": [0.70, 0.58, 0.50]},
       "transform": {"position": [1.2, 0.35, -1.75], "rotation": [0.0, 0.0, 0.0], "scale": [1.05, 1.05, 1.05]}
     },
     {
@@ -90,6 +96,7 @@
       "meshAsset": "game/props/office_pc_meshy.mesh",
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
+      "renderOverrides": {"colorTint": [0.74, 0.88, 1.0], "emissiveColor": [0.34, 0.62, 1.0], "emissiveIntensity": 0.34},
       "transform": {"position": [1.2, 0.92, -2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
@@ -97,6 +104,7 @@
       "meshAsset": "game/props/office_table_meshy.mesh",
       "materialAsset": "game/props/office_table_meshy.material",
       "meshSource": "assets/props/office_table_meshy.glb",
+      "renderOverrides": {"colorTint": [0.70, 0.58, 0.50]},
       "transform": {"position": [3.6, 0.35, -1.75], "rotation": [0.0, 0.0, 0.0], "scale": [1.05, 1.05, 1.05]}
     },
     {
@@ -104,6 +112,7 @@
       "meshAsset": "game/props/office_pc_meshy.mesh",
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
+      "renderOverrides": {"colorTint": [0.74, 0.88, 1.0], "emissiveColor": [0.34, 0.62, 1.0], "emissiveIntensity": 0.34},
       "transform": {"position": [3.6, 0.92, -2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
@@ -111,6 +120,7 @@
       "meshAsset": "game/props/office_table_meshy.mesh",
       "materialAsset": "game/props/office_table_meshy.material",
       "meshSource": "assets/props/office_table_meshy.glb",
+      "renderOverrides": {"colorTint": [0.70, 0.58, 0.50]},
       "transform": {"position": [-3.6, 0.35, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [1.05, 1.05, 1.05]}
     },
     {
@@ -118,6 +128,7 @@
       "meshAsset": "game/props/office_pc_meshy.mesh",
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
+      "renderOverrides": {"colorTint": [0.74, 0.88, 1.0], "emissiveColor": [0.34, 0.62, 1.0], "emissiveIntensity": 0.34},
       "transform": {"position": [-3.6, 0.92, 2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
@@ -125,6 +136,7 @@
       "meshAsset": "game/props/office_table_meshy.mesh",
       "materialAsset": "game/props/office_table_meshy.material",
       "meshSource": "assets/props/office_table_meshy.glb",
+      "renderOverrides": {"colorTint": [0.70, 0.58, 0.50]},
       "transform": {"position": [-1.2, 0.35, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [1.05, 1.05, 1.05]}
     },
     {
@@ -132,6 +144,7 @@
       "meshAsset": "game/props/office_pc_meshy.mesh",
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
+      "renderOverrides": {"colorTint": [0.74, 0.88, 1.0], "emissiveColor": [0.34, 0.62, 1.0], "emissiveIntensity": 0.34},
       "transform": {"position": [-1.2, 0.92, 2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
@@ -139,6 +152,7 @@
       "meshAsset": "game/props/office_table_meshy.mesh",
       "materialAsset": "game/props/office_table_meshy.material",
       "meshSource": "assets/props/office_table_meshy.glb",
+      "renderOverrides": {"colorTint": [0.70, 0.58, 0.50]},
       "transform": {"position": [1.2, 0.35, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [1.05, 1.05, 1.05]}
     },
     {
@@ -146,6 +160,7 @@
       "meshAsset": "game/props/office_pc_meshy.mesh",
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
+      "renderOverrides": {"colorTint": [0.74, 0.88, 1.0], "emissiveColor": [0.34, 0.62, 1.0], "emissiveIntensity": 0.34},
       "transform": {"position": [1.2, 0.92, 2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
@@ -153,6 +168,7 @@
       "meshAsset": "game/props/office_table_meshy.mesh",
       "materialAsset": "game/props/office_table_meshy.material",
       "meshSource": "assets/props/office_table_meshy.glb",
+      "renderOverrides": {"colorTint": [0.70, 0.58, 0.50]},
       "transform": {"position": [3.6, 0.35, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [1.05, 1.05, 1.05]}
     },
     {
@@ -160,6 +176,7 @@
       "meshAsset": "game/props/office_pc_meshy.mesh",
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
+      "renderOverrides": {"colorTint": [0.74, 0.88, 1.0], "emissiveColor": [0.34, 0.62, 1.0], "emissiveIntensity": 0.34},
       "transform": {"position": [3.6, 0.92, 2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
@@ -167,6 +184,7 @@
       "meshAsset": "game/props/office_chair_grey_fabric.mesh",
       "materialAsset": "game/props/office_chair_grey_fabric.material",
       "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "renderOverrides": {"colorTint": [0.72, 0.76, 0.78]},
       "transform": {"position": [-3.6, 0.456, -0.82], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
     },
     {
@@ -174,6 +192,7 @@
       "meshAsset": "game/props/office_chair_grey_fabric.mesh",
       "materialAsset": "game/props/office_chair_grey_fabric.material",
       "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "renderOverrides": {"colorTint": [0.72, 0.76, 0.78]},
       "transform": {"position": [-1.2, 0.456, -0.82], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
     },
     {
@@ -181,6 +200,7 @@
       "meshAsset": "game/props/office_chair_grey_fabric.mesh",
       "materialAsset": "game/props/office_chair_grey_fabric.material",
       "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "renderOverrides": {"colorTint": [0.72, 0.76, 0.78]},
       "transform": {"position": [1.2, 0.456, -0.82], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
     },
     {
@@ -189,6 +209,7 @@
       "materialAsset": "game/characters/office_business_man.material",
       "meshSource": "assets/characters/office_business_man.glb",
       "hiddenWhenFlag": "office_person_vanished",
+      "renderOverrides": {"colorTint": [0.82, 0.90, 0.96]},
       "transform": {"position": [3.6, 0.86, -0.96], "rotation": [0.0, 3.14159, 0.0], "scale": [0.90, 0.90, 0.90]}
     },
     {
@@ -197,6 +218,7 @@
       "materialAsset": "game/props/office_chair_grey_fabric.material",
       "meshSource": "assets/props/office_chair_grey_fabric.glb",
       "visibleWhenFlag": "office_person_vanished",
+      "renderOverrides": {"colorTint": [0.72, 0.76, 0.78]},
       "transform": {"position": [3.6, 0.456, -0.82], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
     },
     {
@@ -204,6 +226,7 @@
       "meshAsset": "game/props/office_chair_grey_fabric.mesh",
       "materialAsset": "game/props/office_chair_grey_fabric.material",
       "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "renderOverrides": {"colorTint": [0.72, 0.76, 0.78]},
       "transform": {"position": [-3.6, 0.456, 0.82], "rotation": [0.0, 0.0, 0.0], "scale": [0.48, 0.48, 0.48]}
     },
     {
@@ -211,6 +234,7 @@
       "meshAsset": "game/props/office_chair_grey_fabric.mesh",
       "materialAsset": "game/props/office_chair_grey_fabric.material",
       "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "renderOverrides": {"colorTint": [0.72, 0.76, 0.78]},
       "transform": {"position": [-1.2, 0.456, 0.82], "rotation": [0.0, 0.0, 0.0], "scale": [0.48, 0.48, 0.48]}
     },
     {
@@ -218,6 +242,7 @@
       "meshAsset": "game/props/office_chair_grey_fabric.mesh",
       "materialAsset": "game/props/office_chair_grey_fabric.material",
       "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "renderOverrides": {"colorTint": [0.72, 0.76, 0.78]},
       "transform": {"position": [1.2, 0.456, 0.82], "rotation": [0.0, 0.0, 0.0], "scale": [0.48, 0.48, 0.48]}
     },
     {
@@ -225,6 +250,7 @@
       "meshAsset": "game/props/office_chair_grey_fabric.mesh",
       "materialAsset": "game/props/office_chair_grey_fabric.material",
       "meshSource": "assets/props/office_chair_grey_fabric.glb",
+      "renderOverrides": {"colorTint": [0.72, 0.76, 0.78]},
       "transform": {"position": [3.6, 0.456, 0.82], "rotation": [0.0, 0.0, 0.0], "scale": [0.48, 0.48, 0.48]}
     }
   ],

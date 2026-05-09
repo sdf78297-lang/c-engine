@@ -206,6 +206,7 @@ private:
                 }
                 validateOptionalFlag(mesh, path, "visibleWhenFlag");
                 validateOptionalFlag(mesh, path, "hiddenWhenFlag");
+                validateStaticMeshRenderOverrides(mesh, path);
             }
         }
         validateCollisionBoxes(root, path);
@@ -452,6 +453,33 @@ private:
             if (value < 0.0 || value > 1.0) {
                 error(path, "renderEnvironment.vignetteStrength must be between 0 and 1");
             }
+        }
+    }
+
+    void validateStaticMeshRenderOverrides(const Json& mesh, const std::filesystem::path& path) {
+        const Json* overrides = find(mesh, "renderOverrides");
+        if (overrides == nullptr) {
+            return;
+        }
+        if (!overrides->is_object()) {
+            error(path, "static mesh renderOverrides must be an object");
+            return;
+        }
+
+        for (const std::string_view field : {
+                 "colorTint",
+                 "emissiveColor",
+             }) {
+            const Json* value = find(*overrides, field);
+            if (value != nullptr && !isVec3(value)) {
+                error(path, "static mesh renderOverrides." + std::string(field) + " must be a vec3");
+            }
+        }
+
+        const Json* emissiveIntensity = find(*overrides, "emissiveIntensity");
+        if (emissiveIntensity != nullptr
+            && (!emissiveIntensity->is_number() || !std::isfinite(emissiveIntensity->get<double>()))) {
+            error(path, "static mesh renderOverrides.emissiveIntensity must be a finite number");
         }
     }
 

@@ -10,6 +10,7 @@
 #include <ExoEngine/Math/Vec.h>
 #include <ExoEngine/Renderer/MeshBuffer.h>
 #include <ExoEngine/Renderer/RenderEnvironment.h>
+#include <ExoEngine/Renderer/RenderMaterialOverride.h>
 #include <ExoEngine/Renderer/Texture2D.h>
 
 namespace Exo {
@@ -47,7 +48,10 @@ public:
     void setPointLights(const std::vector<RenderPointLight>& lights);
     void beginFrame(const RenderView& view);
     [[nodiscard]] std::int32_t loadSceneMesh(const std::filesystem::path& path);
-    void drawSceneMesh(std::int32_t handle, const Mat4& modelTransform);
+    void drawSceneMesh(
+        std::int32_t handle,
+        const Mat4& modelTransform,
+        const RenderMaterialOverride& materialOverride = {});
     [[nodiscard]] bool sceneMeshBounds(std::int32_t handle, Vec3& minOut, Vec3& maxOut) const;
     void endFrame();
 

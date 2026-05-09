@@ -5,6 +5,7 @@
 
 #include <ExoEngine/Math/Vec.h>
 #include <ExoEngine/Renderer/RenderEnvironment.h>
+#include <ExoEngine/Renderer/RenderMaterialOverride.h>
 #include <ExoEngine/Scene/FixedCameraRig.h>
 
 namespace Exo {
@@ -22,6 +23,7 @@ struct StaticMeshInstance {
     std::string meshSource;
     std::string visibleWhenFlag;
     std::string hiddenWhenFlag;
+    RenderMaterialOverride materialOverride {};
     Transform transform {};
 };
 

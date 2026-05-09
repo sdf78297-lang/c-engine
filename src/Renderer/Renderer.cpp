@@ -52,6 +52,9 @@ out vec4 FragColor;
 
 uniform sampler2D uAlbedo;
 uniform vec3 uBaseColor;
+uniform vec3 uColorTint;
+uniform vec3 uEmissiveColor;
+uniform float uEmissiveIntensity;
 uniform vec3 uCameraPosition;
 uniform vec2 uViewportSize;
 uniform vec3 uAmbientColor;
@@ -74,7 +77,7 @@ uniform float uPointLightIntensity[8];
 
 void main() {
     vec4 sampled = texture(uAlbedo, vUV);
-    vec3 albedo = sampled.rgb * uBaseColor;
+    vec3 albedo = sampled.rgb * uBaseColor * uColorTint;
     vec3 normal = normalize(vNormalWS);
 
     vec3 keyDir = normalize(uKeyLightDirection);
@@ -106,6 +109,7 @@ void main() {
 
     float fogAmount = clamp((length(uCameraPosition - vWorldPos) - uFogStart) * uFogDensity, 0.0, 0.82);
     vec3 color = mix(lit, uFogColor, fogAmount);
+    color += uEmissiveColor * uEmissiveIntensity;
     color = vec3(1.0) - exp(-max(color, vec3(0.0)) * max(uExposure, 0.001));
 
     float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -295,7 +299,10 @@ std::int32_t Renderer::loadSceneMesh(const std::filesystem::path& path) {
     return handle;
 }
 
-void Renderer::drawSceneMesh(std::int32_t handle, const Mat4& modelTransform) {
+void Renderer::drawSceneMesh(
+    std::int32_t handle,
+    const Mat4& modelTransform,
+    const RenderMaterialOverride& materialOverride) {
     if (handle < 0 || static_cast<std::size_t>(handle) >= sceneMeshes_.size() || texturedShader_ == 0) {
         return;
     }
@@ -310,6 +317,11 @@ void Renderer::drawSceneMesh(std::int32_t handle, const Mat4& modelTransform) {
     glUniformMatrix4fv(vpLoc, 1, GL_FALSE, currentViewProjection_.data());
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, modelTransform.data());
     glUniform1i(texLoc, 0);
+    glUniform3f(glGetUniformLocation(texturedShader_, "uColorTint"),
+        materialOverride.colorTint.x, materialOverride.colorTint.y, materialOverride.colorTint.z);
+    glUniform3f(glGetUniformLocation(texturedShader_, "uEmissiveColor"),
+        materialOverride.emissiveColor.x, materialOverride.emissiveColor.y, materialOverride.emissiveColor.z);
+    glUniform1f(glGetUniformLocation(texturedShader_, "uEmissiveIntensity"), materialOverride.emissiveIntensity);
     glUniform3f(glGetUniformLocation(texturedShader_, "uCameraPosition"),
         currentCameraPosition_.x, currentCameraPosition_.y, currentCameraPosition_.z);
     glUniform2f(glGetUniformLocation(texturedShader_, "uViewportSize"),

@@ -522,7 +522,7 @@ int Application::runWindowed() {
                 * Mat4::rotateY(instance.transform.rotation.y)
                 * Mat4::scale(instance.transform.scale);
             if (sceneMeshHandles_[i] >= 0) {
-                renderer_.drawSceneMesh(sceneMeshHandles_[i], model);
+                renderer_.drawSceneMesh(sceneMeshHandles_[i], model, instance.materialOverride);
             }
         }
         renderer_.endFrame();
