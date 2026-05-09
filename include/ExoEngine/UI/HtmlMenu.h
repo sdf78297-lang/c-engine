@@ -49,6 +49,7 @@ private:
     bool quitRequested_ = false;
     std::uint32_t width_ = 0;
     std::uint32_t height_ = 0;
+    std::uint32_t lastMouseMoveMs_ = 0;
 
 #if EXO_ENABLE_HTML_UI
     void* renderer_ = nullptr;

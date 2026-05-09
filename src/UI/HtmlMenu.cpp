@@ -304,6 +304,11 @@ void HtmlMenu::handleEvent(const SDL_Event& event) {
 
     switch (event.type) {
         case SDL_MOUSEMOTION: {
+            // Throttle mouse-move events to ~60 fps so Ultralight's
+            // software renderer isn't flooded with hover/repaint work.
+            const std::uint32_t now = SDL_GetTicks();
+            if (now - lastMouseMoveMs_ < 16u) break;
+            lastMouseMoveMs_ = now;
             ULMouseEvent evt = ulCreateMouseEvent(kMouseEventType_MouseMoved, event.motion.x, event.motion.y, kMouseButton_None);
             ulViewFireMouseEvent(static_cast<ULView>(view_), evt);
             ulDestroyMouseEvent(evt);
