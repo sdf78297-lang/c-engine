@@ -14,6 +14,7 @@
 #include <SDL2/SDL.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 #else
 #include <SDL2/SDL.h>
@@ -471,7 +472,7 @@ void HtmlMenu::uploadSurfaceToTexture() {
         return;
     }
 
-    const ULIntRect dirty = ulSurfaceGetDirtyBounds(surface);
+    ULIntRect dirty = ulSurfaceGetDirtyBounds(surface);
     if (textureUploaded_ && ulIntRectIsEmpty(dirty)) {
         return;
     }
@@ -485,19 +486,48 @@ void HtmlMenu::uploadSurfaceToTexture() {
     const unsigned int surfaceWidth = ulSurfaceGetWidth(surface);
     const unsigned int surfaceHeight = ulSurfaceGetHeight(surface);
 
+    if (!textureUploaded_) {
+        dirty.left = 0;
+        dirty.top = 0;
+        dirty.right = static_cast<int>(surfaceWidth);
+        dirty.bottom = static_cast<int>(surfaceHeight);
+    } else {
+        const auto clampInt = [](int value, int lower, int upper) {
+            return std::max(lower, std::min(value, upper));
+        };
+        dirty.left = clampInt(dirty.left, 0, static_cast<int>(surfaceWidth));
+        dirty.right = clampInt(dirty.right, 0, static_cast<int>(surfaceWidth));
+        dirty.top = clampInt(dirty.top, 0, static_cast<int>(surfaceHeight));
+        dirty.bottom = clampInt(dirty.bottom, 0, static_cast<int>(surfaceHeight));
+    }
+
+    const int uploadWidth = dirty.right - dirty.left;
+    const int uploadHeight = dirty.bottom - dirty.top;
+    if (uploadWidth <= 0 || uploadHeight <= 0) {
+        ulSurfaceUnlockPixels(surface);
+        ulSurfaceClearDirtyBounds(surface);
+        textureUploaded_ = true;
+        return;
+    }
+
+    const auto* bytes = static_cast<const unsigned char*>(pixels);
+    const void* uploadPixels = bytes
+        + static_cast<std::size_t>(dirty.top) * rowBytes
+        + static_cast<std::size_t>(dirty.left) * 4u;
+
     glBindTexture(GL_TEXTURE_2D, texture_);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, static_cast<GLint>(rowBytes / 4));
     glTexSubImage2D(
         GL_TEXTURE_2D,
         0,
-        0,
-        0,
-        static_cast<GLsizei>(surfaceWidth),
-        static_cast<GLsizei>(surfaceHeight),
+        dirty.left,
+        dirty.top,
+        static_cast<GLsizei>(uploadWidth),
+        static_cast<GLsizei>(uploadHeight),
         GL_BGRA,
         GL_UNSIGNED_BYTE,
-        pixels
+        uploadPixels
     );
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     glBindTexture(GL_TEXTURE_2D, 0);

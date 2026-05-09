@@ -12,4 +12,6 @@ The runtime contract with C++ is URL-based:
 
 The diagnosis screen uses the original typewriter-style reveal with a frame-batched renderer and a lighter `story-mode` effect profile. Do not bring back one-timeout-per-character DOM writes or an internal draggable story scrollbar there; Ultralight stutters when the letter, card, fullscreen VHS layers, and text scrolling repaint at the same time.
 
+The C++ bridge uploads only the dirty Ultralight surface rectangle to the menu texture after the first full upload. Do not change it back to full-surface `glTexSubImage2D` for every small HTML update.
+
 Do not replace this with a PNG or video capture. The engine renders this HTML live every frame through `Exo::HtmlMenu`.

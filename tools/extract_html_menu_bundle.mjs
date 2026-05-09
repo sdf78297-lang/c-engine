@@ -119,6 +119,12 @@ template = template.replace(
     flex: 1;
     min-height: 150px;
     pointer-events: none;
+    contain: paint;
+  }
+  .typewriter-stream{
+    transform: translateY(0);
+    transition: transform .22s ease-out;
+    will-change: transform;
   }
   .typewriter p{
     margin-bottom: 16px;
@@ -149,7 +155,11 @@ template = template.replace(
   `let typing = false;
   let storyTypeRaf = 0;
   let storyParaTimer = 0;
-  let storyAutoScrollAt = 0;
+  let storyFlow = null;
+  let storyCurrentTarget = null;
+  let storyTargetStack = [];
+  let storyTextNode = null;
+  let storyLastFlowAt = 0;
 
   function stopStoryReveal(){
     typing = false;
@@ -163,20 +173,13 @@ template = template.replace(
     }
   }
 
-  function storyEscapeChar(ch){
-    if (ch === '&') return '&amp;';
-    if (ch === '<') return '&lt;';
-    if (ch === '>') return '&gt;';
-    return ch;
-  }
-
   function storyTokens(html){
     const tokens = [];
     for (let i = 0; i < html.length;) {
       if (html[i] === '<') {
         const close = html.indexOf('>', i);
         if (close !== -1) {
-          tokens.push({ html: html.slice(i, close + 1), tag: true, pause: 0 });
+          tokens.push({ tag: html.slice(i, close + 1).toLowerCase(), pause: 0 });
           i = close + 1;
           continue;
         }
@@ -187,9 +190,59 @@ template = template.replace(
         ch === '.' || ch === '!' || ch === '?' ? 180 :
         ch === ',' || ch === ';' || ch === ':' || ch === '—' ? 60 :
         0;
-      tokens.push({ html: storyEscapeChar(ch), pause });
+      tokens.push({ text: ch, pause });
     }
     return tokens;
+  }
+
+  function storyResetWriter(p){
+    const caret = document.createElement('span');
+    caret.className = 'caret';
+    p.appendChild(caret);
+    storyCurrentTarget = p;
+    storyTargetStack = [];
+    storyTextNode = null;
+    return caret;
+  }
+
+  function storyAppendToken(p, caret, token){
+    if (token.tag) {
+      if (token.tag === '<b>' || token.tag === '<i>') {
+        const element = document.createElement(token.tag === '<b>' ? 'b' : 'i');
+        if (storyCurrentTarget === p) {
+          p.insertBefore(element, caret);
+        } else {
+          storyCurrentTarget.appendChild(element);
+        }
+        storyTargetStack.push(storyCurrentTarget);
+        storyCurrentTarget = element;
+        storyTextNode = null;
+      } else if (token.tag === '</b>' || token.tag === '</i>') {
+        storyCurrentTarget = storyTargetStack.pop() || p;
+        storyTextNode = null;
+      }
+      return;
+    }
+
+    if (!storyTextNode) {
+      storyTextNode = document.createTextNode('');
+      if (storyCurrentTarget === p) {
+        p.insertBefore(storyTextNode, caret);
+      } else {
+        storyCurrentTarget.appendChild(storyTextNode);
+      }
+    }
+    storyTextNode.data += token.text;
+  }
+
+  function syncStoryFlow(now, force){
+    if (!storyFlow) return;
+    if (!force && now - storyLastFlowAt < 260) return;
+    const box = document.getElementById('ttype');
+    if (!box) return;
+    const offset = Math.max(0, storyFlow.offsetHeight - box.clientHeight);
+    storyFlow.style.transform = offset > 0 ? \`translateY(\${-offset}px)\` : '';
+    storyLastFlowAt = now;
   }
 
   function startTyping(){
@@ -198,7 +251,10 @@ template = template.replace(
     const box = document.getElementById('ttype');
     if (!box) return;
     box.innerHTML = "";
-    box.scrollTop = 0;
+    storyFlow = document.createElement('div');
+    storyFlow.className = 'typewriter-stream';
+    box.appendChild(storyFlow);
+    storyLastFlowAt = 0;
 
     let pi = 0;
     function nextPara(){
@@ -211,11 +267,11 @@ template = template.replace(
       const data = storyText[pi++];
       const p = document.createElement('p');
       if (data.cls) p.className = data.cls;
-      box.appendChild(p);
+      storyFlow.appendChild(p);
+      const caret = storyResetWriter(p);
 
       const tokens = storyTokens(data.t);
       let ti = 0;
-      let rendered = "";
       let nextAt = performance.now();
 
       function paint(now){
@@ -225,23 +281,19 @@ template = template.replace(
 
         while (ti < tokens.length && now >= nextAt && budget < 8) {
           const token = tokens[ti++];
-          rendered += token.html;
+          storyAppendToken(p, caret, token);
           nextAt += token.tag ? 0 : (12 + Math.random() * 30 + token.pause);
           changed = true;
           budget++;
         }
 
         if (changed) {
-          p.innerHTML = rendered + '<span class="caret"></span>';
-          if (now - storyAutoScrollAt > 110) {
-            box.scrollTop = box.scrollHeight;
-            storyAutoScrollAt = now;
-          }
+          syncStoryFlow(now, false);
         }
 
         if (ti >= tokens.length) {
-          p.innerHTML = rendered;
-          box.scrollTop = box.scrollHeight;
+          caret.remove();
+          syncStoryFlow(now, true);
           storyTypeRaf = 0;
           storyParaTimer = setTimeout(nextPara, 420);
           return;
