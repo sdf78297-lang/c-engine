@@ -46,14 +46,98 @@ for (const [uuid, entry] of Object.entries(manifest)) {
 
 const bridgeScript = `
 <script>
-  window.exoMenuBridge = window.exoMenuBridge || {};
-  window.exoMenuBridge.startGame = window.exoMenuBridge.startGame || function(){ window.location.href = 'exo://start-game'; };
-  window.exoMenuBridge.quitGame = window.exoMenuBridge.quitGame || function(){ window.location.href = 'exo://quit-game'; };
+  (function(){
+    function exoCommand(command){
+      var nonce = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      var payload = 'exo:' + command + ':' + nonce;
+      try { document.title = payload; } catch (err) {}
+      try { window.location.href = 'exo://' + command + '?nonce=' + nonce; } catch (err) {}
+    }
+
+    window.exoMenuBridge = window.exoMenuBridge || {};
+    window.exoMenuBridge.startGame = window.exoMenuBridge.startGame || function(){ exoCommand('start-game'); };
+    window.exoMenuBridge.quitGame = window.exoMenuBridge.quitGame || function(){ exoCommand('quit-game'); };
+  })();
 </script>
 `;
 
 template = template.replace(/<\/head>/i, `${bridgeScript}</head>`);
-template = template.replace("if (a === 'story')    go('screen-story');", "if (a === 'story')    beginGame();");
+
+template = template
+  .replace(/<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com"[^>]*>\s*/gi, '')
+  .replace(/<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com"[^>]*>\s*/gi, '')
+  .replace('position: fixed; inset: -50%;', 'position: fixed; left: -50%; top: -50%; right: -50%; bottom: -50%;')
+  .replaceAll('position: fixed; inset: 0;', 'position: fixed; left: 0; top: 0; right: 0; bottom: 0;')
+  .replace('position: absolute; inset: -10%;', 'position: absolute; left: -10%; top: -10%; right: -10%; bottom: -10%;')
+  .replaceAll('position: absolute; inset: 0;', 'position: absolute; left: 0; top: 0; right: 0; bottom: 0;')
+  .replaceAll('position:fixed;inset:0;', 'position:fixed;left:0;top:0;right:0;bottom:0;')
+  .replace('font-size: clamp(56px, 9vw, 104px);', 'font-size: 92px;');
+
+template = template.replace(
+  /(@font-face\s*\{[^}]*font-family:\s*'Special Elite';[^}]*unicode-range:\s*U\+0000-00FF[^}]*\})/,
+  (block) => block.replace(
+    /src:\s*url\("([^"]+\.woff2)"\)\s*format\('woff2'\);/,
+    'src:\n    url("assets/SpecialElite-Regular.ttf") format(\'truetype\'),\n    url("$1") format(\'woff2\');',
+  ),
+);
+
+template = template.replace(
+  "    el.addEventListener('click', (e)=>{\n      const a = el.dataset.action;",
+  "    el.addEventListener('click', (e)=>{\n      e.preventDefault();\n      if (el.disabled) return;\n      const a = el.dataset.action;",
+);
+
+template = template.replace(
+  "    const items = [...active.querySelectorAll('.menu-item:not([disabled])')];\n    let i = items.indexOf(document.activeElement);\n    if (e.key === 'ArrowDown'){ i = (i+1+items.length) % items.length; items[i].focus(); e.preventDefault(); }\n    if (e.key === 'ArrowUp')  { i = (i-1+items.length) % items.length; items[i<0?items.length-1:i].focus(); e.preventDefault(); }",
+  "    const items = [...active.querySelectorAll('.menu-item:not([disabled])')];\n    if (!items.length) return;\n    let i = items.indexOf(document.activeElement);\n    if (i < 0) i = 0;\n    if (e.key === 'ArrowDown'){ i = (i+1) % items.length; items[i].focus(); e.preventDefault(); }\n    if (e.key === 'ArrowUp')  { i = (i-1+items.length) % items.length; items[i].focus(); e.preventDefault(); }",
+);
+
+template = template.replace(
+  /(\.story::before\{\s*content: "";\s*position: absolute; left: 0; top: 0; right: 0; bottom: 0;\s*)background-image: url\("data:image\/svg\+xml;utf8,<svg[\s\S]*?pointer-events: none;\s*opacity: \.35;\s*\}/,
+  `$1background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 4px),
+      linear-gradient(180deg, rgba(201,197,188,0.02), transparent 45%, rgba(0,0,0,0.18));
+    pointer-events: none;
+    opacity: .28;
+  }`,
+);
+
+template = template.replace(
+  "  @keyframes caret{ 50%{ opacity: 0; } }\n\n  .story-foot{",
+  "  @keyframes caret{ 50%{ opacity: 0; } }\n\n  .story-mode .grain,\n  .story-mode .flicker,\n  .story-mode .tape-line{\n    animation: none;\n    opacity: .04;\n  }\n  .story-mode .scanlines{ opacity: .22; }\n\n  .story-foot{",
+);
+
+template = template.replace(
+  "      next.classList.add('active');\n      trans.classList.remove('on');",
+  "      next.classList.add('active');\n      document.body.classList.toggle('story-mode', id === 'screen-story');\n      trans.classList.remove('on');",
+);
+
+template = template.replace(
+  /let typing = false;\s*function startTyping\(\)\{[\s\S]*?\n  \}\s*\n\s*\/\/ ----------- Begin game/,
+  `let typing = false;
+  function startTyping(){
+    if (typing) return;
+    typing = true;
+    const box = document.getElementById('ttype');
+    if (!box) return;
+    box.innerHTML = storyText.map((data) => {
+      const cls = data.cls ? \` class="\${data.cls}"\` : "";
+      return \`<p\${cls}>\${data.t}</p>\`;
+    }).join("");
+  }
+
+  // ----------- Begin game`,
+);
+
+template = template.replace(
+  "  function beginGame(){\n    trans.classList.add('on');",
+  "  function beginGame(){\n    document.body.classList.remove('story-mode');\n    trans.classList.add('on');",
+);
+
+template = template.replace(
+  "    if (Math.random() < 0.25){\n      document.body.style.filter = 'invert(1) hue-rotate(180deg)';\n      setTimeout(()=> document.body.style.filter = '', 60 + Math.random()*80);\n    }\n  }, 5500);",
+  "    if (!document.body.classList.contains('story-mode') && Math.random() < 0.12){\n      document.body.style.filter = 'invert(1) hue-rotate(180deg)';\n      setTimeout(()=> document.body.style.filter = '', 60 + Math.random()*80);\n    }\n  }, 8000);",
+);
+
 template = template.replace(
   /function beginGame\(\)\{([\s\S]*?)setTimeout\(\(\)=>\{([\s\S]*?)trans\.classList\.remove\('on'\);\s*\}, 1200\);\s*\}/,
   (_match, before, inside) => `function beginGame(){${before}setTimeout(()=>{${inside}trans.classList.remove('on');
