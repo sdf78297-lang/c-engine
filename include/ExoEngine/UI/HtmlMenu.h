@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 
 union SDL_Event;
@@ -10,10 +11,17 @@ namespace Exo {
 
 class HtmlMenu {
 public:
+    struct SettingChange {
+        std::string key;
+        float value = 1.0f;
+    };
+
     struct Config {
         std::filesystem::path engineRoot;
         std::filesystem::path htmlPath;
         std::filesystem::path ultralightResourcePath;
+        std::string initialScreen = "screen-menu";
+        bool pauseOverlay = false;
         std::uint32_t width = 1280;
         std::uint32_t height = 720;
     };
@@ -34,6 +42,8 @@ public:
     [[nodiscard]] bool isActive() const;
     [[nodiscard]] bool startRequested() const;
     [[nodiscard]] bool quitRequested() const;
+    [[nodiscard]] bool resumeRequested() const;
+    [[nodiscard]] std::optional<SettingChange> takeSettingChange();
     void clearRequests();
 
 #if EXO_ENABLE_HTML_UI
@@ -47,6 +57,8 @@ private:
     bool initialized_ = false;
     bool startRequested_ = false;
     bool quitRequested_ = false;
+    bool resumeRequested_ = false;
+    std::optional<SettingChange> pendingSetting_;
     std::uint32_t width_ = 0;
     std::uint32_t height_ = 0;
     std::uint32_t lastMouseMoveMs_ = 0;

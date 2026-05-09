@@ -73,6 +73,7 @@ struct RoomDefinition {
     std::vector<RoomTrigger> triggers;
     std::vector<RoomEnterEvent> roomEnterEvents;
     std::unordered_map<std::string, std::filesystem::path> audioCues;
+    std::filesystem::path musicPath;
     std::vector<RoomCollisionBox> collisionBoxes;
 };
 

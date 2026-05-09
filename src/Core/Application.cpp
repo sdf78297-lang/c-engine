@@ -283,6 +283,9 @@ int Application::runWindowed() {
     const bool audioReady = audioSystem_.initialize();
     if (!audioReady) {
         Logger::warn("Audio system unavailable; continuing without voice cues");
+    } else {
+        audioSystem_.setMasterVolume(0.55f);
+        audioSystem_.setMusicVolume(0.24f);
     }
 
     if (!renderer_.initialize(window_.width(), window_.height())) {
@@ -292,28 +295,44 @@ int Application::runWindowed() {
 
     reloadSceneMeshes();
 
-    HtmlMenu mainMenu;
-    bool mainMenuActive = false;
-    if (config_.maxFrames == 0 || config_.showMenu) {
-        mainMenuActive = mainMenu.initialize({
+    HtmlMenu htmlMenu;
+    bool htmlMenuActive = false;
+    bool gamePaused = false;
+    const auto openHtmlMenu = [&](const std::string& initialScreen, bool pauseOverlay) {
+        if (htmlMenu.isActive()) {
+            htmlMenu.shutdown();
+        }
+        htmlMenu.clearRequests();
+        htmlMenuActive = htmlMenu.initialize({
             .engineRoot = engineRoot(),
             .htmlPath = std::filesystem::path("assets") / "ui" / "main_menu" / "web" / "index.html",
             .ultralightResourcePath = engineRoot() / "local_deps" / "ultralight-sdk" / "resources",
+            .initialScreen = initialScreen,
+            .pauseOverlay = pauseOverlay,
             .width = window_.width(),
             .height = window_.height(),
         });
+        gamePaused = pauseOverlay && htmlMenuActive;
+        if (htmlMenuActive) {
+            SDL_SetRelativeMouseMode(SDL_FALSE);
+        }
+        return htmlMenuActive;
+    };
+
+    if (config_.maxFrames == 0 || config_.showMenu) {
+        openHtmlMenu("screen-menu", false);
     }
 
-    if (config_.maxFrames == 0 && !mainMenuActive) {
+    if (config_.maxFrames == 0 && !htmlMenuActive) {
         SDL_SetRelativeMouseMode(SDL_TRUE);
     } else {
         SDL_SetRelativeMouseMode(SDL_FALSE);
     }
-    if (!mainMenuActive) {
+    if (!htmlMenuActive) {
         processRoomEnterEvents();
     }
 
-    Logger::info("Runtime running. HTML menu: mouse/Enter start, Esc back. Game: WASD move, mouse look, Shift run, Tab mouse capture, E interact, F5 save, F9 load, Esc quit.");
+    Logger::info("Runtime running. HTML menu: mouse/Enter start, Esc back. Game: WASD move, mouse look, Shift run, Tab mouse capture, E interact, F5 save, F9 load, Esc settings, Q temporary quit.");
 
     bool running = true;
     auto lastTime = SDL_GetPerformanceCounter();
@@ -341,8 +360,8 @@ int Application::runWindowed() {
 
         SDL_Event event {};
         while (SDL_PollEvent(&event) != 0) {
-            if (mainMenuActive) {
-                mainMenu.handleEvent(event);
+            if (htmlMenuActive) {
+                htmlMenu.handleEvent(event);
             }
 
             switch (event.type) {
@@ -350,10 +369,14 @@ int Application::runWindowed() {
                     running = false;
                     break;
                 case SDL_KEYDOWN:
-                    if (mainMenuActive) {
+                    if (htmlMenuActive) {
                         break;
                     }
                     if (event.key.keysym.sym == SDLK_ESCAPE) {
+                        if (!openHtmlMenu("screen-settings", true)) {
+                            Logger::warn("Pause settings menu unavailable");
+                        }
+                    } else if (event.key.keysym.sym == SDLK_q) {
                         running = false;
                     } else if (event.key.keysym.sym == SDLK_TAB) {
                         const SDL_bool wasRelative = SDL_GetRelativeMouseMode();
@@ -375,6 +398,7 @@ int Application::runWindowed() {
                             if (loadRoomScene(loadedState.roomId, loadedState.spawnId, false)) {
                                 gameState_ = loadedState;
                                 syncGameStateToStory();
+                                playRoomMusic();
                                 Logger::info("Loaded game state: " + savePath().string());
                             }
                         } else {
@@ -388,8 +412,8 @@ int Application::runWindowed() {
                             static_cast<std::uint32_t>(event.window.data1),
                             static_cast<std::uint32_t>(event.window.data2)
                         );
-                        if (mainMenuActive) {
-                            mainMenu.resize(
+                        if (htmlMenuActive) {
+                            htmlMenu.resize(
                                 static_cast<std::uint32_t>(event.window.data1),
                                 static_cast<std::uint32_t>(event.window.data2)
                             );
@@ -397,7 +421,7 @@ int Application::runWindowed() {
                     }
                     break;
                 case SDL_MOUSEMOTION:
-                    if (!mainMenuActive && SDL_GetRelativeMouseMode() == SDL_TRUE) {
+                    if (!htmlMenuActive && SDL_GetRelativeMouseMode() == SDL_TRUE) {
                         mouseDeltaX += static_cast<float>(event.motion.xrel);
                         mouseDeltaY += static_cast<float>(event.motion.yrel);
                     }
@@ -407,13 +431,21 @@ int Application::runWindowed() {
             }
         }
 
-        if (mainMenuActive) {
+        if (htmlMenuActive) {
             const auto menuUpdateStart = SDL_GetPerformanceCounter();
-            mainMenu.update();
+            htmlMenu.update();
             const auto menuUpdateEnd = SDL_GetPerformanceCounter();
-            if (mainMenu.startRequested()) {
-                mainMenu.shutdown();
-                mainMenuActive = false;
+            if (auto setting = htmlMenu.takeSettingChange()) {
+                if (setting->key == "vol-master") {
+                    audioSystem_.setMasterVolume(setting->value);
+                } else if (setting->key == "vol-music") {
+                    audioSystem_.setMusicVolume(setting->value);
+                }
+            }
+            if (htmlMenu.startRequested()) {
+                htmlMenu.shutdown();
+                htmlMenuActive = false;
+                gamePaused = false;
                 if (config_.maxFrames == 0) {
                     SDL_SetRelativeMouseMode(SDL_TRUE);
                 }
@@ -421,12 +453,22 @@ int Application::runWindowed() {
                 Logger::info("HTML menu requested game start");
                 continue;
             }
-            if (mainMenu.quitRequested()) {
+            if (htmlMenu.resumeRequested()) {
+                htmlMenu.shutdown();
+                htmlMenuActive = false;
+                gamePaused = false;
+                if (config_.maxFrames == 0) {
+                    SDL_SetRelativeMouseMode(SDL_TRUE);
+                }
+                Logger::info("HTML menu requested game resume");
+                continue;
+            }
+            if (htmlMenu.quitRequested()) {
                 running = false;
             }
 
             renderer_.beginFrame(makeCurrentView());
-            mainMenu.render();
+            htmlMenu.render();
             renderer_.endFrame();
             const auto menuRenderEnd = SDL_GetPerformanceCounter();
             window_.swapBuffers();
@@ -453,7 +495,7 @@ int Application::runWindowed() {
             continue;
         }
 
-        if (config_.maxFrames == 0) {
+        if (config_.maxFrames == 0 && !gamePaused) {
             updatePlayer(deltaSeconds, mouseDeltaX, mouseDeltaY);
             evaluateCurrentTrigger();
         }
@@ -771,6 +813,8 @@ void Application::processRoomEnterEvents() {
         return;
     }
 
+    playRoomMusic();
+
     for (const RoomEnterEvent& event : roomManager_.currentRoom().roomEnterEvents) {
         if (event.once && !event.setFlag.empty() && gameState_.flags.contains(event.setFlag)) {
             continue;
@@ -781,6 +825,21 @@ void Application::processRoomEnterEvents() {
         }
         playAudioCue(event.audioCue);
         Logger::info("Room enter event: " + event.id);
+    }
+}
+
+void Application::playRoomMusic() {
+    if (!roomManager_.loaded() || roomManager_.currentRoom().musicPath.empty()) {
+        return;
+    }
+
+    std::filesystem::path path = roomManager_.currentRoom().musicPath;
+    if (!path.is_absolute()) {
+        path = engineRoot() / path;
+    }
+    const bool played = audioSystem_.playMusic(path, -1);
+    if (!played && audioSystem_.available()) {
+        Logger::warn("Room music did not play: " + path.string());
     }
 }
 

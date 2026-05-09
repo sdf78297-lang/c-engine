@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <string>
+#include <utility>
 
 #if EXO_ENABLE_HTML_UI
 #include <AppCore/CAPI.h>
@@ -15,6 +16,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <string_view>
 #include <vector>
 #else
 #include <SDL2/SDL.h>
@@ -162,6 +165,54 @@ std::string dispatchKeyScript(const char* key) {
         + key + "',bubbles:true,cancelable:true}));";
 }
 
+std::string bridgeCommand(std::string value) {
+    constexpr std::string_view urlPrefix = "exo://";
+    constexpr std::string_view titlePrefix = "exo:";
+    if (value.rfind(urlPrefix, 0) == 0) {
+        value.erase(0, urlPrefix.size());
+    } else if (value.rfind(titlePrefix, 0) == 0) {
+        value.erase(0, titlePrefix.size());
+    } else {
+        return {};
+    }
+
+    if (const std::size_t query = value.find('?'); query != std::string::npos) {
+        value.erase(query);
+    }
+    if (const std::size_t hash = value.find('#'); hash != std::string::npos) {
+        value.erase(hash);
+    }
+    if (const std::size_t nonce = value.rfind(':'); nonce != std::string::npos) {
+        value.erase(nonce);
+    }
+    return value;
+}
+
+bool parseSettingCommand(const std::string& command, HtmlMenu::SettingChange& out) {
+    constexpr std::string_view prefix = "setting/";
+    if (command.rfind(prefix, 0) != 0) {
+        return false;
+    }
+
+    const std::string payload = command.substr(prefix.size());
+    const std::size_t slash = payload.find('/');
+    if (slash == std::string::npos || slash == 0 || slash + 1 >= payload.size()) {
+        return false;
+    }
+
+    const std::string key = payload.substr(0, slash);
+    const std::string valueText = payload.substr(slash + 1);
+    char* end = nullptr;
+    const float rawValue = std::strtof(valueText.c_str(), &end);
+    if (end == valueText.c_str()) {
+        return false;
+    }
+
+    out.key = key;
+    out.value = std::clamp(rawValue, 0.0f, 1.0f);
+    return true;
+}
+
 } // namespace
 #endif
 
@@ -246,6 +297,12 @@ bool HtmlMenu::initialize(const Config& config) {
     ulViewFocus(static_cast<ULView>(view_));
 
     std::string relativeUrl = "file:///" + config.htmlPath.generic_string();
+    if (config.pauseOverlay) {
+        relativeUrl += "?mode=pause";
+    }
+    if (!config.initialScreen.empty()) {
+        relativeUrl += "#" + config.initialScreen;
+    }
     ULString url = makeUlString(relativeUrl);
     ulViewLoadURL(static_cast<ULView>(view_), url);
     ulDestroyString(url);
@@ -275,6 +332,8 @@ void HtmlMenu::shutdown() {
     initialized_ = false;
     startRequested_ = false;
     quitRequested_ = false;
+    resumeRequested_ = false;
+    pendingSetting_.reset();
 }
 
 void HtmlMenu::resize(std::uint32_t width, std::uint32_t height) {
@@ -402,9 +461,21 @@ bool HtmlMenu::quitRequested() const {
     return quitRequested_;
 }
 
+bool HtmlMenu::resumeRequested() const {
+    return resumeRequested_;
+}
+
+std::optional<HtmlMenu::SettingChange> HtmlMenu::takeSettingChange() {
+    std::optional<SettingChange> result = pendingSetting_;
+    pendingSetting_.reset();
+    return result;
+}
+
 void HtmlMenu::clearRequests() {
     startRequested_ = false;
     quitRequested_ = false;
+    resumeRequested_ = false;
+    pendingSetting_.reset();
 }
 
 #if EXO_ENABLE_HTML_UI
@@ -583,10 +654,19 @@ void HtmlMenu::handleBridgeMessage(const char* message) {
     if (message == nullptr) {
         return;
     }
-    const std::string value(message);
-    if (value.rfind("exo://start-game", 0) == 0 || value.rfind("exo:start-game", 0) == 0) {
+    const std::string command = bridgeCommand(message);
+    if (command.empty()) {
+        return;
+    }
+
+    SettingChange setting;
+    if (parseSettingCommand(command, setting)) {
+        pendingSetting_ = std::move(setting);
+    } else if (command == "start-game") {
         startRequested_ = true;
-    } else if (value.rfind("exo://quit-game", 0) == 0 || value.rfind("exo:quit-game", 0) == 0) {
+    } else if (command == "resume-game") {
+        resumeRequested_ = true;
+    } else if (command == "quit-game") {
         quitRequested_ = true;
     }
 }

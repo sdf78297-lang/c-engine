@@ -1056,7 +1056,11 @@
 
     window.exoMenuBridge = window.exoMenuBridge || {};
     window.exoMenuBridge.startGame = window.exoMenuBridge.startGame || function(){ exoCommand('start-game'); };
+    window.exoMenuBridge.resumeGame = window.exoMenuBridge.resumeGame || function(){ exoCommand('resume-game'); };
     window.exoMenuBridge.quitGame = window.exoMenuBridge.quitGame || function(){ exoCommand('quit-game'); };
+    window.exoMenuBridge.setSetting = window.exoMenuBridge.setSetting || function(key, value){
+      exoCommand('setting/' + encodeURIComponent(key) + '/' + encodeURIComponent(value));
+    };
   })();
 </script>
 </head>
@@ -1458,6 +1462,13 @@
   // ----------- screen routing -----------
   const screens = document.querySelectorAll('.screen');
   const trans = document.getElementById('trans');
+  const pauseMode = window.location.search.indexOf('mode=pause') !== -1;
+
+  function setScreenInstant(id){
+    const next = document.getElementById(id) || document.getElementById('screen-menu');
+    screens.forEach(screen => screen.classList.toggle('active', screen === next));
+    document.body.classList.toggle('story-mode', next && next.id === 'screen-story');
+  }
 
   function go(id){
     const cur = document.querySelector('.screen.active');
@@ -1477,6 +1488,12 @@
     }, 220);
   }
 
+  setScreenInstant((window.location.hash || '').replace('#', '') || 'screen-menu');
+  if (pauseMode) {
+    const pauseBack = document.querySelector('#screen-settings [data-action="back"]');
+    if (pauseBack) pauseBack.textContent = '← Вернуться в игру';
+  }
+
   document.querySelectorAll('[data-action]').forEach(el=>{
     el.addEventListener('click', (e)=>{
       e.preventDefault();
@@ -1485,7 +1502,7 @@
       if (a === 'story')    go('screen-story');
       if (a === 'settings') go('screen-settings');
       if (a === 'credits')  go('screen-credits');
-      if (a === 'back')     go('screen-menu');
+      if (a === 'back')     { if (pauseMode) window.exoMenuBridge.resumeGame(); else go('screen-menu'); }
       if (a === 'begin')    beginGame();
       if (a === 'quit')     quitFx();
     });
@@ -1496,7 +1513,8 @@
     const active = document.querySelector('.screen.active');
     if (!active) return;
     if (e.key === 'Escape'){
-      if (active.id !== 'screen-menu') go('screen-menu');
+      if (pauseMode) window.exoMenuBridge.resumeGame();
+      else if (active.id !== 'screen-menu') go('screen-menu');
       return;
     }
     if (active.id !== 'screen-menu') return;
@@ -1517,6 +1535,9 @@
     segs.forEach((s,i)=>{
       s.addEventListener('click', ()=>{
         segs.forEach((x,j)=> x.classList.toggle('on', j<=i));
+        if (window.exoMenuBridge && window.exoMenuBridge.setSetting) {
+          window.exoMenuBridge.setSetting(sl.dataset.key || '', ((i + 1) / segs.length).toFixed(2));
+        }
       });
     });
   });

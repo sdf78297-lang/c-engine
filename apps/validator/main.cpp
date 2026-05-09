@@ -240,6 +240,15 @@ private:
             return ids;
         }
 
+        const Json* musicPath = find(*audio, "musicPath");
+        if (musicPath != nullptr) {
+            if (!musicPath->is_string()) {
+                error(path, "audio.musicPath must be a string");
+            } else {
+                requireExists(resolve(musicPath->get<std::string>()), path, "music file missing");
+            }
+        }
+
         const Json* cues = find(*audio, "cues");
         if (cues == nullptr) {
             return ids;

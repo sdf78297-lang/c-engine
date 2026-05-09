@@ -46,6 +46,7 @@ private:
     void evaluateCurrentTrigger();
     void processRoomEnterEvents();
     void playAudioCue(const std::string& cueId);
+    void playRoomMusic();
     [[nodiscard]] bool isStaticMeshVisible(const StaticMeshInstance& instance) const;
     void syncStoryToGameState();
     void syncGameStateToStory();

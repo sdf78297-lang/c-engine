@@ -52,6 +52,7 @@ public:
         room.triggers = readTriggers();
         room.roomEnterEvents = readRoomEnterEvents();
         room.audioCues = readAudioCues();
+        room.musicPath = readMusicPath();
         room.collisionBoxes = readCollisionBoxes();
 
         if (room.spawns.empty()) {
@@ -434,6 +435,15 @@ private:
             cues[id] = filePath;
         }
         return cues;
+    }
+
+    [[nodiscard]] std::filesystem::path readMusicPath() const {
+        const Json* audioJson = optionalField(root_, "audio");
+        if (audioJson == nullptr) {
+            return {};
+        }
+        expectObject(*audioJson, "$.audio");
+        return optionalPath(*audioJson, "musicPath", "$.audio");
     }
 
     [[nodiscard]] std::vector<RoomCollisionBox> readCollisionBoxes() const {
