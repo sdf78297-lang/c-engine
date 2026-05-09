@@ -103,45 +103,28 @@ template = template.replace(
 
 template = template.replace(
   "  @keyframes caret{ 50%{ opacity: 0; } }\n\n  .story-foot{",
-  "  @keyframes caret{ 50%{ opacity: 0; } }\n\n  .story-mode .grain,\n  .story-mode .flicker,\n  .story-mode .tape-line{\n    animation: none;\n    opacity: .04;\n  }\n  .story-mode .scanlines{ opacity: .22; }\n\n  .story-foot{",
+  "  @keyframes caret{ 50%{ opacity: 0; } }\n\n  .story-mode .grain,\n  .story-mode .flicker,\n  .story-mode .tape-line,\n  .story-mode .crt-curve{\n    display: none;\n  }\n  .story-mode .scanlines{ opacity: .12; }\n  .story-mode .vignette{ mix-blend-mode: normal; opacity: .82; }\n\n  .story-foot{",
 );
 
 template = template.replace(
   /  \.typewriter\{[\s\S]*?  \.typewriter \.blood\{ color: var\(--blood-bright\); \}/,
   `  .typewriter{
     font-family: 'Special Elite', serif;
-    font-size: 17px;
-    line-height: 1.7;
+    font-size: 18px;
+    line-height: 1.85;
     color: var(--ink);
     position: relative; z-index: 2;
     overflow: hidden;
-    padding-right: 0;
-    flex: 0 0 168px;
-    min-height: 168px;
-    pointer-events: none;
-  }
-  .typewriter::after{
-    content: "";
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: 42px;
-    background: linear-gradient(180deg, transparent, rgba(7,8,10,0.94));
+    padding-right: 12px;
+    flex: 1;
+    min-height: 150px;
     pointer-events: none;
   }
   .typewriter p{
-    margin-bottom: 13px;
-    opacity: 0;
-    transform: translateY(18px);
-    transition: opacity .65s ease, transform .65s ease;
+    margin-bottom: 16px;
+    animation: paragraphRise .42s ease both;
   }
-  .typewriter p.reveal{
-    opacity: 1;
-    transform: translateY(0);
-  }
-  .typewriter p.retiring{
-    opacity: 0;
-    transform: translateY(-16px);
-  }
+  @keyframes paragraphRise{ from{ opacity: 0; transform: translateY(10px); } to{ opacity: 1; transform: translateY(0); } }
   .typewriter .quiet{ color: var(--ink-dim); font-style: italic; }
   .typewriter .blood{ color: var(--blood-bright); }`,
 );
@@ -164,14 +147,49 @@ template = template.replace(
 template = template.replace(
   /let typing = false;\s*function startTyping\(\)\{[\s\S]*?\n  \}\s*\n\s*\/\/ ----------- Begin game/,
   `let typing = false;
-  let storyRevealTimer = 0;
+  let storyTypeRaf = 0;
+  let storyParaTimer = 0;
+  let storyAutoScrollAt = 0;
 
   function stopStoryReveal(){
-    if (storyRevealTimer) {
-      clearTimeout(storyRevealTimer);
-      storyRevealTimer = 0;
-    }
     typing = false;
+    if (storyTypeRaf) {
+      cancelAnimationFrame(storyTypeRaf);
+      storyTypeRaf = 0;
+    }
+    if (storyParaTimer) {
+      clearTimeout(storyParaTimer);
+      storyParaTimer = 0;
+    }
+  }
+
+  function storyEscapeChar(ch){
+    if (ch === '&') return '&amp;';
+    if (ch === '<') return '&lt;';
+    if (ch === '>') return '&gt;';
+    return ch;
+  }
+
+  function storyTokens(html){
+    const tokens = [];
+    for (let i = 0; i < html.length;) {
+      if (html[i] === '<') {
+        const close = html.indexOf('>', i);
+        if (close !== -1) {
+          tokens.push({ html: html.slice(i, close + 1), tag: true, pause: 0 });
+          i = close + 1;
+          continue;
+        }
+      }
+
+      const ch = html[i++];
+      const pause =
+        ch === '.' || ch === '!' || ch === '?' ? 180 :
+        ch === ',' || ch === ';' || ch === ':' || ch === '—' ? 60 :
+        0;
+      tokens.push({ html: storyEscapeChar(ch), pause });
+    }
+    return tokens;
   }
 
   function startTyping(){
@@ -180,35 +198,62 @@ template = template.replace(
     const box = document.getElementById('ttype');
     if (!box) return;
     box.innerHTML = "";
+    box.scrollTop = 0;
 
-    let index = 0;
-    const maxVisible = 3;
-    const revealNext = () => {
-      if (!typing || index >= storyText.length) {
-        storyRevealTimer = 0;
+    let pi = 0;
+    function nextPara(){
+      if (!typing) return;
+      if (pi >= storyText.length) {
+        typing = false;
         return;
       }
 
-      const data = storyText[index++];
-      const paragraph = document.createElement('p');
-      if (data.cls) paragraph.className = data.cls;
-      paragraph.innerHTML = data.t;
-      box.appendChild(paragraph);
+      const data = storyText[pi++];
+      const p = document.createElement('p');
+      if (data.cls) p.className = data.cls;
+      box.appendChild(p);
 
-      requestAnimationFrame(() => paragraph.classList.add('reveal'));
+      const tokens = storyTokens(data.t);
+      let ti = 0;
+      let rendered = "";
+      let nextAt = performance.now();
 
-      while (box.children.length > maxVisible) {
-        const first = box.firstElementChild;
-        if (!first) break;
-        first.classList.add('retiring');
-        setTimeout(() => first.remove(), 680);
-        break;
+      function paint(now){
+        if (!typing) return;
+        let changed = false;
+        let budget = 0;
+
+        while (ti < tokens.length && now >= nextAt && budget < 8) {
+          const token = tokens[ti++];
+          rendered += token.html;
+          nextAt += token.tag ? 0 : (12 + Math.random() * 30 + token.pause);
+          changed = true;
+          budget++;
+        }
+
+        if (changed) {
+          p.innerHTML = rendered + '<span class="caret"></span>';
+          if (now - storyAutoScrollAt > 110) {
+            box.scrollTop = box.scrollHeight;
+            storyAutoScrollAt = now;
+          }
+        }
+
+        if (ti >= tokens.length) {
+          p.innerHTML = rendered;
+          box.scrollTop = box.scrollHeight;
+          storyTypeRaf = 0;
+          storyParaTimer = setTimeout(nextPara, 420);
+          return;
+        }
+
+        storyTypeRaf = requestAnimationFrame(paint);
       }
 
-      storyRevealTimer = setTimeout(revealNext, data.cls === 'blood' ? 2600 : 1800);
-    };
+      storyTypeRaf = requestAnimationFrame(paint);
+    }
 
-    revealNext();
+    nextPara();
   }
 
   // ----------- Begin game`,
@@ -222,6 +267,16 @@ template = template.replace(
 template = template.replace(
   "    if (Math.random() < 0.25){\n      document.body.style.filter = 'invert(1) hue-rotate(180deg)';\n      setTimeout(()=> document.body.style.filter = '', 60 + Math.random()*80);\n    }\n  }, 5500);",
   "    if (!document.body.classList.contains('story-mode') && Math.random() < 0.12){\n      document.body.style.filter = 'invert(1) hue-rotate(180deg)';\n      setTimeout(()=> document.body.style.filter = '', 60 + Math.random()*80);\n    }\n  }, 8000);",
+);
+
+template = template.replace(
+  "  setInterval(()=>{\n    const bpm = 64 + Math.floor(Math.random()*22);\n    document.getElementById('hud-time').textContent = String(bpm).padStart(3,'0');\n  }, 900);",
+  "  setInterval(()=>{\n    if (document.body.classList.contains('story-mode')) return;\n    const bpm = 64 + Math.floor(Math.random()*22);\n    document.getElementById('hud-time').textContent = String(bpm).padStart(3,'0');\n  }, 900);",
+);
+
+template = template.replace(
+  "  setInterval(()=>{\n    const n = 4 + Math.floor(Math.random()*4);\n    document.getElementById('trk').textContent = '■'.repeat(n) + '□'.repeat(7-n);\n  }, 800);",
+  "  setInterval(()=>{\n    if (document.body.classList.contains('story-mode')) return;\n    const n = 4 + Math.floor(Math.random()*4);\n    document.getElementById('trk').textContent = '■'.repeat(n) + '□'.repeat(7-n);\n  }, 800);",
 );
 
 template = template.replace(
