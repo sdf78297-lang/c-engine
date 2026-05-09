@@ -216,7 +216,7 @@ bool HtmlMenu::initialize(const Config& config) {
     ulConfigSetResourcePathPrefix(ulConfig, resources);
     ulDestroyString(resources);
     ulConfigSetAnimationTimerDelay(ulConfig, 1.0 / 60.0);
-    ulConfigSetForceRepaint(ulConfig, true);
+    ulConfigSetForceRepaint(ulConfig, false);
 
     renderer_ = ulCreateRenderer(ulConfig);
     ulDestroyConfig(ulConfig);
