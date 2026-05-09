@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <ExoEngine/Math/Vec.h>
+#include <ExoEngine/Renderer/RenderEnvironment.h>
 #include <ExoEngine/Scene/FixedCameraRig.h>
 
 namespace Exo {
@@ -37,12 +38,14 @@ public:
 
     void addStaticMesh(StaticMeshInstance instance);
     void addPointLight(PointLight light);
+    void setRenderEnvironment(RenderEnvironment environment);
 
     [[nodiscard]] const std::string& name() const;
     [[nodiscard]] FixedCameraRig& cameraRig();
     [[nodiscard]] const FixedCameraRig& cameraRig() const;
     [[nodiscard]] const std::vector<StaticMeshInstance>& staticMeshes() const;
     [[nodiscard]] const std::vector<PointLight>& pointLights() const;
+    [[nodiscard]] const RenderEnvironment& renderEnvironment() const;
 
     static Scene createReferenceScene();
 
@@ -51,6 +54,7 @@ private:
     FixedCameraRig cameraRig_;
     std::vector<StaticMeshInstance> staticMeshes_;
     std::vector<PointLight> pointLights_;
+    RenderEnvironment renderEnvironment_ {};
 };
 
 } // namespace Exo

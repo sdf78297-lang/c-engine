@@ -15,6 +15,10 @@ void Scene::addPointLight(PointLight light) {
     pointLights_.push_back(light);
 }
 
+void Scene::setRenderEnvironment(RenderEnvironment environment) {
+    renderEnvironment_ = environment;
+}
+
 const std::string& Scene::name() const {
     return name_;
 }
@@ -33,6 +37,10 @@ const std::vector<StaticMeshInstance>& Scene::staticMeshes() const {
 
 const std::vector<PointLight>& Scene::pointLights() const {
     return pointLights_;
+}
+
+const RenderEnvironment& Scene::renderEnvironment() const {
+    return renderEnvironment_;
 }
 
 Scene Scene::createReferenceScene() {

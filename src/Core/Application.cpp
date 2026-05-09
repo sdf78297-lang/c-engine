@@ -511,6 +511,7 @@ int Application::runWindowed() {
             });
         }
         renderer_.setPointLights(renderLights);
+        renderer_.setEnvironment(scene_.renderEnvironment());
         renderer_.beginFrame(makeCurrentView());
         for (std::size_t i = 0; i < scene_.staticMeshes().size(); ++i) {
             const StaticMeshInstance& instance = scene_.staticMeshes()[i];

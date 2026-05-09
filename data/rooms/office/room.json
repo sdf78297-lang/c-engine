@@ -14,9 +14,25 @@
       "staticMeshes",
       "collisionBoxes",
       "pointLights",
+      "renderEnvironment",
       "fixedCameras"
     ],
     "unknownFieldsIgnored": true
+  },
+  "renderEnvironment": {
+    "clearColor": [0.006, 0.008, 0.010],
+    "ambientColor": [0.18, 0.24, 0.30],
+    "ambientIntensity": 0.24,
+    "keyLightDirection": [0.22, 0.92, 0.18],
+    "keyLightColor": [0.60, 0.72, 0.92],
+    "keyLightIntensity": 0.28,
+    "fogColor": [0.020, 0.029, 0.033],
+    "fogStart": 2.8,
+    "fogDensity": 0.12,
+    "exposure": 0.92,
+    "contrast": 1.26,
+    "saturation": 0.74,
+    "vignetteStrength": 0.66
   },
   "walkBounds": {
     "min": [-5.0, -0.5, -3.45],
@@ -225,51 +241,51 @@
   "pointLights": [
     {
       "position": [-2.9, 2.45, -0.35],
-      "color": [0.68, 0.82, 1.0],
-      "radius": 5.3,
-      "intensity": 0.42
+      "color": [0.48, 0.66, 1.0],
+      "radius": 5.6,
+      "intensity": 0.36
     },
     {
       "position": [2.9, 2.45, -0.35],
-      "color": [0.95, 0.82, 0.58],
-      "radius": 5.3,
-      "intensity": 0.30
+      "color": [0.80, 0.68, 0.46],
+      "radius": 4.7,
+      "intensity": 0.17
     },
     {
       "position": [-2.4, 1.18, -1.30],
-      "color": [0.22, 0.50, 1.0],
-      "radius": 2.1,
-      "intensity": 0.22
+      "color": [0.16, 0.42, 1.0],
+      "radius": 2.35,
+      "intensity": 0.30
     },
     {
       "position": [2.4, 1.18, -1.30],
-      "color": [0.22, 0.50, 1.0],
-      "radius": 2.1,
-      "intensity": 0.22
+      "color": [0.16, 0.42, 1.0],
+      "radius": 2.35,
+      "intensity": 0.28
     },
     {
       "position": [-2.4, 1.18, 1.30],
-      "color": [0.18, 0.44, 0.95],
-      "radius": 2.1,
-      "intensity": 0.18
+      "color": [0.12, 0.34, 0.88],
+      "radius": 2.2,
+      "intensity": 0.24
     },
     {
       "position": [2.4, 1.18, 1.30],
-      "color": [0.18, 0.44, 0.95],
-      "radius": 2.1,
-      "intensity": 0.18
+      "color": [0.12, 0.34, 0.88],
+      "radius": 2.2,
+      "intensity": 0.22
     },
     {
       "position": [-4.65, 0.95, 3.05],
-      "color": [1.0, 0.18, 0.12],
-      "radius": 1.55,
-      "intensity": 0.12
+      "color": [1.0, 0.10, 0.06],
+      "radius": 1.75,
+      "intensity": 0.18
     },
     {
-      "position": [4.55, 1.15, -3.05],
-      "color": [0.58, 0.95, 0.72],
-      "radius": 2.2,
-      "intensity": 0.18
+      "position": [4.20, 1.22, -1.12],
+      "color": [0.38, 0.95, 0.64],
+      "radius": 2.45,
+      "intensity": 0.22
     }
   ],
   "fixedCameras": [

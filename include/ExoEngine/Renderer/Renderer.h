@@ -9,6 +9,7 @@
 #include <ExoEngine/Math/Mat4.h>
 #include <ExoEngine/Math/Vec.h>
 #include <ExoEngine/Renderer/MeshBuffer.h>
+#include <ExoEngine/Renderer/RenderEnvironment.h>
 #include <ExoEngine/Renderer/Texture2D.h>
 
 namespace Exo {
@@ -42,6 +43,7 @@ public:
     bool initialize(std::uint32_t width, std::uint32_t height);
     void shutdown();
     void resize(std::uint32_t width, std::uint32_t height);
+    void setEnvironment(const RenderEnvironment& environment);
     void setPointLights(const std::vector<RenderPointLight>& lights);
     void beginFrame(const RenderView& view);
     [[nodiscard]] std::int32_t loadSceneMesh(const std::filesystem::path& path);
@@ -106,6 +108,8 @@ private:
     std::uint32_t width_ = 0;
     std::uint32_t height_ = 0;
     Mat4 currentViewProjection_ = Mat4::identity();
+    Vec3 currentCameraPosition_ {};
+    RenderEnvironment activeEnvironment_ {};
     std::uint32_t texturedShader_ = 0;
     std::uint32_t whiteTexture_ = 0;
     std::vector<SceneMesh> sceneMeshes_;

@@ -209,6 +209,7 @@ private:
             }
         }
         validateCollisionBoxes(root, path);
+        validateRenderEnvironment(root, path);
         const std::unordered_set<std::string> audioCueIds = validateAudioCues(root, path);
         validateRoomTriggers(root, path, audioCueIds);
         validateRoomEnterEvents(root, path, audioCueIds);
@@ -403,6 +404,54 @@ private:
                 continue;
             }
             validateBounds(*bounds, path, "collision box bounds");
+        }
+    }
+
+    void validateRenderEnvironment(const Json& room, const std::filesystem::path& path) {
+        const Json* environment = find(room, "renderEnvironment");
+        if (environment == nullptr) {
+            return;
+        }
+        if (!environment->is_object()) {
+            error(path, "renderEnvironment must be an object");
+            return;
+        }
+
+        for (const std::string_view field : {
+                 "clearColor",
+                 "ambientColor",
+                 "keyLightDirection",
+                 "keyLightColor",
+                 "fogColor",
+             }) {
+            const Json* value = find(*environment, field);
+            if (value != nullptr && !isVec3(value)) {
+                error(path, "renderEnvironment." + std::string(field) + " must be a vec3");
+            }
+        }
+
+        for (const std::string_view field : {
+                 "ambientIntensity",
+                 "keyLightIntensity",
+                 "fogStart",
+                 "fogDensity",
+                 "exposure",
+                 "contrast",
+                 "saturation",
+                 "vignetteStrength",
+             }) {
+            const Json* value = find(*environment, field);
+            if (value != nullptr && (!value->is_number() || !std::isfinite(value->get<double>()))) {
+                error(path, "renderEnvironment." + std::string(field) + " must be a finite number");
+            }
+        }
+
+        const Json* vignette = find(*environment, "vignetteStrength");
+        if (vignette != nullptr && vignette->is_number()) {
+            const double value = vignette->get<double>();
+            if (value < 0.0 || value > 1.0) {
+                error(path, "renderEnvironment.vignetteStrength must be between 0 and 1");
+            }
         }
     }
 

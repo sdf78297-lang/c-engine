@@ -52,6 +52,20 @@ out vec4 FragColor;
 
 uniform sampler2D uAlbedo;
 uniform vec3 uBaseColor;
+uniform vec3 uCameraPosition;
+uniform vec2 uViewportSize;
+uniform vec3 uAmbientColor;
+uniform float uAmbientIntensity;
+uniform vec3 uKeyLightDirection;
+uniform vec3 uKeyLightColor;
+uniform float uKeyLightIntensity;
+uniform vec3 uFogColor;
+uniform float uFogStart;
+uniform float uFogDensity;
+uniform float uExposure;
+uniform float uContrast;
+uniform float uSaturation;
+uniform float uVignetteStrength;
 uniform int uPointLightCount;
 uniform vec3 uPointLightPosition[8];
 uniform vec3 uPointLightColor[8];
@@ -63,10 +77,10 @@ void main() {
     vec3 albedo = sampled.rgb * uBaseColor;
     vec3 normal = normalize(vNormalWS);
 
-    vec3 lightDir = normalize(vec3(0.40, 0.85, 0.32));
-    float ndotl = max(dot(normal, lightDir), 0.0);
-    float ambient = 0.38;
-    vec3 lit = albedo * (ambient + ndotl * 0.58);
+    vec3 keyDir = normalize(uKeyLightDirection);
+    float ndotl = max(dot(normal, keyDir), 0.0);
+    vec3 lit = albedo * (uAmbientColor * uAmbientIntensity);
+    lit += albedo * (uKeyLightColor * ndotl * uKeyLightIntensity);
 
     for (int i = 0; i < 8; ++i) {
         if (i >= uPointLightCount) {
@@ -83,9 +97,27 @@ void main() {
         float pointDiffuse = max(dot(normal, lightVector), 0.0);
         vec3 pointLight = uPointLightColor[i] * uPointLightIntensity[i] * attenuation * (0.20 + pointDiffuse * 0.85);
         lit += albedo * pointLight;
+
+        vec3 viewDir = normalize(uCameraPosition - vWorldPos);
+        vec3 halfVector = normalize(lightVector + viewDir);
+        float specular = pow(max(dot(normal, halfVector), 0.0), 32.0) * attenuation * uPointLightIntensity[i] * 0.10;
+        lit += uPointLightColor[i] * specular;
     }
 
-    FragColor = vec4(min(lit, vec3(1.0)), sampled.a);
+    float fogAmount = clamp((length(uCameraPosition - vWorldPos) - uFogStart) * uFogDensity, 0.0, 0.82);
+    vec3 color = mix(lit, uFogColor, fogAmount);
+    color = vec3(1.0) - exp(-max(color, vec3(0.0)) * max(uExposure, 0.001));
+
+    float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    color = mix(vec3(luma), color, max(uSaturation, 0.0));
+    color = (color - vec3(0.5)) * max(uContrast, 0.0) + vec3(0.5);
+
+    vec2 screenUv = gl_FragCoord.xy / max(uViewportSize, vec2(1.0));
+    float edgeFade = smoothstep(0.24, 0.78, length(screenUv - vec2(0.5)));
+    color *= mix(1.0, 1.0 - edgeFade * 0.46, clamp(uVignetteStrength, 0.0, 1.0));
+    color = pow(clamp(color, vec3(0.0), vec3(1.0)), vec3(1.0 / 2.2));
+
+    FragColor = vec4(color, sampled.a);
 }
 )glsl";
 
@@ -215,6 +247,10 @@ void Renderer::resize(std::uint32_t width, std::uint32_t height) {
     glViewport(0, 0, static_cast<GLsizei>(width_), static_cast<GLsizei>(height_));
 }
 
+void Renderer::setEnvironment(const RenderEnvironment& environment) {
+    activeEnvironment_ = environment;
+}
+
 void Renderer::setPointLights(const std::vector<RenderPointLight>& lights) {
     activePointLights_ = lights;
     if (activePointLights_.size() > 8) {
@@ -226,8 +262,13 @@ void Renderer::beginFrame(const RenderView& view) {
     stats_.drawCalls = 0;
     ++stats_.frameIndex;
     currentViewProjection_ = view.projection * view.view;
+    currentCameraPosition_ = view.cameraPosition;
 
-    glClearColor(0.018f, 0.021f, 0.023f, 1.0f);
+    glClearColor(
+        activeEnvironment_.clearColor.x,
+        activeEnvironment_.clearColor.y,
+        activeEnvironment_.clearColor.z,
+        1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
@@ -269,6 +310,27 @@ void Renderer::drawSceneMesh(std::int32_t handle, const Mat4& modelTransform) {
     glUniformMatrix4fv(vpLoc, 1, GL_FALSE, currentViewProjection_.data());
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, modelTransform.data());
     glUniform1i(texLoc, 0);
+    glUniform3f(glGetUniformLocation(texturedShader_, "uCameraPosition"),
+        currentCameraPosition_.x, currentCameraPosition_.y, currentCameraPosition_.z);
+    glUniform2f(glGetUniformLocation(texturedShader_, "uViewportSize"),
+        static_cast<float>(std::max(width_, 1u)), static_cast<float>(std::max(height_, 1u)));
+    glUniform3f(glGetUniformLocation(texturedShader_, "uAmbientColor"),
+        activeEnvironment_.ambientColor.x, activeEnvironment_.ambientColor.y, activeEnvironment_.ambientColor.z);
+    glUniform1f(glGetUniformLocation(texturedShader_, "uAmbientIntensity"), activeEnvironment_.ambientIntensity);
+    const Vec3 keyLightDirection = normalize(activeEnvironment_.keyLightDirection);
+    glUniform3f(glGetUniformLocation(texturedShader_, "uKeyLightDirection"),
+        keyLightDirection.x, keyLightDirection.y, keyLightDirection.z);
+    glUniform3f(glGetUniformLocation(texturedShader_, "uKeyLightColor"),
+        activeEnvironment_.keyLightColor.x, activeEnvironment_.keyLightColor.y, activeEnvironment_.keyLightColor.z);
+    glUniform1f(glGetUniformLocation(texturedShader_, "uKeyLightIntensity"), activeEnvironment_.keyLightIntensity);
+    glUniform3f(glGetUniformLocation(texturedShader_, "uFogColor"),
+        activeEnvironment_.fogColor.x, activeEnvironment_.fogColor.y, activeEnvironment_.fogColor.z);
+    glUniform1f(glGetUniformLocation(texturedShader_, "uFogStart"), activeEnvironment_.fogStart);
+    glUniform1f(glGetUniformLocation(texturedShader_, "uFogDensity"), activeEnvironment_.fogDensity);
+    glUniform1f(glGetUniformLocation(texturedShader_, "uExposure"), activeEnvironment_.exposure);
+    glUniform1f(glGetUniformLocation(texturedShader_, "uContrast"), activeEnvironment_.contrast);
+    glUniform1f(glGetUniformLocation(texturedShader_, "uSaturation"), activeEnvironment_.saturation);
+    glUniform1f(glGetUniformLocation(texturedShader_, "uVignetteStrength"), activeEnvironment_.vignetteStrength);
     glUniform1i(pointCountLoc, static_cast<GLint>(activePointLights_.size()));
     glActiveTexture(GL_TEXTURE0);
 

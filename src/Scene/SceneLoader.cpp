@@ -46,6 +46,7 @@ public:
         expectObject(root_, "$");
 
         Scene scene(requiredStringField(root_, "name", "$"));
+        readRenderEnvironment(scene);
         readStaticMeshes(scene);
         readPointLights(scene);
         readFixedCameras(scene);
@@ -250,6 +251,24 @@ private:
         }
     }
 
+    void validateNonNegative(float value, std::string_view path) const {
+        if (value < 0.0f) {
+            fail(path, "must be greater than or equal to zero");
+        }
+    }
+
+    void validatePositive(float value, std::string_view path) const {
+        if (value <= 0.0f) {
+            fail(path, "must be greater than zero");
+        }
+    }
+
+    void validateUnitRange(float value, std::string_view path) const {
+        if (value < 0.0f || value > 1.0f) {
+            fail(path, "must be between 0 and 1");
+        }
+    }
+
     [[nodiscard]] Transform transformValue(const Json& value, std::string_view path) const {
         expectObject(value, path);
 
@@ -288,6 +307,47 @@ private:
 
             scene.addStaticMesh(std::move(instance));
         }
+    }
+
+    void readRenderEnvironment(Scene& scene) const {
+        const Json* environmentJson = optionalField(root_, "renderEnvironment");
+        if (environmentJson == nullptr) {
+            return;
+        }
+        expectObject(*environmentJson, "$.renderEnvironment");
+
+        RenderEnvironment environment = scene.renderEnvironment();
+        environment.clearColor = optionalVec3Field(*environmentJson, "clearColor", "$.renderEnvironment", environment.clearColor);
+        environment.ambientColor = optionalVec3Field(*environmentJson, "ambientColor", "$.renderEnvironment", environment.ambientColor);
+        environment.ambientIntensity = optionalNumberField(*environmentJson, "ambientIntensity", "$.renderEnvironment", environment.ambientIntensity);
+        environment.keyLightDirection = optionalVec3Field(*environmentJson, "keyLightDirection", "$.renderEnvironment", environment.keyLightDirection);
+        environment.keyLightColor = optionalVec3Field(*environmentJson, "keyLightColor", "$.renderEnvironment", environment.keyLightColor);
+        environment.keyLightIntensity = optionalNumberField(*environmentJson, "keyLightIntensity", "$.renderEnvironment", environment.keyLightIntensity);
+        environment.fogColor = optionalVec3Field(*environmentJson, "fogColor", "$.renderEnvironment", environment.fogColor);
+        environment.fogStart = optionalNumberField(*environmentJson, "fogStart", "$.renderEnvironment", environment.fogStart);
+        environment.fogDensity = optionalNumberField(*environmentJson, "fogDensity", "$.renderEnvironment", environment.fogDensity);
+        environment.exposure = optionalNumberField(*environmentJson, "exposure", "$.renderEnvironment", environment.exposure);
+        environment.contrast = optionalNumberField(*environmentJson, "contrast", "$.renderEnvironment", environment.contrast);
+        environment.saturation = optionalNumberField(*environmentJson, "saturation", "$.renderEnvironment", environment.saturation);
+        environment.vignetteStrength = optionalNumberField(*environmentJson, "vignetteStrength", "$.renderEnvironment", environment.vignetteStrength);
+
+        validateNonNegative(environment.clearColor, "$.renderEnvironment.clearColor");
+        validateNonNegative(environment.ambientColor, "$.renderEnvironment.ambientColor");
+        validateNonNegative(environment.ambientIntensity, "$.renderEnvironment.ambientIntensity");
+        if (environment.keyLightDirection.length() <= 0.00001f) {
+            fail("$.renderEnvironment.keyLightDirection", "must not be a zero vector");
+        }
+        validateNonNegative(environment.keyLightColor, "$.renderEnvironment.keyLightColor");
+        validateNonNegative(environment.keyLightIntensity, "$.renderEnvironment.keyLightIntensity");
+        validateNonNegative(environment.fogColor, "$.renderEnvironment.fogColor");
+        validateNonNegative(environment.fogStart, "$.renderEnvironment.fogStart");
+        validateNonNegative(environment.fogDensity, "$.renderEnvironment.fogDensity");
+        validatePositive(environment.exposure, "$.renderEnvironment.exposure");
+        validatePositive(environment.contrast, "$.renderEnvironment.contrast");
+        validateNonNegative(environment.saturation, "$.renderEnvironment.saturation");
+        validateUnitRange(environment.vignetteStrength, "$.renderEnvironment.vignetteStrength");
+
+        scene.setRenderEnvironment(environment);
     }
 
     void readPointLights(Scene& scene) const {
