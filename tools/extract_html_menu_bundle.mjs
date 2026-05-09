@@ -107,22 +107,108 @@ template = template.replace(
 );
 
 template = template.replace(
+  /  \.typewriter\{[\s\S]*?  \.typewriter \.blood\{ color: var\(--blood-bright\); \}/,
+  `  .typewriter{
+    font-family: 'Special Elite', serif;
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--ink);
+    position: relative; z-index: 2;
+    overflow: hidden;
+    padding-right: 0;
+    flex: 0 0 168px;
+    min-height: 168px;
+    pointer-events: none;
+  }
+  .typewriter::after{
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 42px;
+    background: linear-gradient(180deg, transparent, rgba(7,8,10,0.94));
+    pointer-events: none;
+  }
+  .typewriter p{
+    margin-bottom: 13px;
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity .65s ease, transform .65s ease;
+  }
+  .typewriter p.reveal{
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .typewriter p.retiring{
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  .typewriter .quiet{ color: var(--ink-dim); font-style: italic; }
+  .typewriter .blood{ color: var(--blood-bright); }`,
+);
+
+template = template.replace(
   "      next.classList.add('active');\n      trans.classList.remove('on');",
-  "      next.classList.add('active');\n      document.body.classList.toggle('story-mode', id === 'screen-story');\n      trans.classList.remove('on');",
+  "      if (cur && cur.id === 'screen-story' && id !== 'screen-story') stopStoryReveal();\n      next.classList.add('active');\n      document.body.classList.toggle('story-mode', id === 'screen-story');\n      trans.classList.remove('on');",
+);
+
+template = template.replace(
+  "    opacity: 0; pointer-events: none;\n    transition: opacity .8s ease;",
+  "    opacity: 0; pointer-events: none;\n    visibility: hidden;\n    transition: opacity .8s ease;",
+);
+
+template = template.replace(
+  "  .screen.active{ opacity: 1; pointer-events: auto; }",
+  "  .screen.active{ opacity: 1; pointer-events: auto; visibility: visible; }",
 );
 
 template = template.replace(
   /let typing = false;\s*function startTyping\(\)\{[\s\S]*?\n  \}\s*\n\s*\/\/ ----------- Begin game/,
   `let typing = false;
+  let storyRevealTimer = 0;
+
+  function stopStoryReveal(){
+    if (storyRevealTimer) {
+      clearTimeout(storyRevealTimer);
+      storyRevealTimer = 0;
+    }
+    typing = false;
+  }
+
   function startTyping(){
-    if (typing) return;
+    stopStoryReveal();
     typing = true;
     const box = document.getElementById('ttype');
     if (!box) return;
-    box.innerHTML = storyText.map((data) => {
-      const cls = data.cls ? \` class="\${data.cls}"\` : "";
-      return \`<p\${cls}>\${data.t}</p>\`;
-    }).join("");
+    box.innerHTML = "";
+
+    let index = 0;
+    const maxVisible = 3;
+    const revealNext = () => {
+      if (!typing || index >= storyText.length) {
+        storyRevealTimer = 0;
+        return;
+      }
+
+      const data = storyText[index++];
+      const paragraph = document.createElement('p');
+      if (data.cls) paragraph.className = data.cls;
+      paragraph.innerHTML = data.t;
+      box.appendChild(paragraph);
+
+      requestAnimationFrame(() => paragraph.classList.add('reveal'));
+
+      while (box.children.length > maxVisible) {
+        const first = box.firstElementChild;
+        if (!first) break;
+        first.classList.add('retiring');
+        setTimeout(() => first.remove(), 680);
+        break;
+      }
+
+      storyRevealTimer = setTimeout(revealNext, data.cls === 'blood' ? 2600 : 1800);
+    };
+
+    revealNext();
   }
 
   // ----------- Begin game`,
@@ -140,14 +226,15 @@ template = template.replace(
 
 template = template.replace(
   /function beginGame\(\)\{([\s\S]*?)setTimeout\(\(\)=>\{([\s\S]*?)trans\.classList\.remove\('on'\);\s*\}, 1200\);\s*\}/,
-  (_match, before, inside) => `function beginGame(){${before}setTimeout(()=>{${inside}trans.classList.remove('on');
+  (_match, before, inside) => `function beginGame(){${before}setTimeout(()=>{${inside.trimEnd()}
+      trans.classList.remove('on');
       window.exoMenuBridge.startGame();
     }, 1200);
   }`,
 );
 template = template.replace(
   /function quitFx\(\)\{([\s\S]*?)setTimeout\(\(\)=>\{([\s\S]*?)\}, 1400\);\s*\}/,
-  (_match, before, inside) => `function quitFx(){${before}setTimeout(()=>{${inside}
+  (_match, before, inside) => `function quitFx(){${before}setTimeout(()=>{${inside.trimEnd()}
       window.exoMenuBridge.quitGame();
     }, 1400);
   }`,

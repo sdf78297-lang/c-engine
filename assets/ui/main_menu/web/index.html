@@ -339,10 +339,11 @@
     position: fixed; left: 0; top: 0; right: 0; bottom: 0;
     display: flex; align-items: center; justify-content: center;
     opacity: 0; pointer-events: none;
+    visibility: hidden;
     transition: opacity .8s ease;
     z-index: 10;
   }
-  .screen.active{ opacity: 1; pointer-events: auto; }
+  .screen.active{ opacity: 1; pointer-events: auto; visibility: visible; }
   .screen.glitching{ animation: glitchOut .35s steps(3); }
   @keyframes glitchOut{
     0%{ filter: none; transform: none; }
@@ -633,17 +634,38 @@
 
   .typewriter{
     font-family: 'Special Elite', serif;
-    font-size: 18px;
-    line-height: 1.85;
+    font-size: 17px;
+    line-height: 1.7;
     color: var(--ink);
     position: relative; z-index: 2;
-    overflow-y: auto;
-    padding-right: 12px;
-    flex: 1;
+    overflow: hidden;
+    padding-right: 0;
+    flex: 0 0 168px;
+    min-height: 168px;
+    pointer-events: none;
   }
-  .typewriter::-webkit-scrollbar{ width: 6px; }
-  .typewriter::-webkit-scrollbar-thumb{ background: var(--ink-faint); }
-  .typewriter p{ margin-bottom: 16px; }
+  .typewriter::after{
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 42px;
+    background: linear-gradient(180deg, transparent, rgba(7,8,10,0.94));
+    pointer-events: none;
+  }
+  .typewriter p{
+    margin-bottom: 13px;
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity .65s ease, transform .65s ease;
+  }
+  .typewriter p.reveal{
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .typewriter p.retiring{
+    opacity: 0;
+    transform: translateY(-16px);
+  }
   .typewriter .quiet{ color: var(--ink-dim); font-style: italic; }
   .typewriter .blood{ color: var(--blood-bright); }
   .caret{
@@ -1369,6 +1391,7 @@
     if (cur) cur.classList.add('glitching');
     setTimeout(()=>{
       if (cur){ cur.classList.remove('active'); cur.classList.remove('glitching'); }
+      if (cur && cur.id === 'screen-story' && id !== 'screen-story') stopStoryReveal();
       next.classList.add('active');
       document.body.classList.toggle('story-mode', id === 'screen-story');
       trans.classList.remove('on');
@@ -1443,15 +1466,51 @@
     {t: "...а если он не прав — что у меня в голове на самом деле?", cls:"quiet"}
   ];
   let typing = false;
+  let storyRevealTimer = 0;
+
+  function stopStoryReveal(){
+    if (storyRevealTimer) {
+      clearTimeout(storyRevealTimer);
+      storyRevealTimer = 0;
+    }
+    typing = false;
+  }
+
   function startTyping(){
-    if (typing) return;
+    stopStoryReveal();
     typing = true;
     const box = document.getElementById('ttype');
     if (!box) return;
-    box.innerHTML = storyText.map((data) => {
-      const cls = data.cls ? ` class="${data.cls}"` : "";
-      return `<p${cls}>${data.t}</p>`;
-    }).join("");
+    box.innerHTML = "";
+
+    let index = 0;
+    const maxVisible = 3;
+    const revealNext = () => {
+      if (!typing || index >= storyText.length) {
+        storyRevealTimer = 0;
+        return;
+      }
+
+      const data = storyText[index++];
+      const paragraph = document.createElement('p');
+      if (data.cls) paragraph.className = data.cls;
+      paragraph.innerHTML = data.t;
+      box.appendChild(paragraph);
+
+      requestAnimationFrame(() => paragraph.classList.add('reveal'));
+
+      while (box.children.length > maxVisible) {
+        const first = box.firstElementChild;
+        if (!first) break;
+        first.classList.add('retiring');
+        setTimeout(() => first.remove(), 680);
+        break;
+      }
+
+      storyRevealTimer = setTimeout(revealNext, data.cls === 'blood' ? 2600 : 1800);
+    };
+
+    revealNext();
   }
 
   // ----------- Begin game (placeholder fx) -----------
@@ -1489,7 +1548,6 @@
       document.body.innerHTML = `<div style="position:fixed;left:0;top:0;right:0;bottom:0;background:#000;display:flex;align-items:center;justify-content:center;color:#3a3833;font-family:'VT323',monospace;font-size:14px;letter-spacing:4px;">— NO SIGNAL —</div>`;
       document.body.style.opacity = '1';
       document.body.style.filter = '';
-
       window.exoMenuBridge.quitGame();
     }, 1400);
   }
