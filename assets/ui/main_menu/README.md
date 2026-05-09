@@ -18,4 +18,6 @@ While `story-mode` is open, animations on inactive screens are paused. Keep this
 
 The C++ bridge uploads only the dirty Ultralight surface rectangle to the menu texture after the first full upload. Do not change it back to full-surface `glTexSubImage2D` for every small HTML update.
 
+The game loop renders every frame, but `HtmlMenu::update()` advances the software-rendered HTML surface at a fixed cadence and forces immediate refresh only for clicks and key presses. This keeps the 3D/game frame loop responsive even when the menu has expensive VHS/SVG animation.
+
 Do not replace this with a PNG or video capture. The engine renders this HTML live every frame through `Exo::HtmlMenu`.

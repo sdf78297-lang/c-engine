@@ -293,6 +293,7 @@ void HtmlMenu::resize(std::uint32_t width, std::uint32_t height) {
         glBindTexture(GL_TEXTURE_2D, 0);
         textureUploaded_ = false;
     }
+    needsImmediateUpdate_ = true;
 #endif
 }
 
@@ -316,6 +317,7 @@ void HtmlMenu::handleEvent(const SDL_Event& event) {
         }
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP: {
+            needsImmediateUpdate_ = true;
             const ULMouseEventType type = event.type == SDL_MOUSEBUTTONDOWN ? kMouseEventType_MouseDown : kMouseEventType_MouseUp;
             ULMouseEvent evt = ulCreateMouseEvent(type, event.button.x, event.button.y, toUlButton(event.button.button));
             ulViewFireMouseEvent(static_cast<ULView>(view_), evt);
@@ -323,6 +325,7 @@ void HtmlMenu::handleEvent(const SDL_Event& event) {
             break;
         }
         case SDL_KEYDOWN: {
+            needsImmediateUpdate_ = true;
             if (const char* key = keyName(event.key.keysym.sym)) {
                 evaluateScript(dispatchKeyScript(key));
             }
@@ -341,8 +344,18 @@ void HtmlMenu::update() {
     if (!initialized_ || renderer_ == nullptr) {
         return;
     }
+    const std::uint32_t now = SDL_GetTicks();
+    // Ultralight renders this menu in software. Let the game loop keep drawing
+    // the last menu texture at full speed while the HTML animation advances at
+    // a steady cadence, with immediate refresh for clicks and key presses.
+    constexpr std::uint32_t menuAnimationStepMs = 33u;
+    if (!needsImmediateUpdate_ && lastUpdateMs_ != 0 && now - lastUpdateMs_ < menuAnimationStepMs) {
+        return;
+    }
+    needsImmediateUpdate_ = false;
     ulUpdate(static_cast<ULRenderer>(renderer_));
     ulRender(static_cast<ULRenderer>(renderer_));
+    lastUpdateMs_ = SDL_GetTicks();
 #endif
 }
 

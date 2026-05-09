@@ -13,7 +13,6 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cctype>
@@ -311,6 +310,17 @@ int Application::runWindowed() {
     auto lastTime = SDL_GetPerformanceCounter();
     const float perfFreq = static_cast<float>(SDL_GetPerformanceFrequency());
     const auto frameLoopStart = lastTime;
+    double menuUpdateSeconds = 0.0;
+    double menuRenderSeconds = 0.0;
+    double menuSwapSeconds = 0.0;
+    double menuUpdateMaxSeconds = 0.0;
+    double menuRenderMaxSeconds = 0.0;
+    double menuSwapMaxSeconds = 0.0;
+    std::uint64_t menuProfileFrames = 0;
+
+    const auto ticksToSeconds = [](std::uint64_t ticks) {
+        return static_cast<double>(ticks) / static_cast<double>(SDL_GetPerformanceFrequency());
+    };
 
     while (running) {
         const auto now = SDL_GetPerformanceCounter();
@@ -389,7 +399,9 @@ int Application::runWindowed() {
         }
 
         if (mainMenuActive) {
+            const auto menuUpdateStart = SDL_GetPerformanceCounter();
             mainMenu.update();
+            const auto menuUpdateEnd = SDL_GetPerformanceCounter();
             if (mainMenu.startRequested()) {
                 mainMenu.shutdown();
                 mainMenuActive = false;
@@ -406,13 +418,28 @@ int Application::runWindowed() {
             renderer_.beginFrame(makeCurrentView());
             mainMenu.render();
             renderer_.endFrame();
+            const auto menuRenderEnd = SDL_GetPerformanceCounter();
             window_.swapBuffers();
+            const auto menuSwapEnd = SDL_GetPerformanceCounter();
+
+            if (config_.maxFrames != 0) {
+                const double updateSeconds = ticksToSeconds(menuUpdateEnd - menuUpdateStart);
+                const double renderSeconds = ticksToSeconds(menuRenderEnd - menuUpdateEnd);
+                const double swapSeconds = ticksToSeconds(menuSwapEnd - menuRenderEnd);
+                menuUpdateSeconds += updateSeconds;
+                menuRenderSeconds += renderSeconds;
+                menuSwapSeconds += swapSeconds;
+                menuUpdateMaxSeconds = std::max(menuUpdateMaxSeconds, updateSeconds);
+                menuRenderMaxSeconds = std::max(menuRenderMaxSeconds, renderSeconds);
+                menuSwapMaxSeconds = std::max(menuSwapMaxSeconds, swapSeconds);
+                ++menuProfileFrames;
+            }
 
             if (config_.maxFrames != 0 && renderer_.stats().frameIndex >= config_.maxFrames) {
                 running = false;
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::yield();
             continue;
         }
 
@@ -449,7 +476,7 @@ int Application::runWindowed() {
             running = false;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::yield();
     }
 
     SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -464,6 +491,16 @@ int Application::runWindowed() {
         Logger::info("Frame run: " + std::to_string(renderer_.stats().frameIndex)
             + " frames in " + std::to_string(elapsedSeconds)
             + " sec (" + std::to_string(averageFps) + " fps)");
+        if (menuProfileFrames != 0) {
+            const double frames = static_cast<double>(menuProfileFrames);
+            Logger::info("Menu profile avg/max ms: update "
+                + std::to_string((menuUpdateSeconds / frames) * 1000.0)
+                + "/" + std::to_string(menuUpdateMaxSeconds * 1000.0)
+                + ", render " + std::to_string((menuRenderSeconds / frames) * 1000.0)
+                + "/" + std::to_string(menuRenderMaxSeconds * 1000.0)
+                + ", swap " + std::to_string((menuSwapSeconds / frames) * 1000.0)
+                + "/" + std::to_string(menuSwapMaxSeconds * 1000.0));
+        }
     }
 
     renderer_.shutdown();
