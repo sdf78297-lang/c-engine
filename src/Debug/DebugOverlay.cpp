@@ -479,6 +479,72 @@ void DebugOverlay::drawGameOverlay(const RoomManager& roomManager, const GameSta
 #endif
 }
 
+void DebugOverlay::drawInteractionPrompt(const std::string& interactionId, bool workstationBusy, bool workstationComplete) {
+#if EXO_DEBUG_OVERLAY_HAS_IMGUI
+    if (!initialized_ || !frameOpen_ || interactionId != "anton_desk" || workstationBusy) {
+        return;
+    }
+
+    setCurrentContext(imguiContext_);
+
+    const ImGuiIO& io = ImGui::GetIO();
+    const ImVec2 windowSize(390.0f, 84.0f);
+    ImGui::SetNextWindowPos(
+        ImVec2((io.DisplaySize.x - windowSize.x) * 0.5f, io.DisplaySize.y - 132.0f),
+        ImGuiCond_Always);
+    ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.025f, 0.035f, 0.040f, 0.88f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.42f, 0.68f, 0.82f, 0.65f));
+
+    const ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoDecoration |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoNav;
+
+    if (ImGui::Begin("workstation_interaction_prompt", nullptr, flags)) {
+        const ImVec2 origin = ImGui::GetCursorScreenPos();
+        ImDrawList* draw = ImGui::GetWindowDrawList();
+        const ImVec2 keyMin(origin.x + 12.0f, origin.y + 10.0f);
+        const ImVec2 keyMax(keyMin.x + 54.0f, keyMin.y + 54.0f);
+        draw->AddRectFilled(keyMin, keyMax, IM_COL32(221, 238, 244, 235), 7.0f);
+        draw->AddRect(keyMin, keyMax, IM_COL32(48, 83, 98, 255), 7.0f, 0, 1.5f);
+
+        ImGui::SetCursorScreenPos(ImVec2(keyMin.x + 19.0f, keyMin.y + 13.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.04f, 0.08f, 0.09f, 1.0f));
+        ImGui::TextUnformatted("E");
+        ImGui::PopStyleColor();
+
+        ImGui::SetCursorScreenPos(ImVec2(origin.x + 82.0f, origin.y + 13.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.91f, 0.96f, 0.98f, 1.0f));
+        ImGui::TextUnformatted(workstationComplete ? "Вернуться к рабочему месту" : "Сесть за компьютер");
+        ImGui::PopStyleColor();
+
+        ImGui::SetCursorScreenPos(ImVec2(origin.x + 82.0f, origin.y + 39.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.70f, 0.76f, 1.0f));
+        ImGui::TextUnformatted(workstationComplete ? "Отчёт уже отправлен. Экран выключен." : "GROMOV REPORT SUITE: отчёт за ноябрь");
+        ImGui::PopStyleColor();
+
+        draw->AddLine(
+            ImVec2(origin.x + 82.0f, origin.y + 64.0f),
+            ImVec2(origin.x + 360.0f, origin.y + 64.0f),
+            IM_COL32(74, 142, 160, 150),
+            1.0f);
+    }
+    ImGui::End();
+
+    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar(2);
+#else
+    (void)interactionId;
+    (void)workstationBusy;
+    (void)workstationComplete;
+#endif
+}
+
 void DebugOverlay::endFrame() {
 #if EXO_DEBUG_OVERLAY_HAS_IMGUI
     if (!initialized_ || !frameOpen_) {

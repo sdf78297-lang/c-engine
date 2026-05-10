@@ -104,10 +104,18 @@ private:
 
             const Json* rooms = find(*canonical, "rooms");
             if (rooms != nullptr && rooms->is_array()) {
+                bool hasAmbulanceRoom = false;
                 for (const Json& room : *rooms) {
                     if (room.is_string()) {
-                        requireExists(resolve(room.get<std::string>()), path, "canonical room file missing");
+                        const std::string roomPath = room.get<std::string>();
+                        if (roomPath == "data/rooms/ambulance_patient_compartment/room.json") {
+                            hasAmbulanceRoom = true;
+                        }
+                        requireExists(resolve(roomPath), path, "canonical room file missing");
                     }
+                }
+                if (!hasAmbulanceRoom) {
+                    error(path, "canonicalFiles.rooms must include data/rooms/ambulance_patient_compartment/room.json");
                 }
             }
         }
@@ -190,29 +198,53 @@ private:
         }
 
         requireString(root, path, "id");
+        requireString(root, path, "name");
         validateAsciiId(root.value("id", ""), path, "id");
         requireNonEmptyArray(root, path, "staticMeshes");
+        requireNonEmptyArray(root, path, "pointLights");
         requireNonEmptyArray(root, path, "fixedCameras");
 
         const Json* meshes = find(root, "staticMeshes");
         if (meshes != nullptr && meshes->is_array()) {
+            std::unordered_set<std::string> meshNames;
+            int missingMeshSources = 0;
             for (const Json& mesh : *meshes) {
                 if (!mesh.is_object()) {
                     continue;
                 }
+                requireString(mesh, path, "name");
+                requireString(mesh, path, "meshAsset");
+                if (const Json* name = find(mesh, "name"); name != nullptr && name->is_string()) {
+                    const std::string value = name->get<std::string>();
+                    if (!meshNames.insert(value).second) {
+                        error(path, "duplicate staticMesh name: " + value);
+                    }
+                }
                 const Json* source = find(mesh, "meshSource");
                 if (source != nullptr && source->is_string()) {
                     requireExists(resolve(source->get<std::string>()), path, "meshSource missing");
+                    if (!std::filesystem::exists(resolve(source->get<std::string>()))) {
+                        ++missingMeshSources;
+                    }
+                } else {
+                    ++missingMeshSources;
                 }
                 validateOptionalFlag(mesh, path, "visibleWhenFlag");
                 validateOptionalFlag(mesh, path, "hiddenWhenFlag");
                 validateStaticMeshRenderOverrides(mesh, path);
             }
+            if (root.value("id", "") == "ambulance_patient_compartment"
+                && !meshes->empty()
+                && missingMeshSources == static_cast<int>(meshes->size())) {
+                error(path, "ambulance_patient_compartment has no existing meshSource assets; scene would render empty");
+            }
         }
         validateCollisionBoxes(root, path);
         validateRenderEnvironment(root, path);
         const std::unordered_set<std::string> audioCueIds = validateAudioCues(root, path);
-        validateRoomTriggers(root, path, audioCueIds);
+        const std::unordered_set<std::string> sequenceIds = validateSequences(root, path, audioCueIds);
+        validateCollapseConfig(root, path, audioCueIds, sequenceIds);
+        validateRoomTriggers(root, path, audioCueIds, sequenceIds);
         validateRoomEnterEvents(root, path, audioCueIds);
 
         const bool hasDoors = hasNonEmptyArray(root, "doors");
@@ -291,7 +323,8 @@ private:
     void validateRoomTriggers(
         const Json& room,
         const std::filesystem::path& path,
-        const std::unordered_set<std::string>& audioCueIds) {
+        const std::unordered_set<std::string>& audioCueIds,
+        const std::unordered_set<std::string>& sequenceIds) {
         const Json* triggers = find(room, "triggers");
         if (triggers == nullptr) {
             return;
@@ -308,6 +341,21 @@ private:
             }
             validateOptionalFlag(trigger, path, "setFlag");
             validateAudioCueRef(trigger, path, audioCueIds);
+            const Json* sequenceId = find(trigger, "sequenceId");
+            if (sequenceId == nullptr) {
+                sequenceId = find(trigger, "startSequence");
+            }
+            if (sequenceId != nullptr) {
+                if (!sequenceId->is_string()) {
+                    error(path, "trigger sequenceId must be a string");
+                } else {
+                    const std::string value = sequenceId->get<std::string>();
+                    validateAsciiId(value, path, "trigger sequenceId");
+                    if (!sequenceIds.contains(value)) {
+                        error(path, "trigger sequenceId points to missing sequence: " + value);
+                    }
+                }
+            }
             const Json* bounds = find(trigger, "bounds");
             if (bounds == nullptr || !bounds->is_object()) {
                 error(path, "trigger is missing bounds");
@@ -315,6 +363,111 @@ private:
                 validateBounds(*bounds, path, "trigger bounds");
             }
         }
+    }
+
+    [[nodiscard]] std::unordered_set<std::string> validateSequences(
+        const Json& room,
+        const std::filesystem::path& path,
+        const std::unordered_set<std::string>& audioCueIds) {
+        std::unordered_set<std::string> ids;
+        const Json* sequences = find(room, "sequences");
+        if (sequences == nullptr) {
+            return ids;
+        }
+        if (!sequences->is_array()) {
+            error(path, "sequences must be an array");
+            return ids;
+        }
+
+        for (const Json& sequence : *sequences) {
+            if (!sequence.is_object()) {
+                error(path, "sequence must be an object");
+                continue;
+            }
+            const Json* id = find(sequence, "id");
+            if (id == nullptr || !id->is_string()) {
+                error(path, "sequence is missing id");
+                continue;
+            }
+            const std::string value = id->get<std::string>();
+            validateAsciiId(value, path, "sequence id");
+            if (!ids.insert(value).second) {
+                error(path, "duplicate sequence id: " + value);
+            }
+
+            const Json* steps = find(sequence, "steps");
+            if (steps == nullptr || !steps->is_array()) {
+                error(path, "sequence steps must be an array");
+                continue;
+            }
+            for (const Json& step : *steps) {
+                if (!step.is_object()) {
+                    error(path, "sequence step must be an object");
+                    continue;
+                }
+                const Json* time = find(step, "time");
+                if (time != nullptr && !time->is_number()) {
+                    error(path, "sequence step time must be a number");
+                }
+                const Json* actions = find(step, "actions");
+                if (actions == nullptr || !actions->is_array()) {
+                    error(path, "sequence step actions must be an array");
+                    continue;
+                }
+                for (const Json& action : *actions) {
+                    if (!action.is_object()) {
+                        error(path, "sequence action must be an object");
+                        continue;
+                    }
+                    const Json* type = find(action, "type");
+                    if (type == nullptr || !type->is_string()) {
+                        error(path, "sequence action type must be a string");
+                    } else {
+                        const std::string actionType = type->get<std::string>();
+                        static const std::unordered_set<std::string> knownActions {
+                            "setFlag",
+                            "playAudio",
+                            "stopAudio",
+                            "fadeScreen",
+                            "setCameraMode",
+                            "lockPlayerControl",
+                            "unlockPlayerControl",
+                            "transitionRoom",
+                            "setEntityVisible",
+                            "setMusicVolume",
+                            "adjustIdentity",
+                            "setIdentity",
+                            "addItem",
+                            "removeItem",
+                            "setObjective",
+                            "completeObjective"
+                        };
+                        if (!knownActions.contains(actionType)) {
+                            error(path, "unknown sequence action type: " + actionType);
+                        }
+                        if (actionType == "transitionRoom") {
+                            const Json* roomId = find(action, "roomId");
+                            if (roomId == nullptr) {
+                                roomId = find(action, "targetRoomId");
+                            }
+                            if (roomId == nullptr) {
+                                roomId = find(action, "targetRoom");
+                            }
+                            if (roomId == nullptr || !roomId->is_string()) {
+                                error(path, "transitionRoom action must define roomId");
+                            } else {
+                                requireExists(root_ / "data" / "rooms" / roomId->get<std::string>() / "room.json",
+                                    path,
+                                    "transitionRoom target room missing");
+                            }
+                        }
+                    }
+                    validateOptionalFlag(action, path, "flag");
+                    validateAudioCueRef(action, path, audioCueIds);
+                }
+            }
+        }
+        return ids;
     }
 
     void validateRoomEnterEvents(
@@ -357,6 +510,74 @@ private:
         validateAsciiId(value, path, "audioCue");
         if (!audioCueIds.contains(value)) {
             error(path, "audioCue points to missing audio.cues id: " + value);
+        }
+    }
+
+    void validateCollapseConfig(
+        const Json& room,
+        const std::filesystem::path& path,
+        const std::unordered_set<std::string>& audioCueIds,
+        const std::unordered_set<std::string>& sequenceIds) {
+        validateOptionalFlag(room, path, "collapseAfterFlag");
+        validateOptionalFlag(room, path, "collapseTargetEnteredFlag");
+
+        const Json* sequenceId = find(room, "collapseSequenceId");
+        if (sequenceId != nullptr) {
+            if (!sequenceId->is_string()) {
+                error(path, "collapseSequenceId must be a string");
+            } else {
+                const std::string value = sequenceId->get<std::string>();
+                validateAsciiId(value, path, "collapseSequenceId");
+                if (!sequenceIds.contains(value)) {
+                    error(path, "collapseSequenceId points to missing sequence: " + value);
+                }
+            }
+        }
+
+        const Json* cue = find(room, "collapseAudioCue");
+        if (cue != nullptr) {
+            if (!cue->is_string()) {
+                error(path, "collapseAudioCue must be a string");
+            } else {
+                const std::string value = cue->get<std::string>();
+                validateAsciiId(value, path, "collapseAudioCue");
+                if (!audioCueIds.contains(value)) {
+                    error(path, "collapseAudioCue points to missing audio.cues id: " + value);
+                }
+            }
+        }
+
+        const Json* heartbeatCue = find(room, "collapseHeartbeatAudioCue");
+        if (heartbeatCue != nullptr) {
+            if (!heartbeatCue->is_string()) {
+                error(path, "collapseHeartbeatAudioCue must be a string");
+            } else {
+                const std::string value = heartbeatCue->get<std::string>();
+                validateAsciiId(value, path, "collapseHeartbeatAudioCue");
+                if (!audioCueIds.contains(value)) {
+                    error(path, "collapseHeartbeatAudioCue points to missing audio.cues id: " + value);
+                }
+            }
+        }
+
+        const Json* targetRoom = find(room, "collapseTargetRoom");
+        if (targetRoom != nullptr) {
+            if (!targetRoom->is_string()) {
+                error(path, "collapseTargetRoom must be a string");
+            } else {
+                const std::string value = targetRoom->get<std::string>();
+                validateAsciiId(value, path, "collapseTargetRoom");
+                requireExists(root_ / "data" / "rooms" / value / "room.json", path, "collapse target room missing");
+            }
+        }
+
+        const Json* targetSpawn = find(room, "collapseTargetSpawn");
+        if (targetSpawn != nullptr) {
+            if (!targetSpawn->is_string()) {
+                error(path, "collapseTargetSpawn must be a string");
+            } else {
+                validateAsciiId(targetSpawn->get<std::string>(), path, "collapseTargetSpawn");
+            }
         }
     }
 

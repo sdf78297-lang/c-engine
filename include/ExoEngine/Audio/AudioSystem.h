@@ -20,7 +20,7 @@ public:
     [[nodiscard]] bool initialize();
     void shutdown();
     [[nodiscard]] bool available() const;
-    [[nodiscard]] bool playOneShot(const std::filesystem::path& path);
+    [[nodiscard]] bool playOneShot(const std::filesystem::path& path, int loops = 0);
     [[nodiscard]] bool playMusic(const std::filesystem::path& path, int loops = -1);
     void stopMusic();
     void setMasterVolume(float value);

@@ -29,6 +29,7 @@ public:
     void drawEngineOverlay(const Scene& scene, const RenderStats& stats);
     void drawStoryOverlay(const StoryRuntime& story);
     void drawGameOverlay(const RoomManager& roomManager, const GameState& state, const std::string& focusPrompt);
+    void drawInteractionPrompt(const std::string& interactionId, bool workstationBusy, bool workstationComplete);
     void endFrame();
 
     [[nodiscard]] bool isInitialized() const;

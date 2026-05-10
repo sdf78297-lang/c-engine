@@ -156,6 +156,8 @@ const char* keyName(SDL_Keycode key) {
         case SDLK_RETURN:
         case SDLK_KP_ENTER: return "Enter";
         case SDLK_ESCAPE: return "Escape";
+        case SDLK_BACKSPACE: return "Backspace";
+        case SDLK_DELETE: return "Delete";
         default: return nullptr;
     }
 }
@@ -163,6 +165,38 @@ const char* keyName(SDL_Keycode key) {
 std::string dispatchKeyScript(const char* key) {
     return std::string("document.dispatchEvent(new KeyboardEvent('keydown',{key:'")
         + key + "',bubbles:true,cancelable:true}));";
+}
+
+std::string jsStringLiteral(std::string_view value) {
+    std::string output;
+    output.reserve(value.size() + 2);
+    output.push_back('\'');
+    constexpr char hex[] = "0123456789ABCDEF";
+    for (const unsigned char ch : value) {
+        switch (ch) {
+            case '\\': output += "\\\\"; break;
+            case '\'': output += "\\'"; break;
+            case '\n': output += "\\n"; break;
+            case '\r': output += "\\r"; break;
+            case '\t': output += "\\t"; break;
+            default:
+                if (ch < 0x20) {
+                    output += "\\u00";
+                    output.push_back(hex[(ch >> 4) & 0x0F]);
+                    output.push_back(hex[ch & 0x0F]);
+                } else {
+                    output.push_back(static_cast<char>(ch));
+                }
+                break;
+        }
+    }
+    output.push_back('\'');
+    return output;
+}
+
+std::string dispatchTextInputScript(std::string_view text) {
+    return "document.dispatchEvent(new CustomEvent('exo-textinput',{detail:{text:"
+        + jsStringLiteral(text) + "},bubbles:true,cancelable:true}));";
 }
 
 std::string bridgeCommand(std::string value) {
@@ -217,7 +251,11 @@ bool parseSettingCommand(const std::string& command, HtmlMenu::SettingChange& ou
 #endif
 
 HtmlMenu::~HtmlMenu() {
+#if EXO_ENABLE_HTML_UI
+    destroyRuntime();
+#else
     shutdown();
+#endif
 }
 
 bool HtmlMenu::initialize(const Config& config) {
@@ -235,18 +273,18 @@ bool HtmlMenu::initialize(const Config& config) {
     width_ = std::max(config.width, 1u);
     height_ = std::max(config.height, 1u);
 
-    if (!createGraphicsResources()) {
-        shutdown();
+    if ((shader_ == 0 || vao_ == 0 || vbo_ == 0 || texture_ == 0) && !createGraphicsResources()) {
+        destroyRuntime();
         return false;
     }
 
+    ULString baseDir = makeUlString(canonicalGenericPath(config.engineRoot));
+    ulEnablePlatformFileSystem(baseDir);
+    ulDestroyString(baseDir);
+
+    ulEnablePlatformFontLoader();
+
     if (!gPlatformReady) {
-        ULString baseDir = makeUlString(canonicalGenericPath(config.engineRoot));
-        ulEnablePlatformFileSystem(baseDir);
-        ulDestroyString(baseDir);
-
-        ulEnablePlatformFontLoader();
-
         const std::filesystem::path logPath = config.engineRoot / "build" / "ultralight.log";
         ULString log = makeUlString(canonicalGenericPath(logPath));
         ulEnableDefaultLogger(log);
@@ -255,38 +293,50 @@ bool HtmlMenu::initialize(const Config& config) {
         gPlatformReady = true;
     }
 
-    ULConfig ulConfig = ulCreateConfig();
-    const std::filesystem::path resourcePath = config.ultralightResourcePath.empty()
-        ? (config.engineRoot / "local_deps" / "ultralight-sdk" / "resources")
-        : config.ultralightResourcePath;
-    std::string resourcePrefix = canonicalGenericPath(resourcePath);
-    if (!resourcePrefix.empty() && resourcePrefix.back() != '/') {
-        resourcePrefix.push_back('/');
-    }
-    ULString resources = makeUlString(resourcePrefix);
-    ulConfigSetResourcePathPrefix(ulConfig, resources);
-    ulDestroyString(resources);
-    ulConfigSetAnimationTimerDelay(ulConfig, 1.0 / 60.0);
-    ulConfigSetForceRepaint(ulConfig, false);
-
-    renderer_ = ulCreateRenderer(ulConfig);
-    ulDestroyConfig(ulConfig);
     if (renderer_ == nullptr) {
-        Logger::error("Failed to create Ultralight renderer");
-        shutdown();
-        return false;
+        ULConfig ulConfig = ulCreateConfig();
+        const std::filesystem::path resourcePath = config.ultralightResourcePath.empty()
+            ? (config.engineRoot / "local_deps" / "ultralight-sdk" / "resources")
+            : config.ultralightResourcePath;
+        std::string resourcePrefix = canonicalGenericPath(resourcePath);
+        if (!resourcePrefix.empty() && resourcePrefix.back() != '/') {
+            resourcePrefix.push_back('/');
+        }
+        ULString resources = makeUlString(resourcePrefix);
+        ulConfigSetResourcePathPrefix(ulConfig, resources);
+        ulDestroyString(resources);
+        ulConfigSetAnimationTimerDelay(ulConfig, 1.0 / 60.0);
+        ulConfigSetForceRepaint(ulConfig, false);
+
+        renderer_ = ulCreateRenderer(ulConfig);
+        ulDestroyConfig(ulConfig);
+        if (renderer_ == nullptr) {
+            Logger::error("Failed to create Ultralight renderer");
+            destroyRuntime();
+            return false;
+        }
     }
 
-    ULViewConfig viewConfig = ulCreateViewConfig();
-    ulViewConfigSetIsAccelerated(viewConfig, false);
-    ulViewConfigSetInitialFocus(viewConfig, true);
-    ulViewConfigSetEnableImages(viewConfig, true);
-    ulViewConfigSetEnableJavaScript(viewConfig, true);
-    view_ = ulCreateView(static_cast<ULRenderer>(renderer_), width_, height_, viewConfig, nullptr);
-    ulDestroyViewConfig(viewConfig);
+    if (view_ == nullptr) {
+        ULViewConfig viewConfig = ulCreateViewConfig();
+        ulViewConfigSetIsAccelerated(viewConfig, false);
+        ulViewConfigSetInitialFocus(viewConfig, true);
+        ulViewConfigSetEnableImages(viewConfig, true);
+        ulViewConfigSetEnableJavaScript(viewConfig, true);
+        view_ = ulCreateView(static_cast<ULRenderer>(renderer_), width_, height_, viewConfig, nullptr);
+        ulDestroyViewConfig(viewConfig);
+    } else {
+        ulViewResize(static_cast<ULView>(view_), width_, height_);
+        if (texture_ != 0) {
+            glBindTexture(GL_TEXTURE_2D, texture_);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(width_), static_cast<GLsizei>(height_), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            textureUploaded_ = false;
+        }
+    }
     if (view_ == nullptr) {
         Logger::error("Failed to create Ultralight menu view");
-        shutdown();
+        destroyRuntime();
         return false;
     }
 
@@ -318,22 +368,19 @@ bool HtmlMenu::initialize(const Config& config) {
 }
 
 void HtmlMenu::shutdown() {
-#if EXO_ENABLE_HTML_UI
-    if (view_ != nullptr) {
-        ulDestroyView(static_cast<ULView>(view_));
-        view_ = nullptr;
-    }
-    if (renderer_ != nullptr) {
-        ulDestroyRenderer(static_cast<ULRenderer>(renderer_));
-        renderer_ = nullptr;
-    }
-    destroyGraphicsResources();
-#endif
     initialized_ = false;
     startRequested_ = false;
     quitRequested_ = false;
     resumeRequested_ = false;
+    closeRequested_ = false;
+    workstationSaveRequested_ = false;
+    workstationSendRequested_ = false;
+    workstationCompleteRequested_ = false;
+    workstationShutdownRequested_ = false;
     pendingSetting_.reset();
+#if EXO_ENABLE_HTML_UI
+    needsImmediateUpdate_ = true;
+#endif
 }
 
 void HtmlMenu::resize(std::uint32_t width, std::uint32_t height) {
@@ -388,6 +435,11 @@ void HtmlMenu::handleEvent(const SDL_Event& event) {
             if (const char* key = keyName(event.key.keysym.sym)) {
                 evaluateScript(dispatchKeyScript(key));
             }
+            break;
+        }
+        case SDL_TEXTINPUT: {
+            needsImmediateUpdate_ = true;
+            evaluateScript(dispatchTextInputScript(event.text.text));
             break;
         }
         default:
@@ -465,6 +517,34 @@ bool HtmlMenu::resumeRequested() const {
     return resumeRequested_;
 }
 
+bool HtmlMenu::closeRequested() const {
+    return closeRequested_;
+}
+
+bool HtmlMenu::takeWorkstationSaveRequested() {
+    const bool result = workstationSaveRequested_;
+    workstationSaveRequested_ = false;
+    return result;
+}
+
+bool HtmlMenu::takeWorkstationSendRequested() {
+    const bool result = workstationSendRequested_;
+    workstationSendRequested_ = false;
+    return result;
+}
+
+bool HtmlMenu::takeWorkstationCompleteRequested() {
+    const bool result = workstationCompleteRequested_;
+    workstationCompleteRequested_ = false;
+    return result;
+}
+
+bool HtmlMenu::takeWorkstationShutdownRequested() {
+    const bool result = workstationShutdownRequested_;
+    workstationShutdownRequested_ = false;
+    return result;
+}
+
 std::optional<HtmlMenu::SettingChange> HtmlMenu::takeSettingChange() {
     std::optional<SettingChange> result = pendingSetting_;
     pendingSetting_.reset();
@@ -475,6 +555,11 @@ void HtmlMenu::clearRequests() {
     startRequested_ = false;
     quitRequested_ = false;
     resumeRequested_ = false;
+    closeRequested_ = false;
+    workstationSaveRequested_ = false;
+    workstationSendRequested_ = false;
+    workstationCompleteRequested_ = false;
+    workstationShutdownRequested_ = false;
     pendingSetting_.reset();
 }
 
@@ -549,6 +634,28 @@ void HtmlMenu::destroyGraphicsResources() {
         shader_ = 0;
     }
     textureUploaded_ = false;
+}
+
+void HtmlMenu::destroyRuntime() {
+    if (view_ != nullptr) {
+        ulDestroyView(static_cast<ULView>(view_));
+        view_ = nullptr;
+    }
+    if (renderer_ != nullptr) {
+        ulDestroyRenderer(static_cast<ULRenderer>(renderer_));
+        renderer_ = nullptr;
+    }
+    destroyGraphicsResources();
+    initialized_ = false;
+    startRequested_ = false;
+    quitRequested_ = false;
+    resumeRequested_ = false;
+    closeRequested_ = false;
+    workstationSaveRequested_ = false;
+    workstationSendRequested_ = false;
+    workstationCompleteRequested_ = false;
+    workstationShutdownRequested_ = false;
+    pendingSetting_.reset();
 }
 
 void HtmlMenu::uploadSurfaceToTexture() {
@@ -668,6 +775,17 @@ void HtmlMenu::handleBridgeMessage(const char* message) {
         resumeRequested_ = true;
     } else if (command == "quit-game") {
         quitRequested_ = true;
+    } else if (command == "close-workstation") {
+        closeRequested_ = true;
+    } else if (command == "workstation-save") {
+        workstationSaveRequested_ = true;
+    } else if (command == "workstation-send") {
+        workstationSendRequested_ = true;
+    } else if (command == "workstation-complete") {
+        workstationCompleteRequested_ = true;
+    } else if (command == "workstation-shutdown") {
+        workstationShutdownRequested_ = true;
+        closeRequested_ = true;
     }
 }
 #endif

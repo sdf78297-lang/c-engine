@@ -33,6 +33,11 @@ struct RenderPointLight {
     float intensity = 1.0f;
 };
 
+struct ScreenOverlay {
+    float blackFade = 0.0f;
+    float noiseIntensity = 0.0f;
+};
+
 class Renderer {
 public:
     Renderer() = default;
@@ -46,6 +51,7 @@ public:
     void resize(std::uint32_t width, std::uint32_t height);
     void setEnvironment(const RenderEnvironment& environment);
     void setPointLights(const std::vector<RenderPointLight>& lights);
+    void setScreenOverlay(ScreenOverlay overlay);
     void beginFrame(const RenderView& view);
     [[nodiscard]] std::int32_t loadSceneMesh(const std::filesystem::path& path);
     void drawSceneMesh(
@@ -59,6 +65,8 @@ public:
 
 private:
     bool createTexturedShader();
+    bool createScreenOverlayResources();
+    void drawScreenOverlay();
 
     struct GltfSubMesh {
         std::uint32_t vao = 0;
@@ -115,7 +123,10 @@ private:
     Vec3 currentCameraPosition_ {};
     RenderEnvironment activeEnvironment_ {};
     std::uint32_t texturedShader_ = 0;
+    std::uint32_t screenOverlayShader_ = 0;
+    std::uint32_t screenOverlayVao_ = 0;
     std::uint32_t whiteTexture_ = 0;
+    ScreenOverlay screenOverlay_ {};
     std::vector<SceneMesh> sceneMeshes_;
     std::unordered_map<std::string, std::int32_t> sceneMeshCache_;
     std::vector<RenderPointLight> activePointLights_;

@@ -19,6 +19,13 @@
     ],
     "unknownFieldsIgnored": true
   },
+  "collapseAfterFlag": "flag_workstation_task_complete",
+  "collapseSequenceId": "office_collapse_sequence",
+  "collapseAudioCue": "anton_collapse_phrase",
+  "collapseHeartbeatAudioCue": "anton_collapse_heartbeat_low",
+  "collapseTargetRoom": "ambulance_patient_compartment",
+  "collapseTargetSpawn": "stretcher_head_spawn",
+  "collapseTargetEnteredFlag": "entered_ambulance",
   "renderEnvironment": {
     "clearColor": [0.020, 0.024, 0.028],
     "ambientColor": [0.64, 0.72, 0.82],
@@ -50,6 +57,22 @@
         "rotation": [0.0, 0.0, 0.0],
         "scale": [1.0, 1.0, 1.0]
       }
+    },
+    {
+      "name": "office_ceiling_light_left",
+      "meshAsset": "game/props/office_ceiling_light_meshy.mesh",
+      "materialAsset": "game/props/office_ceiling_light_meshy.material",
+      "meshSource": "assets/props/office_ceiling_light_meshy.glb",
+      "renderOverrides": {"colorTint": [0.95, 0.98, 1.0], "emissiveColor": [0.62, 0.86, 1.0], "emissiveIntensity": 0.18},
+      "transform": {"position": [-2.60, 2.79, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [2.14, 1.0, 1.10]}
+    },
+    {
+      "name": "office_ceiling_light_right",
+      "meshAsset": "game/props/office_ceiling_light_meshy.mesh",
+      "materialAsset": "game/props/office_ceiling_light_meshy.material",
+      "meshSource": "assets/props/office_ceiling_light_meshy.glb",
+      "renderOverrides": {"colorTint": [1.0, 0.96, 0.88], "emissiveColor": [1.0, 0.78, 0.46], "emissiveIntensity": 0.14},
+      "transform": {"position": [2.60, 2.79, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [2.14, 1.0, 1.10]}
     },
     {
       "name": "desk_01",
@@ -129,7 +152,7 @@
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
       "renderOverrides": {"colorTint": [0.86, 0.94, 1.0], "emissiveColor": [0.28, 0.54, 0.92], "emissiveIntensity": 0.18},
-      "transform": {"position": [-3.6, 0.92, 2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
+      "transform": {"position": [-3.6, 0.92, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
       "name": "desk_06",
@@ -145,7 +168,7 @@
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
       "renderOverrides": {"colorTint": [0.86, 0.94, 1.0], "emissiveColor": [0.28, 0.54, 0.92], "emissiveIntensity": 0.18},
-      "transform": {"position": [-1.2, 0.92, 2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
+      "transform": {"position": [-1.2, 0.92, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
       "name": "desk_07",
@@ -161,7 +184,7 @@
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
       "renderOverrides": {"colorTint": [0.86, 0.94, 1.0], "emissiveColor": [0.28, 0.54, 0.92], "emissiveIntensity": 0.18},
-      "transform": {"position": [1.2, 0.92, 2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
+      "transform": {"position": [1.2, 0.92, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
       "name": "desk_08",
@@ -177,7 +200,7 @@
       "materialAsset": "game/props/office_pc_meshy.material",
       "meshSource": "assets/props/office_pc_meshy.glb",
       "renderOverrides": {"colorTint": [0.86, 0.94, 1.0], "emissiveColor": [0.28, 0.54, 0.92], "emissiveIntensity": 0.18},
-      "transform": {"position": [3.6, 0.92, 2.14], "rotation": [0.0, 0.0, 0.0], "scale": [0.34, 0.34, 0.34]}
+      "transform": {"position": [3.6, 0.92, 1.75], "rotation": [0.0, 3.14159, 0.0], "scale": [0.34, 0.34, 0.34]}
     },
     {
       "name": "office_chair_pc_01",
@@ -193,7 +216,7 @@
       "materialAsset": "game/props/office_chair_grey_fabric.material",
       "meshSource": "assets/props/office_chair_grey_fabric.glb",
       "renderOverrides": {"colorTint": [0.90, 0.92, 0.92]},
-      "transform": {"position": [-1.2, 0.456, -0.82], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
+      "transform": {"position": [-1.38, 0.456, -0.36], "rotation": [0.0, 2.62, 0.0], "scale": [0.48, 0.48, 0.48]}
     },
     {
       "name": "office_chair_pc_03",
@@ -210,7 +233,7 @@
       "meshSource": "assets/characters/office_business_man.glb",
       "hiddenWhenFlag": "office_person_vanished",
       "renderOverrides": {"colorTint": [0.96, 0.98, 1.0]},
-      "transform": {"position": [3.6, 0.86, -0.96], "rotation": [0.0, 3.14159, 0.0], "scale": [0.90, 0.90, 0.90]}
+      "transform": {"position": [3.6, 0.86, -0.61], "rotation": [0.0, 3.14159, 0.0], "scale": [0.90, 0.90, 0.90]}
     },
     {
       "name": "office_chair_pc_04_empty",
@@ -219,7 +242,7 @@
       "meshSource": "assets/props/office_chair_grey_fabric.glb",
       "visibleWhenFlag": "office_person_vanished",
       "renderOverrides": {"colorTint": [0.90, 0.92, 0.92]},
-      "transform": {"position": [3.6, 0.456, -0.82], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
+      "transform": {"position": [3.6, 0.456, -0.47], "rotation": [0.0, 3.14159, 0.0], "scale": [0.48, 0.48, 0.48]}
     },
     {
       "name": "office_chair_pc_05",
@@ -455,12 +478,102 @@
     {
       "id": "trigger_office_person_pc_04_vanish",
       "bounds": {
-        "min": [2.75, -0.5, -1.25],
-        "max": [4.75, 2.5, -0.45]
+        "min": [2.05, -0.5, -1.85],
+        "max": [4.95, 2.5, -0.15]
       },
       "setFlag": "office_person_vanished",
       "audioCue": "office_maybe_imagined",
+      "sequenceId": "office_person_vanish_sequence",
       "once": true
+    }
+  ],
+  "sequences": [
+    {
+      "id": "office_person_vanish_sequence",
+      "autoStart": false,
+      "once": true,
+      "conditions": [],
+      "steps": [
+        {
+          "time": 0.0,
+          "actions": [
+            {
+              "type": "setEntityVisible",
+              "entityId": "office_business_man_pc_04",
+              "visible": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "office_collapse_sequence",
+      "autoStart": false,
+      "once": true,
+      "conditions": [
+        "flag_workstation_task_complete",
+        {"flag": "collapse_completed", "not": true},
+        {"flag": "flag_anton_collapse_complete", "not": true}
+      ],
+      "steps": [
+        {
+          "time": 0.0,
+          "actions": [
+            {"type": "lockPlayerControl"},
+            {"type": "setFlag", "flag": "office_report_completed"},
+            {"type": "setFlag", "flag": "office_pc_shutdown"},
+            {"type": "setFlag", "flag": "collapse_started"},
+            {"type": "setFlag", "flag": "flag_anton_collapse_started"},
+            {"type": "playAudio", "audioCue": "anton_collapse_phrase"},
+            {"type": "setMusicVolume", "volume": 0.22}
+          ]
+        },
+        {
+          "time": 0.2,
+          "actions": [
+            {"type": "playAudio", "audioCue": "anton_collapse_heartbeat_low"}
+          ]
+        },
+        {
+          "time": 0.5,
+          "actions": [
+            {"type": "setCameraMode", "cameraMode": "collapse_dizzy"}
+          ]
+        },
+        {
+          "time": 1.5,
+          "actions": [
+            {"type": "fadeScreen", "blackFade": 0.78, "noiseIntensity": 0.42, "duration": 2.0}
+          ]
+        },
+        {
+          "time": 3.15,
+          "actions": [
+            {"type": "setFlag", "flag": "flag_anton_collapse_falling"},
+            {"type": "setCameraMode", "cameraMode": "collapse_falling"},
+            {"type": "setMusicVolume", "volume": 0.08}
+          ]
+        },
+        {
+          "time": 4.45,
+          "actions": [
+            {"type": "setFlag", "flag": "flag_anton_collapse_blackout"},
+            {"type": "setCameraMode", "cameraMode": "collapse_blackout"},
+            {"type": "fadeScreen", "blackFade": 1.0, "noiseIntensity": 0.08, "duration": 0.55}
+          ]
+        },
+        {
+          "time": 5.5,
+          "actions": [
+            {"type": "setFlag", "flag": "collapse_completed"},
+            {"type": "setFlag", "flag": "flag_anton_collapse_complete"},
+            {"type": "setFlag", "flag": "entered_ambulance"},
+            {"type": "stopAudio"},
+            {"type": "setMusicVolume", "volume": 0.24},
+            {"type": "transitionRoom", "roomId": "ambulance_patient_compartment", "spawnId": "stretcher_head_spawn"}
+          ]
+        }
+      ]
     }
   ],
   "interactables": [
@@ -470,6 +583,7 @@
       "position": [-1.55, 0.78, -1.15],
       "radius": 0.9,
       "cameraHint": "office_desk_pressure",
+      "uiOverlay": "workstation",
       "title": "Стол Антона",
       "body": [
         "Ноутбук открыт, почта не загружена. Рядом с клавиатурой лежит распечатка из клиники, аккуратно повернутая лицом вниз."
@@ -483,12 +597,13 @@
       ],
       "setsFlags": [
         "flag_seen_anton_desk"
-      ]
+      ],
+      "once": false
     },
     {
       "id": "chair_next_to_anton",
       "type": "chair",
-      "position": [-0.65, 0.45, -1.35],
+      "position": [-1.38, 0.45, -0.36],
       "radius": 0.65,
       "cameraHint": "office_desk_pressure",
       "title": "Соседний стул",
@@ -733,6 +848,14 @@
       {
         "id": "office_maybe_imagined",
         "path": "assets/audio/voice/office_maybe_imagined.mp3"
+      },
+      {
+        "id": "anton_collapse_phrase",
+        "path": "assets/audio/voice/anton_collapse_phrase.mp3"
+      },
+      {
+        "id": "anton_collapse_heartbeat_low",
+        "path": "assets/audio/sfx/anton_collapse_heartbeat_low.wav"
       }
     ],
     "stingers": [
@@ -761,6 +884,19 @@
     "flag_viewed_corporate_photo",
     "flag_other_marked_in_photo",
     "flag_other_seen_in_window",
+    "flag_workstation_opened",
+    "flag_workstation_saved",
+    "flag_workstation_send_failed",
+    "flag_workstation_task_complete",
+    "office_report_completed",
+    "office_pc_shutdown",
+    "collapse_started",
+    "flag_anton_collapse_started",
+    "flag_anton_collapse_falling",
+    "flag_anton_collapse_blackout",
+    "collapse_completed",
+    "flag_anton_collapse_complete",
+    "entered_ambulance",
     "office_person_intro_played",
     "office_person_vanished"
   ],

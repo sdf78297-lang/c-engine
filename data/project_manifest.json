@@ -28,7 +28,8 @@
       "data/rooms/office/room.json",
       "data/rooms/office_restroom/room.json",
       "data/rooms/office_meeting_room/room.json",
-      "data/rooms/office_service_nook/room.json"
+      "data/rooms/office_service_nook/room.json",
+      "data/rooms/ambulance_patient_compartment/room.json"
     ]
   },
   "contentRules": {

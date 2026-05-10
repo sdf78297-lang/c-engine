@@ -29,6 +29,7 @@ public:
     bool create(const WindowConfig& config);
     void destroy();
     void swapBuffers();
+    void resize(std::uint32_t width, std::uint32_t height);
 
     [[nodiscard]] bool isOpen() const;
     [[nodiscard]] std::uint32_t width() const;

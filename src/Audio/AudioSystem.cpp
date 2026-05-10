@@ -94,7 +94,7 @@ bool AudioSystem::available() const {
     return initialized_;
 }
 
-bool AudioSystem::playOneShot(const std::filesystem::path& path) {
+bool AudioSystem::playOneShot(const std::filesystem::path& path, int loops) {
 #if EXO_ENABLE_AUDIO
     if (!initialized_) {
         return false;
@@ -115,7 +115,7 @@ bool AudioSystem::playOneShot(const std::filesystem::path& path) {
     }
     Mix_VolumeChunk(chunk, mixerVolume(masterVolume_));
 
-    if (Mix_PlayChannel(-1, chunk, 0) == -1) {
+    if (Mix_PlayChannel(-1, chunk, loops) == -1) {
         Logger::warn(std::string("Unable to play audio cue '") + key + "': " + Mix_GetError());
         return false;
     }
@@ -123,6 +123,7 @@ bool AudioSystem::playOneShot(const std::filesystem::path& path) {
     return true;
 #else
     (void)path;
+    (void)loops;
     return false;
 #endif
 }

@@ -1,6 +1,7 @@
 {
   "schema": "zero_patient.room.v1",
   "id": "office_service_nook",
+  "name": "office_service_nook",
   "title": "Служебная ниша",
   "body": [
     "Тесное место за дверью без таблички. Здесь офис показывает техническую сторону."

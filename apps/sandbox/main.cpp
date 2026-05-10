@@ -33,6 +33,16 @@ std::uint32_t integerOption(std::span<char*> args, std::string_view name, std::u
     return fallback;
 }
 
+std::string stringOption(std::span<char*> args, std::string_view name, std::string fallback = {}) {
+    for (std::size_t i = 1; i + 1 < args.size(); ++i) {
+        if (std::string_view(args[i]) == name) {
+            return std::string(args[i + 1]);
+        }
+    }
+
+    return fallback;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -44,7 +54,17 @@ int main(int argc, char** argv) {
     config.height = 720;
     config.headless = hasFlag(args, "--headless");
     config.maxFrames = integerOption(args, "--frames", 0);
+    config.startupRoomId = stringOption(args, "--room");
+    config.startupSpawnId = stringOption(args, "--spawn");
     config.showMenu = hasFlag(args, "--menu");
+    if (hasFlag(args, "--workstation")) {
+        config.showMenu = true;
+        config.startupOverlay = "workstation";
+    }
+    if (hasFlag(args, "--cycle-workstation")) {
+        config.showMenu = true;
+        config.cycleWorkstationOverlay = true;
+    }
 
     Exo::Application app(config);
     return app.run();

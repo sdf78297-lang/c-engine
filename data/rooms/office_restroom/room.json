@@ -1,6 +1,7 @@
 {
   "schema": "zero_patient.room.v1",
   "id": "office_restroom",
+  "name": "office_restroom",
   "title": "Туалет офиса",
   "body": [
     "Белая плитка, холодный свет и зеркало, которое не всегда повторяет движение сразу."

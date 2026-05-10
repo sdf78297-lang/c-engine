@@ -1,6 +1,7 @@
 {
   "schema": "zero_patient.room.v1",
   "id": "office_meeting_room",
+  "name": "office_meeting_room",
   "title": "Переговорная",
   "body": [
     "Стеклянная комната для звонков, где голос Антона может прозвучать раньше него."

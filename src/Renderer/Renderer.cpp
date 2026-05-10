@@ -125,6 +125,51 @@ void main() {
 }
 )glsl";
 
+constexpr const char* kScreenOverlayVertexShader = R"glsl(
+#version 330 core
+const vec2 positions[3] = vec2[3](
+    vec2(-1.0, -1.0),
+    vec2( 3.0, -1.0),
+    vec2(-1.0,  3.0)
+);
+
+out vec2 vUv;
+
+void main() {
+    vec2 p = positions[gl_VertexID];
+    vUv = p * 0.5 + 0.5;
+    gl_Position = vec4(p, 0.0, 1.0);
+}
+)glsl";
+
+constexpr const char* kScreenOverlayFragmentShader = R"glsl(
+#version 330 core
+in vec2 vUv;
+out vec4 FragColor;
+
+uniform vec2 uViewportSize;
+uniform float uBlackFade;
+uniform float uNoiseIntensity;
+uniform float uFrame;
+
+float hash(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
+}
+
+void main() {
+    vec2 pixel = vUv * max(uViewportSize, vec2(1.0));
+    float n = hash(floor(pixel * 0.75) + vec2(uFrame * 7.13, uFrame * 1.91));
+    float scan = step(0.88, fract((pixel.y + uFrame * 6.0) / 7.0));
+    float tear = step(0.985, hash(vec2(floor(pixel.y / 28.0), floor(uFrame * 2.0))));
+    vec3 staticColor = vec3(n * 0.34 + scan * 0.22, n * 0.42, n * 0.58 + tear * 0.36);
+    vec3 overlayColor = mix(staticColor * clamp(uNoiseIntensity, 0.0, 1.0), vec3(0.0), clamp(uBlackFade, 0.0, 1.0));
+    float alpha = clamp(uBlackFade + uNoiseIntensity * (0.18 + scan * 0.08 + tear * 0.22), 0.0, 1.0);
+    FragColor = vec4(overlayColor, alpha);
+}
+)glsl";
+
 std::uint32_t compileShader(GLenum type, const char* source) {
     const GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, nullptr);
@@ -195,7 +240,7 @@ bool Renderer::initialize(std::uint32_t width, std::uint32_t height) {
 
     resize(width, height);
 
-    if (!createTexturedShader()) {
+    if (!createTexturedShader() || !createScreenOverlayResources()) {
         shutdown();
         return false;
     }
@@ -243,6 +288,14 @@ void Renderer::shutdown() {
         glDeleteProgram(texturedShader_);
         texturedShader_ = 0;
     }
+    if (screenOverlayShader_ != 0) {
+        glDeleteProgram(screenOverlayShader_);
+        screenOverlayShader_ = 0;
+    }
+    if (screenOverlayVao_ != 0) {
+        glDeleteVertexArrays(1, &screenOverlayVao_);
+        screenOverlayVao_ = 0;
+    }
 }
 
 void Renderer::resize(std::uint32_t width, std::uint32_t height) {
@@ -260,6 +313,11 @@ void Renderer::setPointLights(const std::vector<RenderPointLight>& lights) {
     if (activePointLights_.size() > 8) {
         activePointLights_.resize(8);
     }
+}
+
+void Renderer::setScreenOverlay(ScreenOverlay overlay) {
+    screenOverlay_.blackFade = std::clamp(overlay.blackFade, 0.0f, 1.0f);
+    screenOverlay_.noiseIntensity = std::clamp(overlay.noiseIntensity, 0.0f, 1.0f);
 }
 
 void Renderer::beginFrame(const RenderView& view) {
@@ -378,7 +436,9 @@ bool Renderer::sceneMeshBounds(std::int32_t handle, Vec3& minOut, Vec3& maxOut) 
     return true;
 }
 
-void Renderer::endFrame() {}
+void Renderer::endFrame() {
+    drawScreenOverlay();
+}
 
 const RenderStats& Renderer::stats() const {
     return stats_;
@@ -415,6 +475,57 @@ bool Renderer::createTexturedShader() {
     glBindTexture(GL_TEXTURE_2D, 0);
 
     return true;
+}
+
+bool Renderer::createScreenOverlayResources() {
+    const std::uint32_t vertexShader = compileShader(GL_VERTEX_SHADER, kScreenOverlayVertexShader);
+    if (vertexShader == 0) {
+        return false;
+    }
+
+    const std::uint32_t fragmentShader = compileShader(GL_FRAGMENT_SHADER, kScreenOverlayFragmentShader);
+    if (fragmentShader == 0) {
+        glDeleteShader(vertexShader);
+        return false;
+    }
+
+    screenOverlayShader_ = linkProgram(vertexShader, fragmentShader);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    if (screenOverlayShader_ == 0) {
+        return false;
+    }
+
+    glGenVertexArrays(1, &screenOverlayVao_);
+    return screenOverlayVao_ != 0;
+}
+
+void Renderer::drawScreenOverlay() {
+    if (screenOverlayShader_ == 0 || screenOverlayVao_ == 0) {
+        return;
+    }
+    if (screenOverlay_.blackFade <= 0.001f && screenOverlay_.noiseIntensity <= 0.001f) {
+        return;
+    }
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glUseProgram(screenOverlayShader_);
+    glUniform2f(glGetUniformLocation(screenOverlayShader_, "uViewportSize"),
+        static_cast<float>(std::max(width_, 1u)), static_cast<float>(std::max(height_, 1u)));
+    glUniform1f(glGetUniformLocation(screenOverlayShader_, "uBlackFade"), screenOverlay_.blackFade);
+    glUniform1f(glGetUniformLocation(screenOverlayShader_, "uNoiseIntensity"), screenOverlay_.noiseIntensity);
+    glUniform1f(glGetUniformLocation(screenOverlayShader_, "uFrame"), static_cast<float>(stats_.frameIndex));
+    glBindVertexArray(screenOverlayVao_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindVertexArray(0);
+    glUseProgram(0);
+    glDisable(GL_BLEND);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
 }
 
 std::int32_t Renderer::loadObjMesh(const std::filesystem::path& path) {

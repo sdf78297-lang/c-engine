@@ -43,6 +43,11 @@ public:
     [[nodiscard]] bool startRequested() const;
     [[nodiscard]] bool quitRequested() const;
     [[nodiscard]] bool resumeRequested() const;
+    [[nodiscard]] bool closeRequested() const;
+    [[nodiscard]] bool takeWorkstationSaveRequested();
+    [[nodiscard]] bool takeWorkstationSendRequested();
+    [[nodiscard]] bool takeWorkstationCompleteRequested();
+    [[nodiscard]] bool takeWorkstationShutdownRequested();
     [[nodiscard]] std::optional<SettingChange> takeSettingChange();
     void clearRequests();
 
@@ -58,6 +63,11 @@ private:
     bool startRequested_ = false;
     bool quitRequested_ = false;
     bool resumeRequested_ = false;
+    bool closeRequested_ = false;
+    bool workstationSaveRequested_ = false;
+    bool workstationSendRequested_ = false;
+    bool workstationCompleteRequested_ = false;
+    bool workstationShutdownRequested_ = false;
     std::optional<SettingChange> pendingSetting_;
     std::uint32_t width_ = 0;
     std::uint32_t height_ = 0;
@@ -76,6 +86,7 @@ private:
 
     [[nodiscard]] bool createGraphicsResources();
     void destroyGraphicsResources();
+    void destroyRuntime();
     void uploadSurfaceToTexture();
 #endif
 };

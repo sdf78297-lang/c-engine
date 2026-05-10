@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GROMOV REPORT SUITE</title>
+  <style>
+    :root {
+      --title-a: #202934;
+      --title-b: #111820;
+      --chrome: #d5dbe0;
+      --chrome-dark: #aab3bb;
+      --chrome-mid: #c4cbd1;
+      --line: #8d969e;
+      --line-soft: #b7c0c7;
+      --paper: #f3f6f7;
+      --cell: #fbfcfc;
+      --cell-alt: #f1f4f5;
+      --select: #2d4f78;
+      --select-fill: #e4eefb;
+      --ink: #101820;
+      --muted: #56616a;
+      --red: #8b2020;
+      --amber: #986711;
+      --green: #27703f;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      color: var(--ink);
+      background: #9aa3aa;
+      font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+      font-size: 12px;
+      user-select: none;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0, rgba(255,255,255,.05) 1px, transparent 1px, transparent 3px),
+        radial-gradient(circle at 50% 25%, rgba(255,255,255,.18), transparent 34%),
+        linear-gradient(90deg, rgba(0,0,0,.12), transparent 12%, transparent 88%, rgba(0,0,0,.12));
+      opacity: .55;
+      z-index: 20;
+    }
+
+    #workstation-root {
+      width: 100vw;
+      height: 100vh;
+      padding: 0;
+      display: grid;
+      grid-template-rows: 24px 28px 30px 42px 24px 1fr 28px 24px;
+      background: var(--paper);
+      border: 1px solid #4b535a;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.9);
+      position: relative;
+    }
+
+    .titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      color: #f3f7fa;
+      background: linear-gradient(#2b3541, var(--title-a) 42%, var(--title-b));
+      border-bottom: 1px solid #0b1015;
+      font-family: Consolas, "Courier New", monospace;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .title-left,
+    .title-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    .app-mark {
+      width: 13px;
+      height: 13px;
+      border: 1px solid #91a7b7;
+      background: linear-gradient(135deg, #f2f7fb 0 45%, #7790a4 45% 100%);
+    }
+
+    .doc-title {
+      color: #b7c4ce;
+      font-weight: 400;
+      text-transform: none;
+    }
+
+    .win-controls {
+      display: flex;
+      align-items: center;
+      margin-left: 12px;
+    }
+
+    .win-controls button {
+      width: 28px;
+      min-width: 28px;
+      height: 20px;
+      padding: 0;
+      border: 1px solid #1b2229;
+      background: #c9d0d6;
+      color: #111820;
+      font: 700 12px/18px Tahoma, Arial, sans-serif;
+    }
+
+    .win-controls .power-button {
+      color: #f4f7f9;
+      background: linear-gradient(#8f3030, #672020);
+      border-color: #351010;
+      text-shadow: 0 1px 0 rgba(0,0,0,.4);
+    }
+
+    .menubar,
+    .toolbar,
+    .formula {
+      display: flex;
+      align-items: center;
+      background: linear-gradient(#e7ebee, var(--chrome));
+      border-bottom: 1px solid var(--line);
+    }
+
+    .menubar {
+      gap: 24px;
+      padding: 0 11px;
+      color: #101820;
+    }
+
+    .menu-item:first-letter {
+      text-decoration: underline;
+    }
+
+    .toolbar {
+      gap: 4px;
+      padding: 3px 8px;
+      background: linear-gradient(#dfe4e7, #c9d0d5);
+    }
+
+    button {
+      height: 22px;
+      min-width: 64px;
+      padding: 2px 9px;
+      border: 1px solid #6e7881;
+      background: linear-gradient(#f9fbfc, #c3ccd3);
+      color: #101820;
+      font: 12px Tahoma, Arial, sans-serif;
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,.9), inset -1px -1px 0 rgba(0,0,0,.16);
+    }
+
+    button:active {
+      background: linear-gradient(#b9c3ca, #eef2f5);
+      box-shadow: inset 1px 1px 0 rgba(0,0,0,.18), inset -1px -1px 0 rgba(255,255,255,.8);
+    }
+
+    .icon-button {
+      min-width: 28px;
+      width: 28px;
+      font-family: Consolas, "Courier New", monospace;
+      font-weight: 700;
+    }
+
+    .separator {
+      width: 1px;
+      height: 20px;
+      margin: 0 5px;
+      background: var(--line);
+      border-right: 1px solid rgba(255,255,255,.75);
+    }
+
+    .session {
+      margin-left: auto;
+      padding-right: 4px;
+      color: #33404b;
+      font-family: Consolas, "Courier New", monospace;
+      white-space: nowrap;
+    }
+
+    .task-strip {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 5px 10px;
+      background: linear-gradient(#eef2f3, #d7dee3);
+      border-top: 1px solid rgba(255,255,255,.75);
+      border-bottom: 1px solid var(--line);
+      color: #1e2a33;
+    }
+
+    .task-badge {
+      padding: 3px 7px;
+      border: 1px solid #7d8a94;
+      background: #f7fafb;
+      font-family: Consolas, "Courier New", monospace;
+      font-weight: 700;
+      color: #2f465c;
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,.9);
+    }
+
+    .task-copy {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .task-copy b {
+      font-family: Consolas, "Courier New", monospace;
+      color: #17283a;
+    }
+
+    .task-state {
+      font-family: Consolas, "Courier New", monospace;
+      color: var(--amber);
+      white-space: nowrap;
+    }
+
+    .formula {
+      gap: 5px;
+      padding: 3px 8px;
+      background: linear-gradient(#dbe1e5, #c7d0d6);
+    }
+
+    .address-box,
+    .fx-box {
+      height: 19px;
+      border: 1px inset #eef2f5;
+      background: #eef3f5;
+      line-height: 17px;
+      text-align: center;
+    }
+
+    .address-box { width: 58px; font-weight: 700; }
+    .fx-box { width: 28px; font-style: italic; color: #38506a; }
+
+    #formula-input {
+      flex: 1;
+      height: 20px;
+      border: 1px inset #eef2f5;
+      background: white;
+      color: #101820;
+      padding: 2px 6px;
+      font: 12px Consolas, "Courier New", monospace;
+      outline: none;
+    }
+
+    #sheet-grid {
+      overflow: hidden;
+      background: #e8edf0;
+      display: grid;
+      grid-template-rows: 1fr;
+    }
+
+    .sheet-frame {
+      overflow: hidden;
+      border-top: 1px solid #eef2f5;
+      background: var(--cell);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+    }
+
+    col.row-head { width: 36px; }
+    col.col-a { width: 108px; }
+    col.col-b { width: 78px; }
+    col.col-c { width: 110px; }
+    col.col-d { width: 120px; }
+    col.col-e { width: 92px; }
+    col.col-f { width: 132px; }
+    col.col-g { width: 230px; }
+    col.col-h { width: 78px; }
+    col.col-i { width: 92px; }
+    col.col-j { width: 64px; }
+    col.col-k { width: 74px; }
+
+    th,
+    td {
+      height: 19px;
+      padding: 2px 5px;
+      border-right: 1px solid var(--line-soft);
+      border-bottom: 1px solid var(--line-soft);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      background: var(--cell);
+    }
+
+    thead th,
+    tbody th {
+      background: linear-gradient(#dfe5e9, #c5ced5);
+      color: #1a232c;
+      text-align: center;
+      font-family: Tahoma, Arial, sans-serif;
+      font-weight: 400;
+    }
+
+    tbody tr:nth-child(even) td {
+      background: var(--cell-alt);
+    }
+
+    td.number { text-align: right; }
+    td.low { color: var(--green); }
+    td.mid { color: var(--amber); }
+    td.high,
+    td.locked { color: var(--red); }
+
+    td {
+      cursor: cell;
+    }
+
+    td.selected {
+      outline: 2px solid var(--select);
+      outline-offset: -2px;
+      background: var(--select-fill) !important;
+      color: #06111f;
+    }
+
+    td.task-cell {
+      box-shadow: inset 0 0 0 2px rgba(45,79,120,.52);
+      background: #edf5ff !important;
+    }
+
+    td.task-cell.task-ok {
+      box-shadow: inset 0 0 0 2px rgba(39,112,63,.55);
+      background: #e9f6ed !important;
+    }
+
+    td.task-cell.task-bad {
+      box-shadow: inset 0 0 0 2px rgba(139,32,32,.55);
+      background: #f7e8e6 !important;
+    }
+
+    td.drift {
+      color: #5b1111;
+      background:
+        repeating-linear-gradient(135deg, rgba(139,32,32,.08) 0 5px, transparent 5px 10px),
+        var(--cell) !important;
+    }
+
+    .tabs-row {
+      display: flex;
+      align-items: flex-end;
+      background: var(--chrome-mid);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 3px 8px 0;
+      gap: 2px;
+    }
+
+    .nav-tab {
+      width: 18px;
+      height: 21px;
+      min-width: 18px;
+      padding: 0;
+      font-size: 10px;
+    }
+
+    .tab {
+      height: 22px;
+      min-width: 94px;
+      padding: 4px 13px 2px;
+      border: 1px solid var(--line);
+      border-bottom: none;
+      background: linear-gradient(#cdd5db, #b5bec5);
+      text-align: center;
+    }
+
+    .tab.active {
+      background: var(--paper);
+      font-weight: 700;
+      position: relative;
+      top: 1px;
+    }
+
+    #status-line {
+      display: grid;
+      grid-template-columns: auto auto 1fr auto auto auto;
+      gap: 12px;
+      align-items: center;
+      padding: 0 10px;
+      background: linear-gradient(#e6eaed, #c9d0d5);
+      border-top: 1px solid #eef2f5;
+      color: #2b363f;
+      white-space: nowrap;
+    }
+
+    .signal {
+      display: inline-flex;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #5d8f41;
+      margin-right: 5px;
+      box-shadow: 0 0 5px rgba(93,143,65,.45);
+    }
+
+    .status-message.error { color: var(--red); }
+    .status-message.ok { color: var(--green); }
+
+    .error-panel {
+      position: fixed;
+      right: 28px;
+      bottom: 44px;
+      width: 360px;
+      padding: 14px 16px;
+      border: 1px solid #5c1515;
+      background: #f0e7e3;
+      color: #2b1515;
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+      display: none;
+      z-index: 30;
+    }
+
+    .error-panel.visible { display: block; }
+    .error-title { font-weight: 700; color: var(--red); margin-bottom: 8px; }
+    .error-code { margin-top: 9px; font-family: Consolas, "Courier New", monospace; color: #6f2020; }
+
+    .ghost-line {
+      animation: ghostPulse .28s steps(2, end) 1;
+    }
+
+    @keyframes ghostPulse {
+      50% { opacity: .18; }
+    }
+
+    @media (max-width: 900px) {
+      #workstation-root { grid-template-rows: 24px 28px 54px 58px 24px 1fr 28px 24px; }
+      .toolbar { flex-wrap: wrap; align-content: center; }
+      .session { display: none; }
+      .tab { min-width: 76px; padding-inline: 8px; }
+      .task-strip { grid-template-columns: auto 1fr; align-content: center; }
+      .task-state { grid-column: 2; }
+    }
+  </style>
+</head>
+<body>
+  <main id="workstation-root">
+    <header class="titlebar">
+      <div class="title-left">
+        <span class="app-mark" aria-hidden="true"></span>
+        <span>GROMOV REPORT SUITE</span>
+        <span class="doc-title">— v3.4.118 (build 2024.11) · отчёт_ноябрь_2024.grs · [Громов А.С.]</span>
+      </div>
+      <div class="title-right">
+        <span>NODE-14</span>
+        <div class="win-controls">
+          <button type="button">–</button>
+          <button type="button">□</button>
+          <button id="btn-close-window" class="power-button" type="button" title="Выключить рабочее место" aria-label="Выключить рабочее место">⏻</button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="menubar" aria-label="Меню">
+      <span class="menu-item">Файл</span>
+      <span class="menu-item">Правка</span>
+      <span class="menu-item">Вид</span>
+      <span class="menu-item">Отчёт</span>
+      <span class="menu-item">Сервис</span>
+      <span class="menu-item">Окно</span>
+      <span class="menu-item">Справка</span>
+    </nav>
+
+    <section class="toolbar" aria-label="Панель инструментов">
+      <button class="icon-button" type="button">□</button>
+      <button class="icon-button" type="button">▤</button>
+      <button id="btn-save" type="button">▼ Сохранить</button>
+      <button class="icon-button" type="button">↶</button>
+      <button class="icon-button" type="button">↷</button>
+      <button class="icon-button" type="button">✂</button>
+      <button class="icon-button" type="button">▣</button>
+      <span class="separator" aria-hidden="true"></span>
+      <button class="icon-button" type="button">Σ</button>
+      <button class="icon-button" type="button">A↕</button>
+      <button class="icon-button" type="button">▽</button>
+      <button class="icon-button" type="button">▦</button>
+      <span class="separator" aria-hidden="true"></span>
+      <button id="btn-send" type="button">↗ Проверить</button>
+      <button type="button">⇧ Печать</button>
+      <button id="btn-close" type="button">Выключить</button>
+      <span class="session">SESSION: GROMOV-A · LAN/OFFICE-2 · CACHE: LOCAL</span>
+    </section>
+
+    <section class="task-strip" aria-label="Задание">
+      <span class="task-badge">ЗАДАНИЕ</span>
+      <span class="task-copy">Строка <b>ZJ-1101-024</b>: впишите <b>D12=Согласование</b>, <b>H12=12.11</b>, <b>I12=средний</b>, <b>K12=ok</b>. Затем нажмите <b>Проверить</b>.</span>
+      <span class="task-state" id="task-state">0/4</span>
+    </section>
+
+    <section class="formula" aria-label="Строка формулы">
+      <div class="address-box" id="cell-address">A2</div>
+      <div class="fx-box">fx</div>
+      <input id="formula-input" type="text" autocomplete="off" spellcheck="false">
+    </section>
+
+    <section id="sheet-grid" aria-label="Таблица">
+      <div class="sheet-frame">
+        <table>
+          <colgroup>
+            <col class="row-head">
+            <col class="col-a"><col class="col-b"><col class="col-c"><col class="col-d"><col class="col-e"><col class="col-f">
+            <col class="col-g"><col class="col-h"><col class="col-i"><col class="col-j"><col class="col-k">
+          </colgroup>
+          <thead id="grid-head"></thead>
+          <tbody id="grid-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <nav class="tabs-row" aria-label="Листы">
+      <button class="nav-tab" type="button">‹‹</button>
+      <button class="nav-tab" type="button">‹</button>
+      <button class="nav-tab" type="button">›</button>
+      <button class="nav-tab" type="button">››</button>
+      <div class="tab active" data-sheet="report">Отчёт_ноябрь</div>
+      <div class="tab" data-sheet="summary">Сводка</div>
+      <div class="tab" data-sheet="clients">Клиенты</div>
+      <div class="tab" data-sheet="archive">Архив</div>
+    </nav>
+
+    <footer id="status-line">
+      <span><span class="signal"></span>Открыт лист: <b id="sheet-name">Отчёт_ноябрь</b></span>
+      <span>Ячейка: <b id="status-cell">A2</b></span>
+      <span class="status-message" id="status-message">Введите значения из задания в указанные ячейки. Enter фиксирует значение.</span>
+      <span>RU</span>
+      <span>CAPS</span>
+      <span>15:05</span>
+    </footer>
+
+    <aside class="error-panel" id="error-panel" aria-live="polite">
+      <div class="error-title" id="error-title">Ошибка соединения с сервером</div>
+      <div id="error-text">Отчёт не отправлен. Узел `GROMOV-LINK` не подтвердил пакет.</div>
+      <div class="error-code" id="error-code">ERR_ROUTE_STALE / ws-04 / retry denied</div>
+    </aside>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var columns = ["A","B","C","D","E","F","G","H","I","J","K"];
+      var rowCount = 32;
+      var activeSheet = "report";
+      var selected = { row: 2, col: 1 };
+      var edits = {};
+      var taskComplete = false;
+      var completionSent = false;
+      var requiredCells = [
+        { sheet: "report", row: 12, col: 4, value: "Согласование" },
+        { sheet: "report", row: 12, col: 8, value: "12.11" },
+        { sheet: "report", row: 12, col: 9, value: "средний" },
+        { sheet: "report", row: 12, col: 11, value: "ok" }
+      ];
+      var sheetLabels = {
+        report: "Отчёт_ноябрь",
+        summary: "Сводка",
+        clients: "Клиенты",
+        archive: "Архив"
+      };
+
+      var seed = {
+        report: [
+          ["ID заявки","Дата","Отдел","Статус","Сумма ₽","Ответственный","Комментарий","Дедлайн","Риск","Подпись","Прим."],
+          ["ZJ-1101-014","01.11.24","Логистика","В работе","142 800","М. Корнеев","Задержка склад №3","08.11","средний","МК",""],
+          ["ZJ-1101-015","01.11.24","Финансы","Закрыто","58 200","И. Лазарева","Возврат ООО «Светоч»","03.11","низкий","ИЛ","ok"],
+          ["ZJ-1101-016","02.11.24","Бухгалтерия","Согласование","—","С. Петренко","Проверка реквизитов","06.11","низкий","СП",""],
+          ["ZJ-1101-017","02.11.24","Закупки","В работе","318 500","А. Громов","уточнить у поставщика","09.11","средний","АГ","ждать"],
+          ["ZJ-1101-018","02.11.24","ИТ","Закрыто","24 000","Д. Соловьёв","Замена SSD каб. 14","02.11","низкий","ДС","ok"],
+          ["ZJ-1101-019","03.11.24","Кадры","Ожидание","—","Е. Туркина","Доп. соглашение №7","12.11","низкий","ЕТ",""],
+          ["ZJ-1101-020","03.11.24","Логистика","Отклонено","—","М. Корнеев","Нет накладной","03.11","высокий","МК","см. архив"],
+          ["ZJ-1101-021","03.11.24","Продажи","В работе","89 400","Н. Авдеев","Клиент не отвечает","11.11","средний","НА",""],
+          ["ZJ-1101-022","04.11.24","Юр. отдел","Согласование","—","К. Шершнёв","Договор на правке","15.11","низкий","КШ",""],
+          ["ZJ-1101-023","04.11.24","Финансы","Возврат","12 760","И. Лазарева","Двойная оплата","07.11","низкий","ИЛ","ok"],
+          ["ZJ-1101-024","04.11.24","Закупки","В работе","205 100","А. Громов","согл. с Корнеевым","10.11","высокий","АГ","!"],
+          ["ZJ-1101-025","05.11.24","Архив","Проверка","—","Г. Силина","Старая папка 2019","14.11","низкий","ГС",""]
+        ],
+        summary: [
+          ["Отдел","Заявок","В работе","Закрыто","Отклонено","Сумма ₽","Средний риск","Ответ.","Просрочено","Замечания","Прим."],
+          ["Логистика","8","5","1","1","283 150","средний","Корнеев","2","жалобы","ревизия"],
+          ["Финансы","6","2","3","0","81 000","низкий","Лазарева","0","—",""],
+          ["Закупки","7","4","0","2","523 600","высокий","Громов","3","см. отчёт","!"],
+          ["ИТ","4","2","2","0","24 000","средний","Соловьёв","1","сеть",""],
+          ["Кадры","3","1","0","0","—","низкий","Туркина","0","—",""],
+          ["ИТОГО","41","18","9","3","1 199 210","—","—","7","—",""]
+        ],
+        clients: [
+          ["Код","Клиент","ИНН","Договор №","Менеджер","Лимит ₽","Долг ₽","Статус","Контакт","Город","Прим."],
+          ["K-0014","ООО «Светоч»","7712345601","Д-441/24","Лазарева","500 000","12 760","активен","Иванов А.","Москва","—"],
+          ["K-0015","ИП Журавлёв","771234560X","Д-442/24","Авдеев","120 000","0","активен","Журавлёв","Тверь","—"],
+          ["K-0016","АО «Северная»","7812345678","Д-443/24","Авдеев","2 000 000","156 700","активен","Семёнов","СПб","ключ."],
+          ["K-0017","ООО «Гермес»","7723456789","Д-444/24","Корнеев","800 000","0","заморожен","—","Калуга","спор"],
+          ["K-0018","ООО «Атлант»","7734567890","Д-445/24","Корнеев","350 000","77 950","активен","Кузьмин","Тула","—"]
+        ],
+        archive: [
+          ["ID","Период","Отдел","Статус","Сумма ₽","Закрыл","Комментарий","Закрыто","Риск","Подпись","Прим."],
+          ["ZJ-0824-091","08.24","Логистика","Закрыто","412 000","Корнеев","Перевозка партии","31.08.24","низкий","МК","ok"],
+          ["ZJ-0924-101","09.24","Закупки","Закрыто","290 100","Громов","согл. договор","30.09.24","низкий","АГ","ok"],
+          ["ZJ-1024-104","10.24","Логистика","Отклонено","—","Корнеев","Срыв сроков","12.10.24","высокий","МК","!"],
+          ["ZJ-1024-106","10.24","Бухгалтерия","Закрыто","104 900","Петренко","Закрытие месяца","31.10.24","низкий","СП","ok"]
+        ]
+      };
+
+      var head = document.getElementById("grid-head");
+      var body = document.getElementById("grid-body");
+      var formula = document.getElementById("formula-input");
+      var addressBox = document.getElementById("cell-address");
+      var statusCell = document.getElementById("status-cell");
+      var statusMessage = document.getElementById("status-message");
+      var sheetName = document.getElementById("sheet-name");
+      var errorPanel = document.getElementById("error-panel");
+      var errorTitle = document.getElementById("error-title");
+      var errorText = document.getElementById("error-text");
+      var errorCode = document.getElementById("error-code");
+      var taskState = document.getElementById("task-state");
+
+      function key(row, col) { return activeSheet + ":" + row + ":" + col; }
+      function address(row, col) { return columns[col - 1] + row; }
+
+      function normalize(value) {
+        return String(value).replace(/\s+/g, " ").trim().toLowerCase();
+      }
+
+      function requiredFor(sheet, row, col) {
+        for (var i = 0; i < requiredCells.length; i += 1) {
+          var item = requiredCells[i];
+          if (item.sheet === sheet && item.row === row && item.col === col) return item;
+        }
+        return null;
+      }
+
+      function isRequiredValueCorrect(item) {
+        return normalize(valueAtSheet(item.sheet, item.row, item.col)) === normalize(item.value);
+      }
+
+      function showError(title, text, code) {
+        errorTitle.textContent = title;
+        errorText.textContent = text;
+        errorCode.textContent = code;
+        errorPanel.classList.add("visible");
+      }
+
+      function emitEngineEvent(command) {
+        document.title = command;
+      }
+
+      function refreshTaskState(markErrors) {
+        var done = 0;
+        for (var i = 0; i < requiredCells.length; i += 1) {
+          if (isRequiredValueCorrect(requiredCells[i])) done += 1;
+        }
+        taskComplete = done === requiredCells.length;
+        taskState.textContent = taskComplete ? "ГОТОВО" : done + "/" + requiredCells.length;
+        taskState.style.color = taskComplete ? "var(--green)" : "var(--amber)";
+
+        var cells = body.querySelectorAll("td.task-cell");
+        for (var c = 0; c < cells.length; c += 1) {
+          var cell = cells[c];
+          var item = requiredFor(activeSheet, Number(cell.getAttribute("data-row")), Number(cell.getAttribute("data-col")));
+          cell.classList.toggle("task-ok", !!item && isRequiredValueCorrect(item));
+          cell.classList.toggle("task-bad", !!item && markErrors && !isRequiredValueCorrect(item));
+        }
+        return taskComplete;
+      }
+
+      function missingTaskList() {
+        var missing = [];
+        for (var i = 0; i < requiredCells.length; i += 1) {
+          var item = requiredCells[i];
+          if (!isRequiredValueCorrect(item)) missing.push(address(item.row, item.col) + "=" + item.value);
+        }
+        return missing.join(", ");
+      }
+
+      function seeded(row, col) {
+        return seededSheet(activeSheet, row, col);
+      }
+
+      function seededSheet(sheet, row, col) {
+        var rows = seed[sheet] || seed.report;
+        if (rows[row - 1] && rows[row - 1][col - 1] !== undefined) return rows[row - 1][col - 1];
+        if (row > 14 && col === 1) return "ZJ-1101-" + ("000" + (row + 12)).slice(-3);
+        if (row > 14 && col > 4 && col < 7) return String((row * 137 + col * 89) % 99000);
+        return "";
+      }
+
+      function valueAt(row, col) {
+        var edited = edits[key(row, col)];
+        return edited !== undefined ? edited : seeded(row, col);
+      }
+
+      function valueAtSheet(sheet, row, col) {
+        var edited = edits[sheet + ":" + row + ":" + col];
+        return edited !== undefined ? edited : seededSheet(sheet, row, col);
+      }
+
+      function classFor(value) {
+        var text = String(value).toLowerCase();
+        if (text.indexOf("высок") !== -1 || text.indexOf("крит") !== -1 || text.indexOf("отклон") !== -1 || text.indexOf("заморож") !== -1) return "high";
+        if (text.indexOf("сред") !== -1 || text.indexOf("соглас") !== -1 || text.indexOf("ждать") !== -1 || text.charAt(0) === "-") return "mid";
+        if (text.indexOf("низк") !== -1 || text.indexOf("закрыто") !== -1 || text.indexOf("активен") !== -1 || text === "ok") return "low";
+        if (/^[0-9\s]+$/.test(text) || text === "—") return "number";
+        return "";
+      }
+
+      function renderHead() {
+        var tr = document.createElement("tr");
+        var corner = document.createElement("th");
+        corner.textContent = "";
+        tr.appendChild(corner);
+        for (var i = 0; i < columns.length; i += 1) {
+          var th = document.createElement("th");
+          th.textContent = columns[i];
+          tr.appendChild(th);
+        }
+        head.textContent = "";
+        head.appendChild(tr);
+      }
+
+      function renderBody() {
+        var fragment = document.createDocumentFragment();
+        for (var r = 1; r <= rowCount; r += 1) {
+          var tr = document.createElement("tr");
+          var rowHead = document.createElement("th");
+          rowHead.textContent = r;
+          tr.appendChild(rowHead);
+          for (var c = 1; c <= columns.length; c += 1) {
+            var td = document.createElement("td");
+            var value = valueAt(r, c);
+            td.textContent = value;
+            td.setAttribute("data-row", String(r));
+            td.setAttribute("data-col", String(c));
+            td.className = classFor(value);
+            if (requiredFor(activeSheet, r, c)) td.classList.add("task-cell");
+            if (r === selected.row && c === selected.col) td.classList.add("selected");
+            tr.appendChild(td);
+          }
+          fragment.appendChild(tr);
+        }
+        body.textContent = "";
+        body.appendChild(fragment);
+      }
+
+      function activeCell() {
+        return body.querySelector("td[data-row='" + selected.row + "'][data-col='" + selected.col + "']");
+      }
+
+      function updateSelection() {
+        var cells = body.querySelectorAll("td");
+        for (var i = 0; i < cells.length; i += 1) {
+          var cell = cells[i];
+          var on = Number(cell.getAttribute("data-row")) === selected.row && Number(cell.getAttribute("data-col")) === selected.col;
+          cell.classList.toggle("selected", on);
+        }
+        addressBox.textContent = address(selected.row, selected.col);
+        statusCell.textContent = address(selected.row, selected.col);
+        formula.value = valueAt(selected.row, selected.col);
+        refreshTaskState(false);
+      }
+
+      function selectCell(row, col) {
+        selected.row = Math.max(1, Math.min(rowCount, row));
+        selected.col = Math.max(1, Math.min(columns.length, col));
+        errorPanel.classList.remove("visible");
+        updateSelection();
+      }
+
+      function applyFormulaToCell(showStatus) {
+        edits[key(selected.row, selected.col)] = formula.value;
+        var cell = activeCell();
+        if (cell) {
+          cell.textContent = formula.value;
+          cell.className = classFor(formula.value);
+          if (requiredFor(activeSheet, selected.row, selected.col)) cell.classList.add("task-cell");
+          cell.classList.add("selected");
+        }
+        refreshTaskState(false);
+        if (showStatus) {
+          statusMessage.className = "status-message ok";
+          statusMessage.textContent = address(selected.row, selected.col) + " обновлена в локальном кэше.";
+        }
+      }
+
+      function commitFormula() {
+        applyFormulaToCell(true);
+      }
+
+      function focusFormula(selectAll) {
+        formula.focus();
+        if (selectAll) {
+          formula.select();
+        } else if (formula.setSelectionRange) {
+          var end = formula.value.length;
+          formula.setSelectionRange(end, end);
+        }
+      }
+
+      function selectedTextRange() {
+        var start = typeof formula.selectionStart === "number" ? formula.selectionStart : formula.value.length;
+        var end = typeof formula.selectionEnd === "number" ? formula.selectionEnd : start;
+        return { start: start, end: end };
+      }
+
+      function replaceFormulaRange(text) {
+        var range = selectedTextRange();
+        formula.value = formula.value.slice(0, range.start) + text + formula.value.slice(range.end);
+        var caret = range.start + text.length;
+        focusFormula(false);
+        if (formula.setSelectionRange) formula.setSelectionRange(caret, caret);
+        applyFormulaToCell(false);
+      }
+
+      function eraseFormula(backward) {
+        var range = selectedTextRange();
+        if (range.start === range.end) {
+          if (backward && range.start > 0) {
+            range.start -= 1;
+          } else if (!backward && range.end < formula.value.length) {
+            range.end += 1;
+          }
+        }
+        formula.value = formula.value.slice(0, range.start) + formula.value.slice(range.end);
+        focusFormula(false);
+        if (formula.setSelectionRange) formula.setSelectionRange(range.start, range.start);
+        applyFormulaToCell(false);
+      }
+
+      function setSheet(sheet) {
+        activeSheet = sheet;
+        selected = { row: 2, col: 1 };
+        var tabs = document.querySelectorAll(".tab");
+        for (var i = 0; i < tabs.length; i += 1) {
+          tabs[i].classList.toggle("active", tabs[i].getAttribute("data-sheet") === sheet);
+        }
+        sheetName.textContent = sheetLabels[sheet] || sheet;
+        renderBody();
+        updateSelection();
+        errorPanel.classList.remove("visible");
+        statusMessage.className = "status-message";
+        statusMessage.textContent = "Лист загружен из локального зеркала.";
+        refreshTaskState(false);
+      }
+
+      function shutdownWorkstation() {
+        commitFormula();
+        if (!refreshTaskState(true)) {
+          showError("Выключение заблокировано", "Сначала завершите отчёт: " + missingTaskList() + ".", "ERR_TASK_INCOMPLETE / local-check");
+          statusMessage.className = "status-message error";
+          statusMessage.textContent = "Рабочее место нельзя выключить, пока отчёт не исправлен.";
+          return;
+        }
+        if (!completionSent) {
+          emitEngineEvent("exo:workstation-complete");
+          completionSent = true;
+          setTimeout(function () { emitEngineEvent("exo:workstation-shutdown"); }, 35);
+        } else {
+          emitEngineEvent("exo:workstation-shutdown");
+        }
+        statusMessage.className = "status-message ok";
+        statusMessage.textContent = "Рабочее место выключается. Отчёт подтверждён.";
+      }
+
+      function saveReport() {
+        commitFormula();
+        document.title = "exo:workstation-save:" + Date.now();
+        statusMessage.className = "status-message ok";
+        statusMessage.textContent = "Сохранено локально. Сетевой шлюз всё ещё недоступен.";
+      }
+
+      function sendReport() {
+        commitFormula();
+        if (!refreshTaskState(true)) {
+          showError("Проверка отчёта не пройдена", "Исправьте ячейки: " + missingTaskList() + ".", "ERR_REPORT_VALUES / local-check");
+          statusMessage.className = "status-message error";
+          statusMessage.textContent = "В отчёте остались неверные значения.";
+          return;
+        }
+        if (!completionSent) {
+          emitEngineEvent("exo:workstation-complete");
+          completionSent = true;
+        }
+        errorPanel.classList.remove("visible");
+        statusMessage.className = "status-message ok";
+        statusMessage.textContent = "Задание выполнено. Теперь можно выключить рабочее место.";
+      }
+
+      function moveBy(dr, dc) {
+        commitFormula();
+        selectCell(selected.row + dr, selected.col + dc);
+      }
+
+      body.addEventListener("mousedown", function (event) {
+        event.preventDefault();
+        var target = event.target;
+        while (target && (!target.tagName || target.tagName.toUpperCase() !== "TD")) target = target.parentNode;
+        if (target && target.tagName && target.tagName.toUpperCase() === "TD") {
+          commitFormula();
+          selectCell(Number(target.getAttribute("data-row")), Number(target.getAttribute("data-col")));
+          focusFormula(true);
+        }
+      });
+
+      formula.addEventListener("input", function () {
+        applyFormulaToCell(false);
+      });
+
+      formula.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" || event.key === "Enter" || event.key === "Backspace" || event.key === "Delete" || event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.stopPropagation();
+        }
+        if (event.key === "Escape") { event.preventDefault(); shutdownWorkstation(); return; }
+        if (event.key === "Enter") { event.preventDefault(); moveBy(1, 0); return; }
+        if (event.key === "Backspace") { event.preventDefault(); eraseFormula(true); return; }
+        if (event.key === "Delete") { event.preventDefault(); eraseFormula(false); return; }
+        if (event.key === "ArrowUp") { event.preventDefault(); moveBy(-1, 0); return; }
+        if (event.key === "ArrowDown") { event.preventDefault(); moveBy(1, 0); return; }
+        if (event.key === "ArrowLeft" && formula.selectionStart === 0) { event.preventDefault(); moveBy(0, -1); return; }
+        if (event.key === "ArrowRight" && formula.selectionStart === formula.value.length) { event.preventDefault(); moveBy(0, 1); }
+      });
+
+      document.addEventListener("exo-textinput", function (event) {
+        var text = event.detail && event.detail.text ? String(event.detail.text) : "";
+        if (!text) return;
+        if (document.activeElement !== formula) focusFormula(true);
+        replaceFormulaRange(text);
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") { event.preventDefault(); shutdownWorkstation(); return; }
+        if (event.key === "Backspace") { event.preventDefault(); if (document.activeElement !== formula) focusFormula(true); eraseFormula(true); return; }
+        if (event.key === "Delete") { event.preventDefault(); if (document.activeElement !== formula) focusFormula(true); eraseFormula(false); return; }
+        if (event.target === formula) return;
+        if (event.key === "ArrowUp") { event.preventDefault(); moveBy(-1, 0); return; }
+        if (event.key === "ArrowDown") { event.preventDefault(); moveBy(1, 0); return; }
+        if (event.key === "ArrowLeft") { event.preventDefault(); moveBy(0, -1); return; }
+        if (event.key === "ArrowRight") { event.preventDefault(); moveBy(0, 1); return; }
+        if (event.key === "Enter") { event.preventDefault(); focusFormula(true); }
+      });
+
+      document.getElementById("btn-save").addEventListener("click", saveReport);
+      document.getElementById("btn-send").addEventListener("click", sendReport);
+      document.getElementById("btn-close").addEventListener("click", shutdownWorkstation);
+      document.getElementById("btn-close-window").addEventListener("click", shutdownWorkstation);
+
+      var tabs = document.querySelectorAll(".tab");
+      for (var t = 0; t < tabs.length; t += 1) {
+        tabs[t].addEventListener("mousedown", function () {
+          setSheet(this.getAttribute("data-sheet"));
+          formula.focus();
+        });
+      }
+
+      function anomaly() {
+        if (activeSheet !== "report") return;
+        var cell = body.querySelector("td[data-row='18'][data-col='7']");
+        if (!cell) return;
+        var old = cell.textContent;
+        cell.textContent = Math.random() > .5 ? "ТЫ УЖЕ НЕ ЗДЕСЬ" : "не отвечай";
+        cell.classList.add("drift", "ghost-line");
+        setTimeout(function () {
+          cell.textContent = old;
+          cell.classList.remove("drift", "ghost-line");
+        }, 820);
+      }
+
+      renderHead();
+      renderBody();
+      updateSelection();
+      refreshTaskState(false);
+      formula.focus();
+      setInterval(anomaly, 7200);
+    }());
+  </script>
+</body>
+</html>

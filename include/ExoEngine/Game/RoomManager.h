@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <ExoEngine/Game/SequenceManager.h>
 #include <ExoEngine/Scene/FixedCameraRig.h>
 
 namespace Exo {
@@ -21,6 +22,7 @@ struct RoomInteraction {
     std::string prompt;
     Bounds3 bounds {};
     std::string storyNode;
+    std::string uiOverlay;
     std::string setFlag;
     std::string addItem;
     std::string requiredItem;
@@ -45,6 +47,7 @@ struct RoomTrigger {
     std::string storyNode;
     std::string setFlag;
     std::string audioCue;
+    std::string sequenceId;
     int identityDelta = 0;
     bool once = true;
 };
@@ -66,6 +69,13 @@ struct RoomDefinition {
     std::string title = "Office";
     std::filesystem::path sourcePath;
     std::filesystem::path scenePath;
+    std::string collapseAfterFlag;
+    std::string collapseSequenceId;
+    std::string collapseAudioCue;
+    std::string collapseHeartbeatAudioCue;
+    std::string collapseTargetRoom;
+    std::string collapseTargetSpawn = "stretcher_head_spawn";
+    std::string collapseTargetEnteredFlag;
     Bounds3 walkBounds {{-1.85f, 0.0f, -1.85f}, {1.85f, 2.4f, 1.85f}};
     std::vector<RoomSpawn> spawns;
     std::vector<RoomInteraction> interactions;
@@ -75,6 +85,7 @@ struct RoomDefinition {
     std::unordered_map<std::string, std::filesystem::path> audioCues;
     std::filesystem::path musicPath;
     std::vector<RoomCollisionBox> collisionBoxes;
+    std::vector<RoomSequence> sequences;
 };
 
 class RoomManager {

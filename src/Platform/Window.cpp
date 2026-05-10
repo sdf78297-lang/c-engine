@@ -112,6 +112,11 @@ void Window::swapBuffers() {
     }
 }
 
+void Window::resize(std::uint32_t width, std::uint32_t height) {
+    width_ = width == 0 ? 1 : width;
+    height_ = height == 0 ? 1 : height;
+}
+
 bool Window::isOpen() const {
     return window_ != nullptr;
 }

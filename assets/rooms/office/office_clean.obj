@@ -45,19 +45,3 @@ v 4.70 2.38 -3.68
 v 1.10 2.38 -3.68
 usemtl office_glass
 f 13/1/3 14/2/3 15/3/3 16/4/3
-
-o ceiling_light_strip_left
-v -4.65 2.86 -0.22
-v -0.55 2.86 -0.22
-v -0.55 2.86 0.22
-v -4.65 2.86 0.22
-usemtl office_light_panel
-f 17/1/2 18/2/2 19/3/2 20/4/2
-
-o ceiling_light_strip_right
-v 0.55 2.86 -0.22
-v 4.65 2.86 -0.22
-v 4.65 2.86 0.22
-v 0.55 2.86 0.22
-usemtl office_light_panel
-f 21/1/2 22/2/2 23/3/2 24/4/2

@@ -100,6 +100,29 @@ bool overlapsExpandedXz(Vec3 position, const Bounds3& bounds, float radius) {
         && position.z >= (bounds.min.z - radius) && position.z <= (bounds.max.z + radius);
 }
 
+float smoothStep01(float t) {
+    t = std::clamp(t, 0.0f, 1.0f);
+    return t * t * (3.0f - 2.0f * t);
+}
+
+float lerpFloat(float a, float b, float t) {
+    return a + (b - a) * t;
+}
+
+Vec3 lerpVec3(Vec3 a, Vec3 b, float t) {
+    return {
+        lerpFloat(a.x, b.x, t),
+        lerpFloat(a.y, b.y, t),
+        lerpFloat(a.z, b.z, t),
+    };
+}
+
+float distanceXz(Vec3 a, Vec3 b) {
+    const float dx = a.x - b.x;
+    const float dz = a.z - b.z;
+    return std::sqrt((dx * dx) + (dz * dz));
+}
+
 bool blockedByRoomCollider(Vec3 position, const RoomDefinition& room, float radius) {
     for (const RoomCollisionBox& collider : room.collisionBoxes) {
         if (overlapsExpandedXz(position, collider.bounds, radius)) {
@@ -113,7 +136,14 @@ bool blockedByRoomCollider(Vec3 position, const RoomDefinition& room, float radi
 
 Application::Application(ApplicationConfig config)
     : config_(std::move(config)),
-      scene_(Scene::createReferenceScene()) {}
+      scene_(Scene::createReferenceScene()) {
+    if (!config_.startupRoomId.empty()) {
+        gameState_.roomId = config_.startupRoomId;
+        gameState_.spawnId = config_.startupSpawnId;
+    } else if (!config_.startupSpawnId.empty()) {
+        gameState_.spawnId = config_.startupSpawnId;
+    }
+}
 
 int Application::run() {
     if (config_.headless) {
@@ -293,34 +323,84 @@ int Application::runWindowed() {
         return 1;
     }
 
+    if (!debugOverlay_.initialize(window_.nativeHandle(), nullptr)) {
+        Logger::warn("Gameplay HUD overlay unavailable; interaction prompt will be hidden");
+    }
+
     reloadSceneMeshes();
 
     HtmlMenu htmlMenu;
+    enum class HtmlOverlayKind {
+        None,
+        MainMenu,
+        PauseSettings,
+        Workstation,
+    };
+
+    HtmlOverlayKind htmlOverlayKind = HtmlOverlayKind::None;
     bool htmlMenuActive = false;
     bool gamePaused = false;
-    const auto openHtmlMenu = [&](const std::string& initialScreen, bool pauseOverlay) {
+    bool cycleWorkstationOpened = false;
+    const auto closeHtmlOverlay = [&](bool captureMouse) {
+        htmlMenu.shutdown();
+        htmlMenuActive = false;
+        gamePaused = false;
+        htmlOverlayKind = HtmlOverlayKind::None;
+        SDL_StopTextInput();
+        if (captureMouse && config_.maxFrames == 0) {
+            SDL_SetRelativeMouseMode(SDL_TRUE);
+        }
+    };
+    const auto openHtmlOverlay = [&](
+        const std::filesystem::path& htmlPath,
+        const std::string& initialScreen,
+        bool pauseOverlay,
+        HtmlOverlayKind kind) {
         if (htmlMenu.isActive()) {
             htmlMenu.shutdown();
+            SDL_StopTextInput();
         }
         htmlMenu.clearRequests();
         htmlMenuActive = htmlMenu.initialize({
             .engineRoot = engineRoot(),
-            .htmlPath = std::filesystem::path("assets") / "ui" / "main_menu" / "web" / "index.html",
+            .htmlPath = htmlPath,
             .ultralightResourcePath = engineRoot() / "local_deps" / "ultralight-sdk" / "resources",
             .initialScreen = initialScreen,
             .pauseOverlay = pauseOverlay,
             .width = window_.width(),
             .height = window_.height(),
         });
+        htmlOverlayKind = htmlMenuActive ? kind : HtmlOverlayKind::None;
         gamePaused = pauseOverlay && htmlMenuActive;
         if (htmlMenuActive) {
             SDL_SetRelativeMouseMode(SDL_FALSE);
+            SDL_StartTextInput();
+        } else {
+            SDL_StopTextInput();
         }
         return htmlMenuActive;
     };
+    const auto openHtmlMenu = [&](const std::string& initialScreen, bool pauseOverlay) {
+        return openHtmlOverlay(
+            std::filesystem::path("assets") / "ui" / "main_menu" / "web" / "index.html",
+            initialScreen,
+            pauseOverlay,
+            pauseOverlay ? HtmlOverlayKind::PauseSettings : HtmlOverlayKind::MainMenu);
+    };
+    const auto openWorkstation = [&]() {
+        return openHtmlOverlay(
+            std::filesystem::path("assets") / "ui" / "workstation" / "web" / "index.html",
+            "",
+            true,
+            HtmlOverlayKind::Workstation);
+    };
 
     if (config_.maxFrames == 0 || config_.showMenu) {
-        openHtmlMenu("screen-menu", false);
+        if (config_.startupOverlay == "workstation") {
+            openWorkstation();
+        } else {
+            openHtmlMenu("screen-menu", false);
+        }
     }
 
     if (config_.maxFrames == 0 && !htmlMenuActive) {
@@ -332,7 +412,7 @@ int Application::runWindowed() {
         processRoomEnterEvents();
     }
 
-    Logger::info("Runtime running. HTML menu: mouse/Enter start, Esc back. Game: WASD move, mouse look, Shift run, Tab mouse capture, E interact, F5 save, F9 load, Esc settings, Q temporary quit.");
+    Logger::info("Runtime running. HTML menu: mouse/Enter start, Esc back. Game: WASD move, mouse look, Shift run, Tab mouse capture, E interact, N skip to collapse, F5 save, F9 load, Esc settings, Q temporary quit.");
 
     bool running = true;
     auto lastTime = SDL_GetPerformanceCounter();
@@ -362,6 +442,8 @@ int Application::runWindowed() {
         while (SDL_PollEvent(&event) != 0) {
             if (htmlMenuActive) {
                 htmlMenu.handleEvent(event);
+            } else if (debugOverlay_.isInitialized()) {
+                debugOverlay_.handleEvent(event);
             }
 
             switch (event.type) {
@@ -369,7 +451,22 @@ int Application::runWindowed() {
                     running = false;
                     break;
                 case SDL_KEYDOWN:
+                    if (event.key.repeat == 0
+                        && (event.key.keysym.sym == SDLK_n || event.key.keysym.scancode == SDL_SCANCODE_N)
+                        && (!htmlMenuActive || htmlOverlayKind != HtmlOverlayKind::Workstation)) {
+                        if (htmlMenuActive) {
+                            closeHtmlOverlay(true);
+                        }
+                        skipToCollapseShortcut();
+                        break;
+                    }
                     if (htmlMenuActive) {
+                        break;
+                    }
+                    if (workstationSequenceBlocksPlayer() || collapseSequenceBlocksPlayer() || sequenceBlocksPlayer()) {
+                        if (event.key.keysym.sym == SDLK_q) {
+                            running = false;
+                        }
                         break;
                     }
                     if (event.key.keysym.sym == SDLK_ESCAPE) {
@@ -408,6 +505,10 @@ int Application::runWindowed() {
                     break;
                 case SDL_WINDOWEVENT:
                     if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                        window_.resize(
+                            static_cast<std::uint32_t>(event.window.data1),
+                            static_cast<std::uint32_t>(event.window.data2)
+                        );
                         renderer_.resize(
                             static_cast<std::uint32_t>(event.window.data1),
                             static_cast<std::uint32_t>(event.window.data2)
@@ -431,10 +532,44 @@ int Application::runWindowed() {
             }
         }
 
+        if (updateWorkstationSequence(deltaSeconds) && !htmlMenuActive) {
+            if (openWorkstation()) {
+                gameState_.flags.insert("flag_workstation_opened");
+                Logger::info("Opened UI overlay: workstation");
+                continue;
+            }
+            workstationSequenceState_ = WorkstationSequenceState::Exiting;
+            workstationSequenceTimer_ = 0.0f;
+            Logger::warn("Workstation UI overlay unavailable");
+        }
+
+        if (!pendingUiOverlay_.empty() && !htmlMenuActive) {
+            const std::string overlay = std::exchange(pendingUiOverlay_, {});
+            if (overlay == "workstation") {
+                if (openWorkstation()) {
+                    gameState_.flags.insert("flag_workstation_opened");
+                    Logger::info("Opened UI overlay: workstation");
+                    continue;
+                }
+                Logger::warn("Workstation UI overlay unavailable");
+            } else {
+                Logger::warn("Unknown UI overlay requested: " + overlay);
+            }
+        }
+
         if (htmlMenuActive) {
             const auto menuUpdateStart = SDL_GetPerformanceCounter();
             htmlMenu.update();
             const auto menuUpdateEnd = SDL_GetPerformanceCounter();
+            if (config_.cycleWorkstationOverlay
+                && !cycleWorkstationOpened
+                && htmlOverlayKind == HtmlOverlayKind::MainMenu
+                && renderer_.stats().frameIndex > 12) {
+                closeHtmlOverlay(false);
+                cycleWorkstationOpened = true;
+                openWorkstation();
+                continue;
+            }
             if (auto setting = htmlMenu.takeSettingChange()) {
                 if (setting->key == "vol-master") {
                     audioSystem_.setMasterVolume(setting->value);
@@ -442,24 +577,43 @@ int Application::runWindowed() {
                     audioSystem_.setMusicVolume(setting->value);
                 }
             }
-            if (htmlMenu.startRequested()) {
-                htmlMenu.shutdown();
-                htmlMenuActive = false;
-                gamePaused = false;
-                if (config_.maxFrames == 0) {
-                    SDL_SetRelativeMouseMode(SDL_TRUE);
+
+            if (htmlOverlayKind == HtmlOverlayKind::Workstation) {
+                if (htmlMenu.takeWorkstationSaveRequested()) {
+                    gameState_.flags.insert("flag_workstation_saved");
+                    Logger::info("Workstation save requested");
                 }
+                if (htmlMenu.takeWorkstationSendRequested()) {
+                    gameState_.flags.insert("flag_workstation_send_failed");
+                    Logger::info("Workstation send requested");
+                }
+                if (htmlMenu.takeWorkstationCompleteRequested()) {
+                    gameState_.flags.insert("flag_workstation_task_complete");
+                    gameState_.flags.insert("office_report_completed");
+                    Logger::info("Workstation task completed");
+                }
+                const bool shutdownRequested = htmlMenu.takeWorkstationShutdownRequested();
+                if (shutdownRequested || htmlMenu.closeRequested()) {
+                    if (shutdownRequested) {
+                        gameState_.flags.insert("office_pc_shutdown");
+                    }
+                    closeHtmlOverlay(false);
+                    beginWorkstationExitSequence();
+                    Logger::info(shutdownRequested
+                        ? "Workstation shutdown requested"
+                        : "Closed UI overlay: workstation");
+                    continue;
+                }
+            }
+
+            if (htmlOverlayKind == HtmlOverlayKind::MainMenu && htmlMenu.startRequested()) {
+                closeHtmlOverlay(true);
                 processRoomEnterEvents();
                 Logger::info("HTML menu requested game start");
                 continue;
             }
-            if (htmlMenu.resumeRequested()) {
-                htmlMenu.shutdown();
-                htmlMenuActive = false;
-                gamePaused = false;
-                if (config_.maxFrames == 0) {
-                    SDL_SetRelativeMouseMode(SDL_TRUE);
-                }
+            if (htmlOverlayKind == HtmlOverlayKind::PauseSettings && htmlMenu.resumeRequested()) {
+                closeHtmlOverlay(true);
                 Logger::info("HTML menu requested game resume");
                 continue;
             }
@@ -495,9 +649,19 @@ int Application::runWindowed() {
             continue;
         }
 
-        if (config_.maxFrames == 0 && !gamePaused) {
+        updateCollapseSequence(deltaSeconds);
+        updateSequenceRuntime(deltaSeconds);
+
+        const bool gameplayControlBlocked = workstationSequenceBlocksPlayer()
+            || collapseSequenceBlocksPlayer()
+            || sequenceBlocksPlayer();
+        if (config_.maxFrames == 0
+            && !gamePaused
+            && (!gameplayControlBlocked || lyingLimitedLookActive())) {
             updatePlayer(deltaSeconds, mouseDeltaX, mouseDeltaY);
-            evaluateCurrentTrigger();
+            if (!gameplayControlBlocked) {
+                evaluateCurrentTrigger();
+            }
         }
 
         std::vector<RenderPointLight> renderLights;
@@ -512,20 +676,30 @@ int Application::runWindowed() {
         }
         renderer_.setPointLights(renderLights);
         renderer_.setEnvironment(scene_.renderEnvironment());
+        renderer_.setScreenOverlay(currentScreenOverlay());
         renderer_.beginFrame(makeCurrentView());
         for (std::size_t i = 0; i < scene_.staticMeshes().size(); ++i) {
             const StaticMeshInstance& instance = scene_.staticMeshes()[i];
             if (!isStaticMeshVisible(instance)) {
                 continue;
             }
-            const Mat4 model = Mat4::translate(instance.transform.position)
-                * Mat4::rotateY(instance.transform.rotation.y)
-                * Mat4::scale(instance.transform.scale);
+            const Transform renderTransform = animatedStaticMeshTransform(instance);
+            const Mat4 model = Mat4::translate(renderTransform.position)
+                * Mat4::rotateY(renderTransform.rotation.y)
+                * Mat4::scale(renderTransform.scale);
             if (sceneMeshHandles_[i] >= 0) {
                 renderer_.drawSceneMesh(sceneMeshHandles_[i], model, instance.materialOverride);
             }
         }
         renderer_.endFrame();
+        if (debugOverlay_.isInitialized()) {
+            debugOverlay_.beginFrame();
+            debugOverlay_.drawInteractionPrompt(
+                currentFocusInteractionId_,
+                workstationSequenceBlocksPlayer(),
+                gameState_.flags.contains("flag_workstation_task_complete"));
+            debugOverlay_.endFrame();
+        }
         window_.swapBuffers();
 
         if (config_.maxFrames != 0 && renderer_.stats().frameIndex >= config_.maxFrames) {
@@ -559,6 +733,7 @@ int Application::runWindowed() {
         }
     }
 
+    debugOverlay_.shutdown();
     renderer_.shutdown();
     audioSystem_.shutdown();
     window_.destroy();
@@ -572,8 +747,15 @@ void Application::updatePlayer(float deltaSeconds, float mouseDeltaX, float mous
     constexpr float kRunMultiplier = 1.65f;
     constexpr float kEyeHeight = 1.65f;
 
-    gameState_.playerYaw += mouseDeltaX * kMouseSensitivity;
-    playerPitch_ -= mouseDeltaY * kMouseSensitivity;
+    if (lyingLimitedLookActive()) {
+        updateLyingLimitedLook(deltaSeconds, mouseDeltaX, mouseDeltaY);
+        return;
+    }
+
+    const float control = collapseControlMultiplier();
+
+    gameState_.playerYaw += mouseDeltaX * kMouseSensitivity * control;
+    playerPitch_ -= mouseDeltaY * kMouseSensitivity * control;
     playerPitch_ = std::clamp(playerPitch_, -kMaxPitch, kMaxPitch);
 
     const std::uint8_t* keys = SDL_GetKeyboardState(nullptr);
@@ -601,10 +783,10 @@ void Application::updatePlayer(float deltaSeconds, float mouseDeltaX, float mous
     }
 
     if (keys[SDL_SCANCODE_LEFT] != 0) {
-        gameState_.playerYaw -= 1.8f * deltaSeconds;
+        gameState_.playerYaw -= 1.8f * deltaSeconds * control;
     }
     if (keys[SDL_SCANCODE_RIGHT] != 0) {
-        gameState_.playerYaw += 1.8f * deltaSeconds;
+        gameState_.playerYaw += 1.8f * deltaSeconds * control;
     }
 
     const Bounds3 walkBounds = roomManager_.loaded()
@@ -614,7 +796,7 @@ void Application::updatePlayer(float deltaSeconds, float mouseDeltaX, float mous
     if (move.length() > 0.001f) {
         constexpr float kPlayerRadius = 0.28f;
         const bool running = (keys[SDL_SCANCODE_LSHIFT] != 0) || (keys[SDL_SCANCODE_RSHIFT] != 0);
-        const float speed = running ? (kWalkSpeed * kRunMultiplier) : kWalkSpeed;
+        const float speed = (running ? (kWalkSpeed * kRunMultiplier) : kWalkSpeed) * control;
         const Vec3 delta = normalize(move) * (speed * deltaSeconds);
         const Vec3 startPosition = gameState_.playerPosition;
 
@@ -639,13 +821,65 @@ void Application::updatePlayer(float deltaSeconds, float mouseDeltaX, float mous
     gameState_.playerPosition.y = kEyeHeight;
 
     currentFocusPrompt_.clear();
+    currentFocusInteractionId_.clear();
     if (roomManager_.loaded()) {
         if (const RoomDoor* door = roomManager_.doorAt(gameState_.playerPosition)) {
             currentFocusPrompt_ = door->prompt.empty() ? door->id : door->prompt;
         } else if (const RoomInteraction* interaction = roomManager_.interactionAt(gameState_.playerPosition)) {
             currentFocusPrompt_ = interaction->prompt.empty() ? interaction->id : interaction->prompt;
+            currentFocusInteractionId_ = interaction->id;
         }
     }
+}
+
+void Application::updateLyingLimitedLook(float deltaSeconds, float mouseDeltaX, float mouseDeltaY) {
+    constexpr float kMouseSensitivity = 0.00155f;
+    constexpr float kKeyboardLookSpeed = 1.15f;
+    constexpr float kMaxYaw = 90.0f * 0.017453292519943295769f;
+    constexpr float kMinPitchOffset = -88.0f * 0.017453292519943295769f;
+    constexpr float kMaxPitchOffset = 8.0f * 0.017453292519943295769f;
+    constexpr float kMinAbsolutePitch = -12.0f * 0.017453292519943295769f;
+    constexpr float kMaxAbsolutePitch = 86.0f * 0.017453292519943295769f;
+
+    const float dt = std::max(deltaSeconds, 0.0f);
+    lyingLookTimer_ += dt;
+
+    if (lyingLookInputEnabled_) {
+        lyingYawTarget_ += mouseDeltaX * kMouseSensitivity;
+        lyingPitchTarget_ -= mouseDeltaY * kMouseSensitivity;
+
+        if (const std::uint8_t* keys = SDL_GetKeyboardState(nullptr)) {
+            if (keys[SDL_SCANCODE_LEFT] != 0) {
+                lyingYawTarget_ -= kKeyboardLookSpeed * dt;
+            }
+            if (keys[SDL_SCANCODE_RIGHT] != 0) {
+                lyingYawTarget_ += kKeyboardLookSpeed * dt;
+            }
+            if (keys[SDL_SCANCODE_UP] != 0) {
+                lyingPitchTarget_ += kKeyboardLookSpeed * dt;
+            }
+            if (keys[SDL_SCANCODE_DOWN] != 0) {
+                lyingPitchTarget_ -= kKeyboardLookSpeed * dt;
+            }
+        }
+    } else {
+        const float settle = 1.0f - std::exp(-dt * 3.0f);
+        lyingYawTarget_ = lerpFloat(lyingYawTarget_, 0.0f, settle);
+        lyingPitchTarget_ = lerpFloat(lyingPitchTarget_, 0.0f, settle);
+    }
+
+    lyingYawTarget_ = std::clamp(lyingYawTarget_, -kMaxYaw, kMaxYaw);
+    lyingPitchTarget_ = std::clamp(lyingPitchTarget_, kMinPitchOffset, kMaxPitchOffset);
+
+    const float inertia = 1.0f - std::exp(-dt * 6.5f);
+    lyingYawOffset_ = lerpFloat(lyingYawOffset_, lyingYawTarget_, inertia);
+    lyingPitchOffset_ = lerpFloat(lyingPitchOffset_, lyingPitchTarget_, inertia);
+
+    gameState_.playerPosition = lyingAnchorPosition_;
+    gameState_.playerYaw = lyingBaseYaw_ + lyingYawOffset_;
+    playerPitch_ = std::clamp(lyingBasePitch_ + lyingPitchOffset_, kMinAbsolutePitch, kMaxAbsolutePitch);
+    currentFocusPrompt_.clear();
+    currentFocusInteractionId_.clear();
 }
 
 bool Application::loadStartupScene(bool required) {
@@ -696,18 +930,56 @@ bool Application::loadRoomScene(const std::string& roomId, const std::string& sp
     }
 
     try {
+        Logger::info("[RoomLoad] loading " + scenePath.string());
         scene_ = SceneLoader::loadFromFile(scenePath);
+        Logger::info("[RoomLoad] scene=" + scene_.name()
+            + " room=" + roomManager_.currentRoom().id
+            + " staticMeshes=" + std::to_string(scene_.staticMeshes().size())
+            + " pointLights=" + std::to_string(scene_.pointLights().size())
+            + " fixedCameras=" + std::to_string(scene_.cameraRig().shots().size()));
+        if (scene_.staticMeshes().empty()) {
+            Logger::error("[RoomLoad] staticMeshes is empty: " + scenePath.string());
+        }
+        const std::filesystem::path root = engineRoot();
+        for (const StaticMeshInstance& mesh : scene_.staticMeshes()) {
+            std::filesystem::path source(mesh.meshSource);
+            if (!source.empty() && !source.is_absolute()) {
+                source = root / source;
+            }
+            const bool exists = !source.empty() && std::filesystem::exists(source);
+            Logger::info("[MeshResolve] " + mesh.name
+                + " meshSource=" + (mesh.meshSource.empty() ? std::string("<empty>") : mesh.meshSource)
+                + " exists=" + (exists ? std::string("true") : std::string("false")));
+        }
         Logger::info("Room loaded: " + roomManager_.currentRoom().id + " -> " + scenePath.string());
         if (renderer_.stats().frameIndex > 0 || !sceneMeshHandles_.empty()) {
             reloadSceneMeshes();
         }
+        cameraMode_ = CameraMode::FreeFirstPerson;
+        lyingAnchorPosition_ = gameState_.playerPosition;
+        lyingBaseYaw_ = gameState_.playerYaw;
+        lyingBasePitch_ = 0.0f;
+        lyingYawOffset_ = 0.0f;
+        lyingPitchOffset_ = 0.0f;
+        lyingYawTarget_ = 0.0f;
+        lyingPitchTarget_ = 0.0f;
+        lyingLookTimer_ = 0.0f;
+        lyingLookInputEnabled_ = false;
+        sequencePlayerControlLocked_ = false;
+        sequenceOverlay_ = {};
+        sequenceFadeStart_ = 0.0f;
+        sequenceFadeTarget_ = 0.0f;
+        sequenceFadeDuration_ = 0.0f;
+        sequenceFadeTimer_ = 0.0f;
+        sequenceHiddenEntities_.clear();
+        sequenceManager_.setSequences(roomManager_.currentRoom().sequences, gameState_.flags);
         if (audioSystem_.available()) {
             processRoomEnterEvents();
         }
         return true;
     } catch (const std::exception& error) {
         Logger::error(error.what());
-        return !required;
+        return false;
     }
 }
 
@@ -730,16 +1002,40 @@ bool Application::loadStartupStory(bool required) {
 void Application::reloadSceneMeshes() {
     sceneMeshHandles_.assign(scene_.staticMeshes().size(), -1);
     const std::filesystem::path root = engineRoot();
+    const std::filesystem::path debugMesh = root / "assets" / "debug" / "debug_missing_mesh.obj";
     for (std::size_t i = 0; i < scene_.staticMeshes().size(); ++i) {
         const StaticMeshInstance& instance = scene_.staticMeshes()[i];
-        if (instance.meshSource.empty()) {
-            continue;
+        std::filesystem::path meshAssetPath(instance.meshAsset);
+        if (!meshAssetPath.empty() && !meshAssetPath.is_absolute()) {
+            meshAssetPath = root / meshAssetPath;
         }
+
         std::filesystem::path source(instance.meshSource);
-        if (!source.is_absolute()) {
+        if (!source.empty() && !source.is_absolute()) {
             source = root / source;
         }
-        sceneMeshHandles_[i] = renderer_.loadSceneMesh(source);
+
+        if (!instance.meshAsset.empty() && !std::filesystem::exists(meshAssetPath)) {
+            Logger::warn("[MeshResolve] compiled meshAsset missing for " + instance.name
+                + ": " + instance.meshAsset + "; using meshSource");
+        }
+
+        std::filesystem::path loadPath;
+        if (!source.empty() && std::filesystem::exists(source)) {
+            loadPath = source;
+        } else {
+            Logger::error("[MeshResolve] missing meshSource for static mesh instance: " + instance.name
+                + " source=" + (instance.meshSource.empty() ? std::string("<empty>") : instance.meshSource));
+            loadPath = debugMesh;
+        }
+
+        std::int32_t handle = renderer_.loadSceneMesh(loadPath);
+        if (handle < 0 && loadPath != debugMesh) {
+            Logger::error("[MeshResolve] mesh load failed for " + instance.name
+                + "; using debug placeholder: " + debugMesh.string());
+            handle = renderer_.loadSceneMesh(debugMesh);
+        }
+        sceneMeshHandles_[i] = handle;
     }
 }
 
@@ -782,8 +1078,659 @@ void Application::activateCurrentFocus() {
             story_.restoreState(story_.currentNodeId(), gameState_.identity);
             syncStoryToGameState();
         }
+        if (interaction->id == "anton_desk" && interaction->uiOverlay == "workstation") {
+            beginWorkstationEntrySequence();
+        } else if (!interaction->uiOverlay.empty()) {
+            pendingUiOverlay_ = interaction->uiOverlay;
+        }
         Logger::info("Interaction: " + interaction->id);
     }
+}
+
+void Application::beginWorkstationEntrySequence() {
+    if (workstationSequenceState_ == WorkstationSequenceState::Entering
+        || workstationSequenceState_ == WorkstationSequenceState::AtWorkstation
+        || workstationSequenceState_ == WorkstationSequenceState::Exiting) {
+        return;
+    }
+
+    workstationStandPosition_ = gameState_.playerPosition;
+    workstationStandYaw_ = gameState_.playerYaw;
+    workstationStandPitch_ = playerPitch_;
+    workstationSequenceTimer_ = 0.0f;
+    workstationSequenceState_ = WorkstationSequenceState::Entering;
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+    Logger::info("Workstation enter sequence started");
+}
+
+void Application::beginWorkstationExitSequence() {
+    workstationSequenceTimer_ = 0.0f;
+    workstationSequenceState_ = WorkstationSequenceState::Exiting;
+    gameState_.playerPosition = workstationSeatedPosition_;
+    gameState_.playerYaw = workstationSeatedYaw_;
+    playerPitch_ = workstationSeatedPitch_;
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+    Logger::info("Workstation exit sequence started");
+}
+
+bool Application::updateWorkstationSequence(float deltaSeconds) {
+    constexpr float kEnterDuration = 1.25f;
+    constexpr float kExitDuration = 1.05f;
+
+    if (workstationSequenceState_ == WorkstationSequenceState::Entering) {
+        workstationSequenceTimer_ += std::max(deltaSeconds, 0.0f);
+        const float t = smoothStep01(workstationSequenceTimer_ / kEnterDuration);
+        gameState_.playerPosition = lerpVec3(workstationStandPosition_, workstationSeatedPosition_, t);
+        gameState_.playerYaw = lerpFloat(workstationStandYaw_, workstationSeatedYaw_, t);
+        playerPitch_ = lerpFloat(workstationStandPitch_, workstationSeatedPitch_, t);
+
+        if (workstationSequenceTimer_ >= kEnterDuration) {
+            gameState_.playerPosition = workstationSeatedPosition_;
+            gameState_.playerYaw = workstationSeatedYaw_;
+            playerPitch_ = workstationSeatedPitch_;
+            workstationSequenceState_ = WorkstationSequenceState::AtWorkstation;
+            workstationSequenceTimer_ = 0.0f;
+            return true;
+        }
+    } else if (workstationSequenceState_ == WorkstationSequenceState::Exiting) {
+        workstationSequenceTimer_ += std::max(deltaSeconds, 0.0f);
+        const float t = smoothStep01(workstationSequenceTimer_ / kExitDuration);
+        gameState_.playerPosition = lerpVec3(workstationSeatedPosition_, workstationStandPosition_, t);
+        gameState_.playerYaw = lerpFloat(workstationSeatedYaw_, workstationStandYaw_, t);
+        playerPitch_ = lerpFloat(workstationSeatedPitch_, workstationStandPitch_, t);
+
+        if (workstationSequenceTimer_ >= kExitDuration) {
+            gameState_.playerPosition = workstationStandPosition_;
+            gameState_.playerYaw = workstationStandYaw_;
+            playerPitch_ = workstationStandPitch_;
+            workstationSequenceState_ = WorkstationSequenceState::None;
+            workstationSequenceTimer_ = 0.0f;
+            if (config_.maxFrames == 0) {
+                SDL_SetRelativeMouseMode(SDL_TRUE);
+            }
+            armCollapseAfterWorkstation();
+            Logger::info("Workstation exit sequence completed");
+        }
+    }
+
+    return false;
+}
+
+bool Application::workstationSequenceBlocksPlayer() const {
+    return workstationSequenceState_ == WorkstationSequenceState::Entering
+        || workstationSequenceState_ == WorkstationSequenceState::AtWorkstation
+        || workstationSequenceState_ == WorkstationSequenceState::Exiting;
+}
+
+void Application::updateSequenceRuntime(float deltaSeconds) {
+    if (sequenceFadeDuration_ > 0.0f && sequenceFadeTimer_ < sequenceFadeDuration_) {
+        sequenceFadeTimer_ = std::min(sequenceFadeTimer_ + std::max(deltaSeconds, 0.0f), sequenceFadeDuration_);
+        const float t = smoothStep01(sequenceFadeTimer_ / sequenceFadeDuration_);
+        sequenceOverlay_.blackFade = lerpFloat(sequenceFadeStart_, sequenceFadeTarget_, t);
+    }
+
+    for (const SequenceAction& action : sequenceManager_.update(deltaSeconds)) {
+        executeSequenceAction(action);
+    }
+}
+
+void Application::executeSequenceAction(const SequenceAction& action) {
+    if (action.type == "setFlag") {
+        if (action.flag.empty()) {
+            Logger::warn("Sequence setFlag action missing flag");
+            return;
+        }
+        gameState_.flags.insert(action.flag);
+        return;
+    }
+
+    if (action.type == "playAudio") {
+        playAudioCue(action.audioCue, action.loop);
+        return;
+    }
+
+    if (action.type == "stopAudio") {
+        audioSystem_.stopMusic();
+        return;
+    }
+
+    if (action.type == "setMusicVolume") {
+        if (action.volume < 0.0f) {
+            Logger::warn("Sequence setMusicVolume action missing volume");
+            return;
+        }
+        audioSystem_.setMusicVolume(std::clamp(action.volume, 0.0f, 1.0f));
+        return;
+    }
+
+    if (action.type == "fadeScreen") {
+        sequenceFadeStart_ = sequenceOverlay_.blackFade;
+        sequenceFadeTarget_ = std::clamp(action.blackFade, 0.0f, 1.0f);
+        sequenceFadeDuration_ = std::max(action.duration, 0.0f);
+        sequenceFadeTimer_ = 0.0f;
+        sequenceOverlay_.noiseIntensity = std::clamp(action.noiseIntensity, 0.0f, 1.0f);
+        if (sequenceFadeDuration_ <= 0.0f) {
+            sequenceOverlay_.blackFade = sequenceFadeTarget_;
+        }
+        return;
+    }
+
+    if (action.type == "setCameraMode") {
+        if (action.cameraMode == "collapse_dizzy"
+            || action.cameraMode == "collapse_sway"
+            || action.cameraMode == "collapse_camera_sway") {
+            setCollapseCameraStage(CollapseSequenceState::Dizzy);
+            return;
+        }
+        if (action.cameraMode == "collapse_falling"
+            || action.cameraMode == "collapse_fall"
+            || action.cameraMode == "collapse_camera_fall") {
+            setCollapseCameraStage(CollapseSequenceState::Falling);
+            return;
+        }
+        if (action.cameraMode == "collapse_blackout") {
+            setCollapseCameraStage(CollapseSequenceState::Blackout);
+            return;
+        }
+        if (action.cameraMode == "LyingLimitedLook"
+            || action.cameraMode == "lying_limited_look"
+            || action.cameraMode == "lying"
+            || action.cameraMode == "limited") {
+            const std::string anchorId = action.entityId.empty() ? std::string("stretcher_head_anchor") : action.entityId;
+            const bool inputEnabled = action.cameraMode == "limited";
+            enterLyingLimitedLook(anchorId, inputEnabled);
+            return;
+        }
+        if (action.cameraMode == "SeatedComputer" || action.cameraMode == "seated_computer") {
+            cameraMode_ = CameraMode::SeatedComputer;
+            return;
+        }
+        if (action.cameraMode == "CollapseCutscene" || action.cameraMode == "collapse_cutscene") {
+            cameraMode_ = CameraMode::CollapseCutscene;
+            return;
+        }
+        if (action.cameraMode == "player"
+            || action.cameraMode == "default"
+            || action.cameraMode == "none") {
+            resetCollapseRuntime();
+            cameraMode_ = CameraMode::FreeFirstPerson;
+            return;
+        }
+        Logger::warn("Sequence setCameraMode is not implemented yet: " + action.cameraMode);
+        return;
+    }
+
+    if (action.type == "lockPlayerControl") {
+        sequencePlayerControlLocked_ = true;
+        if (action.cameraMode == "lying"
+            || action.cameraMode == "limited"
+            || action.cameraMode == "LyingLimitedLook"
+            || action.cameraMode == "lying_limited_look") {
+            const std::string anchorId = action.entityId.empty() ? std::string("stretcher_head_anchor") : action.entityId;
+            const bool inputEnabled = action.cameraMode == "limited";
+            enterLyingLimitedLook(anchorId, inputEnabled);
+        }
+        return;
+    }
+
+    if (action.type == "unlockPlayerControl") {
+        sequencePlayerControlLocked_ = false;
+        if (lyingLimitedLookActive()) {
+            cameraMode_ = CameraMode::FreeFirstPerson;
+        }
+        return;
+    }
+
+    if (action.type == "transitionRoom") {
+        if (action.roomId.empty()) {
+            Logger::warn("Sequence transitionRoom action missing roomId");
+            return;
+        }
+        const std::string spawnId = action.spawnId.empty() ? "entry" : action.spawnId;
+        if (!loadRoomScene(action.roomId, spawnId, false)) {
+            Logger::warn("Sequence transitionRoom failed: " + action.roomId + "." + spawnId);
+        } else {
+            resetCollapseRuntime();
+            updateSequenceRuntime(0.0f);
+        }
+        return;
+    }
+
+    if (action.type == "setEntityVisible") {
+        if (action.entityId.empty()) {
+            Logger::warn("Sequence setEntityVisible action missing entityId");
+            return;
+        }
+        if (action.visible) {
+            sequenceHiddenEntities_.erase(action.entityId);
+        } else {
+            sequenceHiddenEntities_.insert(action.entityId);
+        }
+        return;
+    }
+
+    Logger::warn("Unknown sequence action type: " + action.type);
+}
+
+bool Application::sequenceBlocksPlayer() const {
+    return sequencePlayerControlLocked_;
+}
+
+ScreenOverlay Application::currentScreenOverlay() const {
+    const ScreenOverlay collapse = collapseScreenOverlay();
+    return {
+        .blackFade = std::max(collapse.blackFade, sequenceOverlay_.blackFade),
+        .noiseIntensity = std::max(collapse.noiseIntensity, sequenceOverlay_.noiseIntensity),
+    };
+}
+
+void Application::armCollapseAfterWorkstation() {
+    if (!roomManager_.loaded() || collapseSequenceState_ != CollapseSequenceState::None) {
+        return;
+    }
+
+    const RoomDefinition& room = roomManager_.currentRoom();
+    if (room.collapseAfterFlag.empty()
+        || !gameState_.flags.contains(room.collapseAfterFlag)
+        || gameState_.flags.contains("collapse_completed")
+        || gameState_.flags.contains("flag_anton_collapse_complete")) {
+        return;
+    }
+
+    collapseArmPosition_ = gameState_.playerPosition;
+    collapseSequenceTimer_ = 0.0f;
+    collapseControlMultiplier_ = 1.0f;
+    collapseBlackFade_ = 0.0f;
+    collapseNoiseIntensity_ = 0.0f;
+    collapseCameraRoll_ = 0.0f;
+    collapseSequenceState_ = CollapseSequenceState::ArmedAfterWorkstation;
+    Logger::info("Collapse sequence armed after workstation");
+}
+
+void Application::skipToCollapseShortcut() {
+    if (gameState_.roomId == "ambulance_patient_compartment") {
+        gameState_.flags.insert("entered_ambulance");
+        updateSequenceRuntime(0.0f);
+        Logger::info("Skip-to-collapse ignored: already in ambulance");
+        return;
+    }
+
+    if (!roomManager_.loaded() || roomManager_.currentRoom().collapseTargetRoom.empty()) {
+        if (!loadRoomScene("office_open_space_3f", "from_elevator_day", false)) {
+            Logger::warn("Skip-to-collapse failed: office room is unavailable");
+            return;
+        }
+        playRoomMusic();
+    }
+
+    if (!roomManager_.loaded()) {
+        return;
+    }
+
+    const RoomDefinition& room = roomManager_.currentRoom();
+    if (room.collapseTargetRoom.empty()) {
+        Logger::warn("Skip-to-collapse failed: current room has no collapse target");
+        return;
+    }
+    const std::string targetRoom = room.collapseTargetRoom;
+    const std::string targetSpawn = room.collapseTargetSpawn.empty()
+        ? std::string("stretcher_head_spawn")
+        : room.collapseTargetSpawn;
+    const std::string enteredFlag = room.collapseTargetEnteredFlag.empty()
+        ? std::string("entered_ambulance")
+        : room.collapseTargetEnteredFlag;
+
+    workstationSequenceState_ = WorkstationSequenceState::None;
+    workstationSequenceTimer_ = 0.0f;
+    pendingUiOverlay_.clear();
+    currentFocusPrompt_.clear();
+    currentFocusInteractionId_.clear();
+    sequencePlayerControlLocked_ = false;
+    sequenceOverlay_ = {};
+    sequenceHiddenEntities_.clear();
+
+    gameState_.flags.insert("flag_workstation_task_complete");
+    gameState_.flags.insert("office_report_completed");
+    gameState_.flags.insert("office_pc_shutdown");
+
+    if (gameState_.flags.contains("collapse_completed") || gameState_.flags.contains("flag_anton_collapse_complete")) {
+        gameState_.flags.insert(enteredFlag);
+        if (loadRoomScene(targetRoom, targetSpawn, false)) {
+            updateSequenceRuntime(0.0f);
+            Logger::info("Skip-to-collapse loaded already completed target: " + targetRoom);
+        }
+        return;
+    }
+
+    if (sequenceManager_.running() || collapseSequenceState_ != CollapseSequenceState::None) {
+        completeCollapseTransition();
+        Logger::info("Skip-to-collapse fast-forwarded active collapse");
+        return;
+    }
+
+    collapseArmPosition_ = gameState_.playerPosition;
+    collapseSequenceTimer_ = 0.0f;
+    collapseControlMultiplier_ = 1.0f;
+    collapseBlackFade_ = 0.0f;
+    collapseNoiseIntensity_ = 0.0f;
+    collapseCameraRoll_ = 0.0f;
+    collapseStoredMusicVolume_ = audioSystem_.musicVolume();
+
+    if (!room.collapseSequenceId.empty() && sequenceManager_.startSequence(room.collapseSequenceId, gameState_.flags)) {
+        collapseDrivenBySequence_ = true;
+        collapseSequenceState_ = CollapseSequenceState::None;
+        Logger::info("Skip-to-collapse started timeline: " + room.collapseSequenceId);
+        return;
+    }
+
+    Logger::warn("Skip-to-collapse falling back to legacy collapse runtime");
+    beginCollapseDizzy();
+}
+
+void Application::beginCollapseDizzy() {
+    if (!roomManager_.loaded()) {
+        return;
+    }
+
+    collapseDrivenBySequence_ = false;
+    collapseStartPosition_ = gameState_.playerPosition;
+    collapseStartYaw_ = gameState_.playerYaw;
+    collapseStartPitch_ = playerPitch_;
+    collapseSequenceTimer_ = 0.0f;
+    collapseStoredMusicVolume_ = audioSystem_.musicVolume();
+    audioSystem_.setMusicVolume(std::min(collapseStoredMusicVolume_, 0.22f));
+    gameState_.flags.insert("collapse_started");
+    gameState_.flags.insert("flag_anton_collapse_started");
+    playAudioCue(roomManager_.currentRoom().collapseAudioCue);
+    collapseSequenceState_ = CollapseSequenceState::Dizzy;
+    Logger::info("Collapse sequence started");
+}
+
+void Application::setCollapseCameraStage(CollapseSequenceState stage) {
+    if (stage == CollapseSequenceState::None || stage == CollapseSequenceState::ArmedAfterWorkstation) {
+        resetCollapseRuntime();
+        return;
+    }
+
+    cameraMode_ = CameraMode::CollapseCutscene;
+    collapseDrivenBySequence_ = true;
+    collapseSequenceState_ = stage;
+    collapseSequenceTimer_ = 0.0f;
+
+    if (stage == CollapseSequenceState::Dizzy || stage == CollapseSequenceState::Falling) {
+        collapseStartPosition_ = gameState_.playerPosition;
+        collapseStartYaw_ = gameState_.playerYaw;
+        collapseStartPitch_ = playerPitch_;
+    }
+
+    if (stage == CollapseSequenceState::Dizzy) {
+        collapseStoredMusicVolume_ = audioSystem_.musicVolume();
+        collapseControlMultiplier_ = 0.78f;
+        collapseBlackFade_ = 0.10f;
+        collapseNoiseIntensity_ = 0.08f;
+        collapseCameraRoll_ = 0.0f;
+        audioSystem_.setMusicVolume(std::min(collapseStoredMusicVolume_, 0.22f));
+        return;
+    }
+
+    if (stage == CollapseSequenceState::Falling) {
+        collapseControlMultiplier_ = 0.0f;
+        collapseBlackFade_ = std::max(collapseBlackFade_, 0.62f);
+        collapseNoiseIntensity_ = std::max(collapseNoiseIntensity_, 0.38f);
+        collapseCameraRoll_ = std::max(collapseCameraRoll_, 0.25f);
+        audioSystem_.setMusicVolume(std::min(collapseStoredMusicVolume_, 0.08f));
+        SDL_SetRelativeMouseMode(SDL_FALSE);
+        return;
+    }
+
+    collapseControlMultiplier_ = 0.0f;
+    collapseBlackFade_ = 1.0f;
+    collapseNoiseIntensity_ = std::max(collapseNoiseIntensity_, 0.58f);
+    collapseCameraRoll_ = 1.18f;
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+}
+
+void Application::resetCollapseRuntime() {
+    collapseSequenceState_ = CollapseSequenceState::None;
+    collapseSequenceTimer_ = 0.0f;
+    collapseControlMultiplier_ = 1.0f;
+    collapseBlackFade_ = 0.0f;
+    collapseNoiseIntensity_ = 0.0f;
+    collapseCameraRoll_ = 0.0f;
+    collapseDrivenBySequence_ = false;
+    if (cameraMode_ == CameraMode::CollapseCutscene) {
+        cameraMode_ = CameraMode::FreeFirstPerson;
+    }
+}
+
+void Application::enterLyingLimitedLook(const std::string& anchorId, bool inputEnabled) {
+    constexpr float kCeilingLookPitch = 76.0f * 0.017453292519943295769f;
+
+    cameraMode_ = CameraMode::LyingLimitedLook;
+    lyingAnchorPosition_ = roomAnchorPosition(anchorId, gameState_.playerPosition);
+    lyingBaseYaw_ = gameState_.playerYaw;
+    lyingBasePitch_ = kCeilingLookPitch;
+    lyingYawOffset_ = 0.0f;
+    lyingPitchOffset_ = 0.0f;
+    lyingYawTarget_ = 0.0f;
+    lyingPitchTarget_ = 0.0f;
+    lyingLookTimer_ = 0.0f;
+    lyingLookInputEnabled_ = inputEnabled;
+    gameState_.playerPosition = lyingAnchorPosition_;
+    playerPitch_ = lyingBasePitch_;
+    if (config_.maxFrames == 0) {
+        SDL_SetRelativeMouseMode(SDL_TRUE);
+    }
+    Logger::info("Camera mode: LyingLimitedLook at " + anchorId);
+}
+
+bool Application::lyingLimitedLookActive() const {
+    return cameraMode_ == CameraMode::LyingLimitedLook;
+}
+
+Vec3 Application::roomAnchorPosition(const std::string& anchorId, Vec3 fallback) const {
+    if (!roomManager_.loaded() || anchorId.empty()) {
+        return fallback;
+    }
+
+    const RoomDefinition& room = roomManager_.currentRoom();
+    for (const RoomSpawn& spawn : room.spawns) {
+        if (spawn.id == anchorId) {
+            return spawn.position;
+        }
+    }
+    for (const RoomInteraction& interaction : room.interactions) {
+        if (interaction.id == anchorId) {
+            return {
+                (interaction.bounds.min.x + interaction.bounds.max.x) * 0.5f,
+                (interaction.bounds.min.y + interaction.bounds.max.y) * 0.5f,
+                (interaction.bounds.min.z + interaction.bounds.max.z) * 0.5f,
+            };
+        }
+    }
+
+    Logger::warn("Camera anchor not found: " + anchorId);
+    return fallback;
+}
+
+void Application::updateCollapseSequence(float deltaSeconds) {
+    constexpr float kWalkDistanceToCollapse = 0.95f;
+    constexpr float kForcedStartSeconds = 2.2f;
+    constexpr float kDizzyDuration = 3.15f;
+    constexpr float kFallDuration = 1.30f;
+    constexpr float kBlackoutDuration = 1.05f;
+
+    const float dt = std::max(deltaSeconds, 0.0f);
+
+    if (collapseSequenceState_ == CollapseSequenceState::None) {
+        collapseControlMultiplier_ = 1.0f;
+        collapseBlackFade_ = 0.0f;
+        collapseNoiseIntensity_ = 0.0f;
+        collapseCameraRoll_ = 0.0f;
+        return;
+    }
+
+    if (collapseSequenceState_ == CollapseSequenceState::ArmedAfterWorkstation) {
+        collapseSequenceTimer_ += dt;
+        collapseControlMultiplier_ = 1.0f;
+        collapseBlackFade_ = 0.0f;
+        collapseNoiseIntensity_ = 0.0f;
+        collapseCameraRoll_ = 0.0f;
+
+        if (distanceXz(gameState_.playerPosition, collapseArmPosition_) >= kWalkDistanceToCollapse
+            || collapseSequenceTimer_ >= kForcedStartSeconds) {
+            const RoomDefinition& room = roomManager_.currentRoom();
+            if (!room.collapseSequenceId.empty()) {
+                if (sequenceManager_.startSequence(room.collapseSequenceId, gameState_.flags)) {
+                    collapseDrivenBySequence_ = true;
+                    collapseSequenceState_ = CollapseSequenceState::None;
+                    collapseSequenceTimer_ = 0.0f;
+                    Logger::info("Collapse timeline sequence started: " + room.collapseSequenceId);
+                    return;
+                }
+                Logger::warn("Collapse timeline sequence did not start: " + room.collapseSequenceId);
+            }
+            beginCollapseDizzy();
+        }
+        return;
+    }
+
+    if (collapseSequenceState_ == CollapseSequenceState::Dizzy) {
+        collapseSequenceTimer_ += dt;
+        const float t = smoothStep01(collapseSequenceTimer_ / kDizzyDuration);
+        const float pulse = (std::sin(collapseSequenceTimer_ * 9.0f) + 1.0f) * 0.5f;
+        collapseControlMultiplier_ = lerpFloat(0.78f, 0.05f, t);
+        collapseBlackFade_ = std::clamp(0.10f + (0.55f * t) + (pulse * 0.05f * t), 0.0f, 0.78f);
+        collapseNoiseIntensity_ = std::clamp(0.08f + (0.33f * t) + (pulse * 0.08f), 0.0f, 0.55f);
+        collapseCameraRoll_ = (std::sin(collapseSequenceTimer_ * 4.6f) * 0.035f) + (t * 0.28f);
+
+        if (!collapseDrivenBySequence_ && collapseSequenceTimer_ >= kDizzyDuration) {
+            collapseSequenceState_ = CollapseSequenceState::Falling;
+            collapseSequenceTimer_ = 0.0f;
+            collapseStartPosition_ = gameState_.playerPosition;
+            collapseStartYaw_ = gameState_.playerYaw;
+            collapseStartPitch_ = playerPitch_;
+            gameState_.flags.insert("flag_anton_collapse_falling");
+            audioSystem_.setMusicVolume(std::min(collapseStoredMusicVolume_, 0.08f));
+            SDL_SetRelativeMouseMode(SDL_FALSE);
+        }
+        return;
+    }
+
+    if (collapseSequenceState_ == CollapseSequenceState::Falling) {
+        collapseSequenceTimer_ += dt;
+        const float t = smoothStep01(collapseSequenceTimer_ / kFallDuration);
+        collapseControlMultiplier_ = 0.0f;
+        collapseBlackFade_ = std::clamp(lerpFloat(0.62f, 0.97f, t), 0.0f, 1.0f);
+        collapseNoiseIntensity_ = std::clamp(lerpFloat(0.38f, 0.85f, t), 0.0f, 1.0f);
+        collapseCameraRoll_ = lerpFloat(0.25f, 1.18f, t);
+
+        if (!collapseDrivenBySequence_ && collapseSequenceTimer_ >= kFallDuration) {
+            collapseSequenceState_ = CollapseSequenceState::Blackout;
+            collapseSequenceTimer_ = 0.0f;
+            gameState_.flags.insert("flag_anton_collapse_blackout");
+            if (roomManager_.loaded()) {
+                playAudioCue(roomManager_.currentRoom().collapseHeartbeatAudioCue);
+            }
+        }
+        return;
+    }
+
+    if (collapseSequenceState_ == CollapseSequenceState::Blackout) {
+        collapseSequenceTimer_ += dt;
+        const float t = smoothStep01(collapseSequenceTimer_ / kBlackoutDuration);
+        collapseControlMultiplier_ = 0.0f;
+        collapseBlackFade_ = 1.0f;
+        collapseNoiseIntensity_ = lerpFloat(0.58f, 0.04f, t);
+        collapseCameraRoll_ = 1.18f;
+
+        if (!collapseDrivenBySequence_
+            && collapseSequenceTimer_ >= kBlackoutDuration
+            && !gameState_.flags.contains("collapse_completed")) {
+            completeCollapseTransition();
+        }
+        return;
+    }
+}
+
+void Application::completeCollapseTransition() {
+    if (!roomManager_.loaded()) {
+        return;
+    }
+
+    // TODO: move this whole collapse chain to a data-driven sequence asset once the next scene is authored.
+    const RoomDefinition sourceRoom = roomManager_.currentRoom();
+    gameState_.flags.insert("collapse_completed");
+    gameState_.flags.insert("flag_anton_collapse_complete");
+    audioSystem_.stopMusic();
+
+    if (sourceRoom.collapseTargetRoom.empty()) {
+        Logger::warn("Collapse completed without a target room");
+        return;
+    }
+
+    const std::string targetSpawn = sourceRoom.collapseTargetSpawn.empty()
+        ? std::string("wake_on_stretcher")
+        : sourceRoom.collapseTargetSpawn;
+    bool insertedEnteredFlag = false;
+    if (!sourceRoom.collapseTargetEnteredFlag.empty()) {
+        gameState_.flags.insert(sourceRoom.collapseTargetEnteredFlag);
+        insertedEnteredFlag = true;
+    }
+    if (!loadRoomScene(sourceRoom.collapseTargetRoom, targetSpawn, false)) {
+        if (insertedEnteredFlag) {
+            gameState_.flags.erase(sourceRoom.collapseTargetEnteredFlag);
+        }
+        Logger::warn("Collapse target room failed to load: " + sourceRoom.collapseTargetRoom);
+        return;
+    }
+
+    resetCollapseRuntime();
+    audioSystem_.setMusicVolume(collapseStoredMusicVolume_);
+    updateSequenceRuntime(0.0f);
+    if (config_.maxFrames == 0 && !sequenceBlocksPlayer()) {
+        SDL_SetRelativeMouseMode(SDL_TRUE);
+    }
+    Logger::info("Collapse transition loaded target room: " + sourceRoom.collapseTargetRoom);
+}
+
+bool Application::collapseSequenceBlocksPlayer() const {
+    return collapseSequenceState_ == CollapseSequenceState::Falling
+        || collapseSequenceState_ == CollapseSequenceState::Blackout;
+}
+
+float Application::collapseControlMultiplier() const {
+    return std::clamp(collapseControlMultiplier_, 0.0f, 1.0f);
+}
+
+ScreenOverlay Application::collapseScreenOverlay() const {
+    return {
+        .blackFade = collapseBlackFade_,
+        .noiseIntensity = collapseNoiseIntensity_,
+    };
+}
+
+Transform Application::animatedStaticMeshTransform(const StaticMeshInstance& instance) const {
+    Transform result = instance.transform;
+    if (instance.name != "office_chair_pc_02") {
+        return result;
+    }
+
+    float t = 0.0f;
+    if (workstationSequenceState_ == WorkstationSequenceState::Entering) {
+        t = smoothStep01(workstationSequenceTimer_ / 1.25f);
+    } else if (workstationSequenceState_ == WorkstationSequenceState::AtWorkstation) {
+        t = 1.0f;
+    } else if (workstationSequenceState_ == WorkstationSequenceState::Exiting) {
+        t = 1.0f - smoothStep01(workstationSequenceTimer_ / 1.05f);
+    } else {
+        return result;
+    }
+
+    const Vec3 seatedPosition {-1.22f, result.position.y, -0.78f};
+    result.position = lerpVec3(result.position, seatedPosition, t);
+    result.rotation.y = lerpFloat(result.rotation.y, 3.14159f, t);
+    return result;
 }
 
 void Application::evaluateCurrentTrigger() {
@@ -806,6 +1753,9 @@ void Application::evaluateCurrentTrigger() {
         syncStoryToGameState();
     }
     playAudioCue(trigger->audioCue);
+    if (!trigger->sequenceId.empty() && !sequenceManager_.startSequence(trigger->sequenceId, gameState_.flags)) {
+        Logger::warn("Trigger sequence did not start: " + trigger->sequenceId);
+    }
     Logger::info("Trigger: " + trigger->id);
 }
 
@@ -844,7 +1794,7 @@ void Application::playRoomMusic() {
     }
 }
 
-void Application::playAudioCue(const std::string& cueId) {
+void Application::playAudioCue(const std::string& cueId, bool loop) {
     if (cueId.empty() || !roomManager_.loaded()) {
         return;
     }
@@ -860,13 +1810,16 @@ void Application::playAudioCue(const std::string& cueId) {
     if (!path.is_absolute()) {
         path = engineRoot() / path;
     }
-    const bool played = audioSystem_.playOneShot(path);
+    const bool played = audioSystem_.playOneShot(path, loop ? -1 : 0);
     if (!played && audioSystem_.available()) {
         Logger::warn("Audio cue did not play: " + cueId);
     }
 }
 
 bool Application::isStaticMeshVisible(const StaticMeshInstance& instance) const {
+    if (sequenceHiddenEntities_.contains(instance.name)) {
+        return false;
+    }
     if (!instance.visibleWhenFlag.empty() && !gameState_.flags.contains(instance.visibleWhenFlag)) {
         return false;
     }
@@ -910,20 +1863,66 @@ RenderView Application::makeCurrentView() const {
         ? 16.0f / 9.0f
         : static_cast<float>(window_.width()) / static_cast<float>(window_.height());
 
-    const float cosPitch = std::cos(playerPitch_);
-    const float sinPitch = std::sin(playerPitch_);
-    const float sinYaw = std::sin(gameState_.playerYaw);
-    const float cosYaw = std::cos(gameState_.playerYaw);
+    Vec3 cameraPosition = gameState_.playerPosition;
+    float yaw = gameState_.playerYaw;
+    float pitch = playerPitch_;
+    float roll = collapseCameraRoll_;
+
+    if (lyingLimitedLookActive()) {
+        const float breath = std::sin(lyingLookTimer_ * 1.55f);
+        const float slowBreath = std::sin(lyingLookTimer_ * 0.72f);
+        cameraPosition = lyingAnchorPosition_;
+        cameraPosition.y += breath * 0.010f;
+        cameraPosition.z += slowBreath * 0.006f;
+        yaw = lyingBaseYaw_ + lyingYawOffset_;
+        pitch = lyingBasePitch_ + lyingPitchOffset_ + (breath * 0.008f);
+        roll = slowBreath * 0.010f;
+    } else if (collapseSequenceState_ == CollapseSequenceState::Dizzy) {
+        const float t = smoothStep01(collapseSequenceTimer_ / 3.15f);
+        const float sway = std::sin(collapseSequenceTimer_ * 5.4f) * 0.045f * t;
+        const float bob = std::sin(collapseSequenceTimer_ * 8.1f) * 0.035f * t;
+        const float sinYawBase = std::sin(yaw);
+        const float cosYawBase = std::cos(yaw);
+        const Vec3 right {cosYawBase, 0.0f, sinYawBase};
+        cameraPosition = cameraPosition + (right * sway);
+        cameraPosition.y += bob;
+        pitch += std::sin(collapseSequenceTimer_ * 3.2f) * 0.045f * t;
+    } else if (collapseSequenceState_ == CollapseSequenceState::Falling
+        || collapseSequenceState_ == CollapseSequenceState::Blackout) {
+        const float rawT = collapseSequenceState_ == CollapseSequenceState::Falling
+            ? collapseSequenceTimer_ / 1.30f
+            : 1.0f;
+        const float t = smoothStep01(rawT);
+        const float sinYawBase = std::sin(collapseStartYaw_);
+        const float cosYawBase = std::cos(collapseStartYaw_);
+        const Vec3 right {cosYawBase, 0.0f, sinYawBase};
+        const Vec3 back {-sinYawBase, 0.0f, cosYawBase};
+        const Vec3 floorPosition = collapseStartPosition_ + (right * 0.24f) + (back * 0.18f);
+        cameraPosition = lerpVec3(collapseStartPosition_, {floorPosition.x, 0.36f, floorPosition.z}, t);
+        yaw = collapseStartYaw_ + (0.28f * t);
+        pitch = lerpFloat(collapseStartPitch_, -1.04f, t);
+    }
+
+    const float cosPitch = std::cos(pitch);
+    const float sinPitch = std::sin(pitch);
+    const float sinYaw = std::sin(yaw);
+    const float cosYaw = std::cos(yaw);
     const Vec3 forward {
         sinYaw * cosPitch,
         sinPitch,
         -cosYaw * cosPitch,
     };
+    Vec3 side = normalize(cross(forward, {0.0f, 1.0f, 0.0f}));
+    if (side.length() <= 0.00001f) {
+        side = {1.0f, 0.0f, 0.0f};
+    }
+    const Vec3 baseUp = normalize(cross(side, forward));
+    const Vec3 rolledUp = normalize((baseUp * std::cos(roll)) + (side * std::sin(roll)));
 
     RenderView view;
-    view.view = Mat4::lookAt(gameState_.playerPosition, gameState_.playerPosition + forward, {0.0f, 1.0f, 0.0f});
+    view.view = Mat4::lookAt(cameraPosition, cameraPosition + forward, rolledUp);
     view.projection = Mat4::perspective(1.134464f, aspect, 0.05f, 90.0f);
-    view.cameraPosition = gameState_.playerPosition;
+    view.cameraPosition = cameraPosition;
     return view;
 }
 

@@ -1,5 +1,7 @@
 #include <ExoEngine/Game/RoomManager.h>
 
+#include <ExoEngine/Core/Logger.h>
+
 #include <nlohmann/json.hpp>
 
 #include <cmath>
@@ -45,6 +47,13 @@ public:
         room.id = requiredString(root_, "id", "$");
         room.title = optionalString(root_, "title", "$", room.id);
         room.scenePath = optionalPath(root_, "scene", "$");
+        room.collapseAfterFlag = optionalString(root_, "collapseAfterFlag", "$", "");
+        room.collapseSequenceId = optionalString(root_, "collapseSequenceId", "$", "");
+        room.collapseAudioCue = optionalString(root_, "collapseAudioCue", "$", "");
+        room.collapseHeartbeatAudioCue = optionalString(root_, "collapseHeartbeatAudioCue", "$", "");
+        room.collapseTargetRoom = optionalString(root_, "collapseTargetRoom", "$", "");
+        room.collapseTargetSpawn = optionalString(root_, "collapseTargetSpawn", "$", room.collapseTargetSpawn);
+        room.collapseTargetEnteredFlag = optionalString(root_, "collapseTargetEnteredFlag", "$", "");
         room.walkBounds = optionalBounds(root_, "walkBounds", "$", room.walkBounds);
         room.spawns = readSpawns();
         room.interactions = readInteractions();
@@ -54,6 +63,7 @@ public:
         room.audioCues = readAudioCues();
         room.musicPath = readMusicPath();
         room.collisionBoxes = readCollisionBoxes();
+        room.sequences = readSequences();
 
         if (room.spawns.empty()) {
             room.spawns.push_back({});
@@ -287,6 +297,7 @@ private:
                 };
             }
             interaction.storyNode = optionalString(interactionJson, "storyNode", path, "");
+            interaction.uiOverlay = optionalString(interactionJson, "uiOverlay", path, "");
             interaction.setFlag = optionalString(interactionJson, "setFlag", path, "");
             if (interaction.setFlag.empty()) {
                 if (const Json* flags = optionalField(interactionJson, "setsFlags");
@@ -372,6 +383,10 @@ private:
             trigger.storyNode = optionalString(triggerJson, "storyNode", path, "");
             trigger.setFlag = optionalString(triggerJson, "setFlag", path, "");
             trigger.audioCue = optionalString(triggerJson, "audioCue", path, "");
+            trigger.sequenceId = optionalString(triggerJson, "sequenceId", path, "");
+            if (trigger.sequenceId.empty()) {
+                trigger.sequenceId = optionalString(triggerJson, "startSequence", path, "");
+            }
             trigger.identityDelta = optionalInt(triggerJson, "identityDelta", path, 0);
             trigger.once = optionalBool(triggerJson, "once", path, true);
             triggers.push_back(std::move(trigger));
@@ -471,6 +486,132 @@ private:
         return boxes;
     }
 
+    [[nodiscard]] std::vector<RoomSequence> readSequences() const {
+        const Json* sequencesJson = optionalField(root_, "sequences");
+        if (sequencesJson == nullptr) {
+            return {};
+        }
+        expectArray(*sequencesJson, "$.sequences");
+
+        std::vector<RoomSequence> sequences;
+        for (std::size_t i = 0; i < sequencesJson->size(); ++i) {
+            const Json& sequenceJson = (*sequencesJson)[i];
+            const std::string path = childPath("$.sequences", i);
+            expectObject(sequenceJson, path);
+
+            RoomSequence sequence;
+            sequence.id = requiredString(sequenceJson, "id", path);
+            sequence.autoStart = optionalBool(sequenceJson, "autoStart", path, false);
+            sequence.once = optionalBool(sequenceJson, "once", path, true);
+            sequence.conditions = readSequenceConditions(sequenceJson, childPath(path, "conditions"));
+            sequence.steps = readSequenceSteps(sequenceJson, childPath(path, "steps"));
+            sequences.push_back(std::move(sequence));
+        }
+        return sequences;
+    }
+
+    [[nodiscard]] std::vector<SequenceCondition> readSequenceConditions(
+        const Json& sequenceJson,
+        std::string_view path) const {
+        const Json* conditionsJson = optionalField(sequenceJson, "conditions");
+        if (conditionsJson == nullptr) {
+            return {};
+        }
+        expectArray(*conditionsJson, path);
+
+        std::vector<SequenceCondition> conditions;
+        for (std::size_t i = 0; i < conditionsJson->size(); ++i) {
+            const Json& conditionJson = (*conditionsJson)[i];
+            const std::string conditionPath = childPath(path, i);
+
+            SequenceCondition condition;
+            if (conditionJson.is_string()) {
+                condition.flag = conditionJson.get<std::string>();
+            } else {
+                expectObject(conditionJson, conditionPath);
+                condition.flag = optionalString(conditionJson, "flag", conditionPath, "");
+                condition.negated = optionalBool(conditionJson, "not", conditionPath, false);
+            }
+            conditions.push_back(std::move(condition));
+        }
+        return conditions;
+    }
+
+    [[nodiscard]] std::vector<SequenceStep> readSequenceSteps(const Json& sequenceJson, std::string_view path) const {
+        const Json* stepsJson = optionalField(sequenceJson, "steps");
+        if (stepsJson == nullptr) {
+            return {};
+        }
+        expectArray(*stepsJson, path);
+
+        std::vector<SequenceStep> steps;
+        for (std::size_t i = 0; i < stepsJson->size(); ++i) {
+            const Json& stepJson = (*stepsJson)[i];
+            const std::string stepPath = childPath(path, i);
+            expectObject(stepJson, stepPath);
+
+            SequenceStep step;
+            step.time = optionalNumber(stepJson, "time", stepPath, 0.0f);
+            step.actions = readSequenceActions(stepJson, childPath(stepPath, "actions"));
+            steps.push_back(std::move(step));
+        }
+        return steps;
+    }
+
+    [[nodiscard]] std::vector<SequenceAction> readSequenceActions(const Json& stepJson, std::string_view path) const {
+        const Json* actionsJson = optionalField(stepJson, "actions");
+        if (actionsJson == nullptr) {
+            return {};
+        }
+        expectArray(*actionsJson, path);
+
+        std::vector<SequenceAction> actions;
+        for (std::size_t i = 0; i < actionsJson->size(); ++i) {
+            const Json& actionJson = (*actionsJson)[i];
+            const std::string actionPath = childPath(path, i);
+            expectObject(actionJson, actionPath);
+
+            SequenceAction action;
+            action.type = optionalString(actionJson, "type", actionPath, "");
+            action.flag = optionalString(actionJson, "flag", actionPath, "");
+            action.audioCue = optionalString(actionJson, "audioCue", actionPath, "");
+            if (action.audioCue.empty()) {
+                action.audioCue = optionalString(actionJson, "cue", actionPath, "");
+            }
+            action.cameraMode = optionalString(actionJson, "cameraMode", actionPath, "");
+            if (action.cameraMode.empty()) {
+                action.cameraMode = optionalString(actionJson, "mode", actionPath, "");
+            }
+            action.roomId = optionalString(actionJson, "roomId", actionPath, "");
+            if (action.roomId.empty()) {
+                action.roomId = optionalString(actionJson, "targetRoomId", actionPath, "");
+            }
+            if (action.roomId.empty()) {
+                action.roomId = optionalString(actionJson, "targetRoom", actionPath, "");
+            }
+            action.spawnId = optionalString(actionJson, "spawnId", actionPath, "");
+            if (action.spawnId.empty()) {
+                action.spawnId = optionalString(actionJson, "targetSpawnId", actionPath, "");
+            }
+            if (action.spawnId.empty()) {
+                action.spawnId = optionalString(actionJson, "targetSpawn", actionPath, "");
+            }
+            action.entityId = optionalString(actionJson, "entityId", actionPath, "");
+            if (action.entityId.empty()) {
+                action.entityId = optionalString(actionJson, "entity", actionPath, "");
+            }
+            action.visible = optionalBool(actionJson, "visible", actionPath, action.visible);
+            action.loop = optionalBool(actionJson, "loop", actionPath, action.loop);
+            action.blackFade = optionalNumber(actionJson, "blackFade", actionPath, action.blackFade);
+            action.blackFade = optionalNumber(actionJson, "value", actionPath, action.blackFade);
+            action.noiseIntensity = optionalNumber(actionJson, "noiseIntensity", actionPath, action.noiseIntensity);
+            action.duration = optionalNumber(actionJson, "duration", actionPath, action.duration);
+            action.volume = optionalNumber(actionJson, "volume", actionPath, action.volume);
+            actions.push_back(std::move(action));
+        }
+        return actions;
+    }
+
     const Json& root_;
     std::filesystem::path sourcePath_;
 };
@@ -518,6 +659,7 @@ bool RoomManager::loadRoom(const std::filesystem::path& dataRoot, const std::str
     lastError_.clear();
 
     const std::filesystem::path path = roomPath(dataRoot, roomId);
+    Logger::info("[RoomLoad] loading " + path.string());
     std::ifstream input(path, std::ios::in | std::ios::binary);
     if (!input) {
         lastError_ = "Unable to open room JSON file: " + path.string();
@@ -537,11 +679,17 @@ bool RoomManager::loadRoom(const std::filesystem::path& dataRoot, const std::str
     }
 
     activeSpawn_ = currentRoom_.spawns.front();
+    bool matchedSpawn = spawnId.empty();
     for (const RoomSpawn& spawn : currentRoom_.spawns) {
         if (spawn.id == spawnId) {
             activeSpawn_ = spawn;
+            matchedSpawn = true;
             break;
         }
+    }
+    if (!matchedSpawn) {
+        Logger::warn("[RoomLoad] spawn not found: " + currentRoom_.id + "." + spawnId
+            + "; fallback=" + activeSpawn_.id);
     }
 
     loaded_ = true;
