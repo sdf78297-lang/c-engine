@@ -5,6 +5,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <ExoEngine/Math/Vec.h>
+
 namespace Exo {
 
 struct SequenceCondition {
@@ -20,12 +22,24 @@ struct SequenceAction {
     std::string roomId;
     std::string spawnId;
     std::string entityId;
+    std::string cueId;
+    std::string clipId;
+    std::string easing;
+    Vec3 position {};
+    Vec3 rotation {};
+    Vec3 scale {1.0f, 1.0f, 1.0f};
+    bool hasPosition = false;
+    bool hasRotation = false;
+    bool hasScale = false;
     bool visible = true;
     bool loop = false;
     float blackFade = 0.0f;
     float noiseIntensity = 0.0f;
     float duration = 0.0f;
     float volume = -1.0f;
+    float intensity = 1.0f;
+    float fadeSeconds = 0.0f;
+    float playbackSpeed = 1.0f;
 };
 
 struct SequenceStep {
@@ -45,6 +59,7 @@ class SequenceManager {
 public:
     void setSequences(std::vector<RoomSequence> sequences, const std::unordered_set<std::string>& flags);
     [[nodiscard]] bool startSequence(const std::string& id, const std::unordered_set<std::string>& flags);
+    void startAutoSequences(const std::unordered_set<std::string>& flags);
     void stopSequence(const std::string& id);
     [[nodiscard]] std::vector<SequenceAction> update(float deltaSeconds);
     [[nodiscard]] bool running() const;

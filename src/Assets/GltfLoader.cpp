@@ -5,10 +5,12 @@
 #include <cgltf.h>
 #include <stb_image.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 namespace Exo {
 
@@ -22,6 +24,105 @@ const cgltf_accessor* findAttribute(const cgltf_primitive& prim, cgltf_attribute
         }
     }
     return nullptr;
+}
+
+std::int32_t nodeIndex(const cgltf_data* data, const cgltf_node* node) {
+    if (data == nullptr || node == nullptr) {
+        return -1;
+    }
+    for (cgltf_size i = 0; i < data->nodes_count; ++i) {
+        if (&data->nodes[i] == node) {
+            return static_cast<std::int32_t>(i);
+        }
+    }
+    return -1;
+}
+
+std::int32_t skinIndex(const cgltf_data* data, const cgltf_skin* skin) {
+    if (data == nullptr || skin == nullptr) {
+        return -1;
+    }
+    for (cgltf_size i = 0; i < data->skins_count; ++i) {
+        if (&data->skins[i] == skin) {
+            return static_cast<std::int32_t>(i);
+        }
+    }
+    return -1;
+}
+
+std::int32_t meshIndex(const cgltf_data* data, const cgltf_mesh* mesh) {
+    if (data == nullptr || mesh == nullptr) {
+        return -1;
+    }
+    for (cgltf_size i = 0; i < data->meshes_count; ++i) {
+        if (&data->meshes[i] == mesh) {
+            return static_cast<std::int32_t>(i);
+        }
+    }
+    return -1;
+}
+
+Mat4 accessorMat4(const cgltf_accessor* accessor, cgltf_size index) {
+    Mat4 result = Mat4::identity();
+    if (accessor == nullptr) {
+        return result;
+    }
+
+    float values[16] {};
+    if (!cgltf_accessor_read_float(accessor, index, values, 16)) {
+        return result;
+    }
+    for (int i = 0; i < 16; ++i) {
+        result.values[static_cast<std::size_t>(i)] = values[i];
+    }
+    return result;
+}
+
+GltfAnimationPath animationPath(cgltf_animation_path_type path) {
+    switch (path) {
+    case cgltf_animation_path_type_translation:
+        return GltfAnimationPath::Translation;
+    case cgltf_animation_path_type_rotation:
+        return GltfAnimationPath::Rotation;
+    case cgltf_animation_path_type_scale:
+        return GltfAnimationPath::Scale;
+    case cgltf_animation_path_type_weights:
+        return GltfAnimationPath::Weights;
+    default:
+        return GltfAnimationPath::Unknown;
+    }
+}
+
+std::string interpolationName(cgltf_interpolation_type interpolation) {
+    switch (interpolation) {
+    case cgltf_interpolation_type_step:
+        return "STEP";
+    case cgltf_interpolation_type_cubic_spline:
+        return "CUBICSPLINE";
+    case cgltf_interpolation_type_linear:
+    default:
+        return "LINEAR";
+    }
+}
+
+cgltf_size componentCount(const cgltf_accessor* accessor) {
+    if (accessor == nullptr) {
+        return 0;
+    }
+    switch (accessor->type) {
+    case cgltf_type_scalar:
+        return 1;
+    case cgltf_type_vec2:
+        return 2;
+    case cgltf_type_vec3:
+        return 3;
+    case cgltf_type_vec4:
+        return 4;
+    case cgltf_type_mat4:
+        return 16;
+    default:
+        return 0;
+    }
 }
 
 void decodeEmbeddedImage(const cgltf_image* image, GltfPrimitiveData& target) {
@@ -63,6 +164,128 @@ void decodeEmbeddedImage(const cgltf_image* image, GltfPrimitiveData& target) {
     stbi_image_free(pixels);
 }
 
+void readNodes(const cgltf_data* data, GltfModelData& result) {
+    result.nodes.resize(data->nodes_count);
+    for (cgltf_size i = 0; i < data->nodes_count; ++i) {
+        const cgltf_node& node = data->nodes[i];
+        GltfNodeData& out = result.nodes[i];
+        out.name = node.name != nullptr ? node.name : ("node_" + std::to_string(i));
+        out.parent = nodeIndex(data, node.parent);
+        out.children.reserve(node.children_count);
+        for (cgltf_size childIndex = 0; childIndex < node.children_count; ++childIndex) {
+            out.children.push_back(nodeIndex(data, node.children[childIndex]));
+        }
+
+        out.hasMatrix = node.has_matrix;
+        if (node.has_matrix) {
+            for (int m = 0; m < 16; ++m) {
+                out.matrix.values[static_cast<std::size_t>(m)] = node.matrix[m];
+            }
+        }
+        if (node.has_translation) {
+            out.translation = {node.translation[0], node.translation[1], node.translation[2]};
+        }
+        if (node.has_rotation) {
+            out.rotation = {node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]};
+        }
+        if (node.has_scale) {
+            out.scale = {node.scale[0], node.scale[1], node.scale[2]};
+        }
+    }
+}
+
+void readSkins(const cgltf_data* data, GltfModelData& result) {
+    result.skins.resize(data->skins_count);
+    for (cgltf_size i = 0; i < data->skins_count; ++i) {
+        const cgltf_skin& skin = data->skins[i];
+        GltfSkinData& out = result.skins[i];
+        out.name = skin.name != nullptr ? skin.name : ("skin_" + std::to_string(i));
+        out.skeletonRoot = nodeIndex(data, skin.skeleton);
+        out.joints.reserve(skin.joints_count);
+        for (cgltf_size jointIndex = 0; jointIndex < skin.joints_count; ++jointIndex) {
+            out.joints.push_back(nodeIndex(data, skin.joints[jointIndex]));
+        }
+
+        out.inverseBindMatrices.resize(out.joints.size(), Mat4::identity());
+        if (skin.inverse_bind_matrices != nullptr) {
+            const cgltf_size matrixCount = std::min(
+                skin.inverse_bind_matrices->count,
+                static_cast<cgltf_size>(out.inverseBindMatrices.size()));
+            for (cgltf_size matrixIndex = 0; matrixIndex < matrixCount; ++matrixIndex) {
+                out.inverseBindMatrices[matrixIndex] = accessorMat4(skin.inverse_bind_matrices, matrixIndex);
+            }
+        }
+    }
+}
+
+std::vector<std::int32_t> meshSkinBindings(const cgltf_data* data) {
+    std::vector<std::int32_t> bindings(data->meshes_count, -1);
+    for (cgltf_size nodeIdx = 0; nodeIdx < data->nodes_count; ++nodeIdx) {
+        const cgltf_node& node = data->nodes[nodeIdx];
+        const std::int32_t meshIdx = meshIndex(data, node.mesh);
+        const std::int32_t skinIdx = skinIndex(data, node.skin);
+        if (meshIdx >= 0 && skinIdx >= 0 && static_cast<std::size_t>(meshIdx) < bindings.size()) {
+            bindings[static_cast<std::size_t>(meshIdx)] = skinIdx;
+        }
+    }
+    return bindings;
+}
+
+void readAnimations(const cgltf_data* data, GltfModelData& result) {
+    result.animations.reserve(data->animations_count);
+    for (cgltf_size animIndex = 0; animIndex < data->animations_count; ++animIndex) {
+        const cgltf_animation& animation = data->animations[animIndex];
+        GltfAnimationClipData clip;
+        clip.name = animation.name != nullptr ? animation.name : ("animation_" + std::to_string(animIndex));
+        clip.samplers.resize(animation.samplers_count);
+        clip.channels.resize(animation.channels_count);
+
+        for (cgltf_size samplerIndex = 0; samplerIndex < animation.samplers_count; ++samplerIndex) {
+            const cgltf_animation_sampler& sampler = animation.samplers[samplerIndex];
+            GltfAnimationSamplerData& out = clip.samplers[samplerIndex];
+            out.interpolation = interpolationName(sampler.interpolation);
+
+            if (sampler.input != nullptr) {
+                out.times.resize(sampler.input->count);
+                for (cgltf_size i = 0; i < sampler.input->count; ++i) {
+                    float value = 0.0f;
+                    cgltf_accessor_read_float(sampler.input, i, &value, 1);
+                    out.times[i] = value;
+                    clip.duration = std::max(clip.duration, value);
+                }
+            }
+
+            if (sampler.output != nullptr && !out.times.empty()) {
+                const cgltf_size components = std::min<cgltf_size>(componentCount(sampler.output), 4);
+                const bool cubic = sampler.interpolation == cgltf_interpolation_type_cubic_spline
+                    && sampler.output->count >= out.times.size() * 3;
+                out.values.resize(out.times.size());
+                for (cgltf_size i = 0; i < out.times.size(); ++i) {
+                    const cgltf_size sourceIndex = cubic ? ((i * 3) + 1) : i;
+                    float values[4] {0.0f, 0.0f, 0.0f, 1.0f};
+                    cgltf_accessor_read_float(sampler.output, sourceIndex, values, components);
+                    out.values[i] = {values[0], values[1], values[2], values[3]};
+                }
+            }
+        }
+
+        for (cgltf_size channelIndex = 0; channelIndex < animation.channels_count; ++channelIndex) {
+            const cgltf_animation_channel& channel = animation.channels[channelIndex];
+            GltfAnimationChannelData& out = clip.channels[channelIndex];
+            out.targetNode = nodeIndex(data, channel.target_node);
+            out.path = animationPath(channel.target_path);
+            for (cgltf_size samplerIndex = 0; samplerIndex < animation.samplers_count; ++samplerIndex) {
+                if (&animation.samplers[samplerIndex] == channel.sampler) {
+                    out.samplerIndex = static_cast<std::int32_t>(samplerIndex);
+                    break;
+                }
+            }
+        }
+
+        result.animations.push_back(std::move(clip));
+    }
+}
+
 } // namespace
 
 GltfModelData GltfLoader::loadFromFile(const std::filesystem::path& path) {
@@ -82,6 +305,11 @@ GltfModelData GltfLoader::loadFromFile(const std::filesystem::path& path) {
     }
 
     GltfModelData result;
+    readNodes(data, result);
+    readSkins(data, result);
+    readAnimations(data, result);
+
+    const std::vector<std::int32_t> meshSkins = meshSkinBindings(data);
 
     for (cgltf_size meshIndex = 0; meshIndex < data->meshes_count; ++meshIndex) {
         const cgltf_mesh& mesh = data->meshes[meshIndex];
@@ -98,8 +326,14 @@ GltfModelData GltfLoader::loadFromFile(const std::filesystem::path& path) {
 
             const cgltf_accessor* normAcc = findAttribute(prim, cgltf_attribute_type_normal);
             const cgltf_accessor* uvAcc = findAttribute(prim, cgltf_attribute_type_texcoord, 0);
+            const cgltf_accessor* jointsAcc = findAttribute(prim, cgltf_attribute_type_joints, 0);
+            const cgltf_accessor* weightsAcc = findAttribute(prim, cgltf_attribute_type_weights, 0);
 
             GltfPrimitiveData primData;
+            if (meshIndex < meshSkins.size()) {
+                primData.skinIndex = meshSkins[static_cast<std::size_t>(meshIndex)];
+            }
+            primData.hasSkinning = primData.skinIndex >= 0 && jointsAcc != nullptr && weightsAcc != nullptr;
             const cgltf_size vertexCount = posAcc->count;
             primData.vertices.resize(vertexCount);
 
@@ -128,6 +362,29 @@ GltfModelData GltfLoader::loadFromFile(const std::filesystem::path& path) {
                     float uv[2] {0.0f, 0.0f};
                     cgltf_accessor_read_float(uvAcc, vi, uv, 2);
                     primData.vertices[vi].uv = {uv[0], uv[1]};
+                }
+
+                if (primData.hasSkinning) {
+                    cgltf_uint joints[4] {0, 0, 0, 0};
+                    float weights[4] {0.0f, 0.0f, 0.0f, 0.0f};
+                    cgltf_accessor_read_uint(jointsAcc, vi, joints, 4);
+                    cgltf_accessor_read_float(weightsAcc, vi, weights, 4);
+
+                    float weightSum = 0.0f;
+                    for (int influence = 0; influence < 4; ++influence) {
+                        primData.vertices[vi].joints[static_cast<std::size_t>(influence)] =
+                            static_cast<std::uint16_t>(std::min<cgltf_uint>(joints[influence], 95));
+                        primData.vertices[vi].weights[static_cast<std::size_t>(influence)] = weights[influence];
+                        weightSum += weights[influence];
+                    }
+                    if (weightSum > 0.00001f) {
+                        for (float& weight : primData.vertices[vi].weights) {
+                            weight /= weightSum;
+                        }
+                    } else {
+                        primData.vertices[vi].joints = {0, 0, 0, 0};
+                        primData.vertices[vi].weights = {1.0f, 0.0f, 0.0f, 0.0f};
+                    }
                 }
             }
 

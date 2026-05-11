@@ -8,6 +8,7 @@ namespace Exo {
 void SequenceManager::setSequences(std::vector<RoomSequence> sequences, const std::unordered_set<std::string>& flags) {
     sequences_.clear();
     active_.clear();
+    completedOnce_.clear();
 
     for (RoomSequence& sequence : sequences) {
         if (sequence.id.empty()) {
@@ -17,11 +18,7 @@ void SequenceManager::setSequences(std::vector<RoomSequence> sequences, const st
         sequences_.emplace(id, std::move(sequence));
     }
 
-    for (const auto& [id, sequence] : sequences_) {
-        if (sequence.autoStart) {
-            (void)startSequence(id, flags);
-        }
-    }
+    startAutoSequences(flags);
 }
 
 bool SequenceManager::startSequence(const std::string& id, const std::unordered_set<std::string>& flags) {
@@ -43,6 +40,14 @@ bool SequenceManager::startSequence(const std::string& id, const std::unordered_
     active.executedSteps.assign(sequence.steps.size(), false);
     active_.push_back(std::move(active));
     return true;
+}
+
+void SequenceManager::startAutoSequences(const std::unordered_set<std::string>& flags) {
+    for (const auto& [id, sequence] : sequences_) {
+        if (sequence.autoStart) {
+            (void)startSequence(id, flags);
+        }
+    }
 }
 
 void SequenceManager::stopSequence(const std::string& id) {

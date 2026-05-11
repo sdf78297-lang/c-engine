@@ -25,17 +25,33 @@ layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec2 aUV;
 layout(location = 2) in vec3 aNormal;
 layout(location = 3) in vec2 aFlags;
+layout(location = 4) in uvec4 aJoints;
+layout(location = 5) in vec4 aWeights;
 
 uniform mat4 uViewProjection;
 uniform mat4 uModel;
+uniform bool uUseSkinning;
+uniform mat4 uJointMatrices[96];
 
 out vec3 vNormalWS;
 out vec3 vWorldPos;
 out vec2 vUV;
 
 void main() {
-    vec4 worldPos = uModel * vec4(aPos, 1.0);
+    vec4 localPos = vec4(aPos, 1.0);
     vec3 normal = aFlags.x > 0.5 ? aNormal : vec3(0.0, 1.0, 0.0);
+
+    if (uUseSkinning) {
+        mat4 skin =
+            aWeights.x * uJointMatrices[int(aJoints.x)] +
+            aWeights.y * uJointMatrices[int(aJoints.y)] +
+            aWeights.z * uJointMatrices[int(aJoints.z)] +
+            aWeights.w * uJointMatrices[int(aJoints.w)];
+        localPos = skin * localPos;
+        normal = mat3(skin) * normal;
+    }
+
+    vec4 worldPos = uModel * localPos;
     vNormalWS = normalize(mat3(uModel) * normal);
     vWorldPos = worldPos.xyz;
     vUV = aFlags.y > 0.5 ? aUV : vec2(0.0);
@@ -75,6 +91,15 @@ uniform vec3 uPointLightColor[8];
 uniform float uPointLightRadius[8];
 uniform float uPointLightIntensity[8];
 
+vec3 filmicAces(vec3 x) {
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return clamp((x * ((a * x) + b)) / ((x * ((c * x) + d)) + e), 0.0, 1.0);
+}
+
 void main() {
     vec4 sampled = texture(uAlbedo, vUV);
     vec3 albedo = sampled.rgb * uBaseColor * uColorTint;
@@ -110,7 +135,12 @@ void main() {
     float fogAmount = clamp((length(uCameraPosition - vWorldPos) - uFogStart) * uFogDensity, 0.0, 0.82);
     vec3 color = mix(lit, uFogColor, fogAmount);
     color += uEmissiveColor * uEmissiveIntensity;
-    color = vec3(1.0) - exp(-max(color, vec3(0.0)) * max(uExposure, 0.001));
+    color = max(color, vec3(0.0));
+    float preToneLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    vec3 shadowTint = vec3(0.93, 0.97, 1.08);
+    vec3 highlightTint = vec3(1.04, 1.00, 0.96);
+    color *= mix(shadowTint, highlightTint, smoothstep(0.08, 1.8, preToneLuma));
+    color = filmicAces(color * max(uExposure, 0.001));
 
     float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
     color = mix(vec3(luma), color, max(uSaturation, 0.0));
@@ -221,6 +251,22 @@ std::string lowerExtension(const std::filesystem::path& path) {
 
 std::string meshCacheKey(const std::filesystem::path& path) {
     return std::filesystem::absolute(path).lexically_normal().generic_string();
+}
+
+Vec3 transformPoint(const Mat4& matrix, Vec3 point) {
+    return {
+        (matrix.values[0] * point.x) + (matrix.values[4] * point.y) + (matrix.values[8] * point.z) + matrix.values[12],
+        (matrix.values[1] * point.x) + (matrix.values[5] * point.y) + (matrix.values[9] * point.z) + matrix.values[13],
+        (matrix.values[2] * point.x) + (matrix.values[6] * point.y) + (matrix.values[10] * point.z) + matrix.values[14],
+    };
+}
+
+Vec3 transformDirection(const Mat4& matrix, Vec3 direction) {
+    return {
+        (matrix.values[0] * direction.x) + (matrix.values[4] * direction.y) + (matrix.values[8] * direction.z),
+        (matrix.values[1] * direction.x) + (matrix.values[5] * direction.y) + (matrix.values[9] * direction.z),
+        (matrix.values[2] * direction.x) + (matrix.values[6] * direction.y) + (matrix.values[10] * direction.z),
+    };
 }
 
 } // namespace
@@ -360,7 +406,8 @@ std::int32_t Renderer::loadSceneMesh(const std::filesystem::path& path) {
 void Renderer::drawSceneMesh(
     std::int32_t handle,
     const Mat4& modelTransform,
-    const RenderMaterialOverride& materialOverride) {
+    const RenderMaterialOverride& materialOverride,
+    const std::vector<Mat4>* jointMatrices) {
     if (handle < 0 || static_cast<std::size_t>(handle) >= sceneMeshes_.size() || texturedShader_ == 0) {
         return;
     }
@@ -401,6 +448,7 @@ void Renderer::drawSceneMesh(
     glUniform1f(glGetUniformLocation(texturedShader_, "uContrast"), activeEnvironment_.contrast);
     glUniform1f(glGetUniformLocation(texturedShader_, "uSaturation"), activeEnvironment_.saturation);
     glUniform1f(glGetUniformLocation(texturedShader_, "uVignetteStrength"), activeEnvironment_.vignetteStrength);
+    glUniform1i(glGetUniformLocation(texturedShader_, "uUseSkinning"), GL_FALSE);
     glUniform1i(pointCountLoc, static_cast<GLint>(activePointLights_.size()));
     glActiveTexture(GL_TEXTURE0);
 
@@ -419,7 +467,7 @@ void Renderer::drawSceneMesh(
     if (mesh.kind == SceneMesh::Kind::Obj) {
         drawObjMesh(mesh);
     } else {
-        drawGltfModel(mesh.gltfModel);
+        drawGltfModel(mesh.gltfModel, jointMatrices);
     }
 
     glBindVertexArray(0);
@@ -657,6 +705,12 @@ std::int32_t Renderer::loadGltfMesh(const std::filesystem::path& path) {
         GltfSubMesh sub;
         sub.indexCount = static_cast<std::uint32_t>(prim.indices.size());
         sub.baseColor = prim.baseColorFactor;
+        sub.skinIndex = prim.skinIndex;
+        sub.skinned = prim.hasSkinning;
+        if (sub.skinned) {
+            sub.baseVertices = prim.vertices;
+            sub.skinnedVertices = prim.vertices;
+        }
 
         glGenVertexArrays(1, &sub.vao);
         glGenBuffers(1, &sub.vbo);
@@ -669,7 +723,7 @@ std::int32_t Renderer::loadGltfMesh(const std::filesystem::path& path) {
             GL_ARRAY_BUFFER,
             static_cast<GLsizeiptr>(prim.vertices.size() * sizeof(GltfVertex)),
             prim.vertices.data(),
-            GL_STATIC_DRAW);
+            sub.skinned ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sub.ebo);
         glBufferData(
@@ -686,6 +740,10 @@ std::int32_t Renderer::loadGltfMesh(const std::filesystem::path& path) {
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(GltfVertex), reinterpret_cast<void*>(offsetof(GltfVertex, normal)));
         glDisableVertexAttribArray(3);
         glVertexAttrib2f(3, 1.0f, 1.0f);
+        glEnableVertexAttribArray(4);
+        glVertexAttribIPointer(4, 4, GL_UNSIGNED_SHORT, sizeof(GltfVertex), reinterpret_cast<void*>(offsetof(GltfVertex, joints)));
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(GltfVertex), reinterpret_cast<void*>(offsetof(GltfVertex, weights)));
 
         glBindVertexArray(0);
 
@@ -725,14 +783,16 @@ std::int32_t Renderer::loadGltfMesh(const std::filesystem::path& path) {
 
         totalVerts += prim.vertices.size();
         totalTris += prim.indices.size() / 3;
-        sceneMesh.gltfModel.subMeshes.push_back(sub);
+        sceneMesh.gltfModel.subMeshes.push_back(std::move(sub));
     }
 
     sceneMeshes_.push_back(std::move(sceneMesh));
     Logger::info("Scene GLB loaded: " + path.filename().string()
         + " (" + std::to_string(data.primitives.size()) + " prims, "
         + std::to_string(totalVerts) + " verts, "
-        + std::to_string(totalTris) + " tris)");
+        + std::to_string(totalTris) + " tris, "
+        + std::to_string(data.skins.size()) + " skins, "
+        + std::to_string(data.animations.size()) + " clips)");
     return static_cast<std::int32_t>(sceneMeshes_.size() - 1);
 }
 
@@ -756,16 +816,81 @@ void Renderer::drawObjMesh(const SceneMesh& mesh) {
     }
 }
 
-void Renderer::drawGltfModel(const GltfModel& model) {
+void Renderer::drawGltfModel(GltfModel& model, const std::vector<Mat4>* jointMatrices) {
     const GLint baseLoc = glGetUniformLocation(texturedShader_, "uBaseColor");
+    const GLint skinLoc = glGetUniformLocation(texturedShader_, "uUseSkinning");
 
-    for (const GltfSubMesh& sub : model.subMeshes) {
+    for (GltfSubMesh& sub : model.subMeshes) {
+        const bool useSkinning = sub.skinned && jointMatrices != nullptr && !jointMatrices->empty();
+        if (useSkinning) {
+            updateCpuSkinnedSubMesh(sub, *jointMatrices);
+        }
+
+        glUniform1i(skinLoc, GL_FALSE);
         glUniform3f(baseLoc, sub.baseColor.x, sub.baseColor.y, sub.baseColor.z);
         glBindTexture(GL_TEXTURE_2D, sub.texture);
         glBindVertexArray(sub.vao);
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sub.indexCount), GL_UNSIGNED_INT, nullptr);
         ++stats_.drawCalls;
     }
+    glUniform1i(skinLoc, GL_FALSE);
+}
+
+void Renderer::updateCpuSkinnedSubMesh(GltfSubMesh& subMesh, const std::vector<Mat4>& jointMatrices) {
+    if (!subMesh.skinned || subMesh.baseVertices.empty() || subMesh.vbo == 0 || jointMatrices.empty()) {
+        return;
+    }
+
+    if (subMesh.skinnedVertices.size() != subMesh.baseVertices.size()) {
+        subMesh.skinnedVertices.resize(subMesh.baseVertices.size());
+    }
+
+    const std::size_t jointCount = std::min<std::size_t>(jointMatrices.size(), 96);
+    if (jointCount == 0) {
+        return;
+    }
+
+    for (std::size_t vertexIndex = 0; vertexIndex < subMesh.baseVertices.size(); ++vertexIndex) {
+        const GltfVertex& base = subMesh.baseVertices[vertexIndex];
+        GltfVertex skinned = base;
+
+        Vec3 skinnedPosition {};
+        Vec3 skinnedNormal {};
+        float totalWeight = 0.0f;
+
+        for (std::size_t influence = 0; influence < base.weights.size(); ++influence) {
+            const float weight = base.weights[influence];
+            const std::size_t jointIndex = static_cast<std::size_t>(base.joints[influence]);
+            if (weight <= 0.0f || jointIndex >= jointCount) {
+                continue;
+            }
+
+            const Mat4& jointMatrix = jointMatrices[jointIndex];
+            skinnedPosition = skinnedPosition + (transformPoint(jointMatrix, base.position) * weight);
+            skinnedNormal = skinnedNormal + (transformDirection(jointMatrix, base.normal) * weight);
+            totalWeight += weight;
+        }
+
+        if (totalWeight > 0.0001f) {
+            if (totalWeight < 0.999f || totalWeight > 1.001f) {
+                const float normalizeWeight = 1.0f / totalWeight;
+                skinnedPosition = skinnedPosition * normalizeWeight;
+                skinnedNormal = skinnedNormal * normalizeWeight;
+            }
+            skinned.position = skinnedPosition;
+            const Vec3 normalizedNormal = normalize(skinnedNormal);
+            skinned.normal = normalizedNormal.length() > 0.0001f ? normalizedNormal : base.normal;
+        }
+
+        subMesh.skinnedVertices[vertexIndex] = skinned;
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, subMesh.vbo);
+    glBufferSubData(
+        GL_ARRAY_BUFFER,
+        0,
+        static_cast<GLsizeiptr>(subMesh.skinnedVertices.size() * sizeof(GltfVertex)),
+        subMesh.skinnedVertices.data());
 }
 
 } // namespace Exo

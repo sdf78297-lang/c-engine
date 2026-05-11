@@ -14,7 +14,9 @@ public:
     static Mat4 perspective(float fovRadians, float aspect, float nearPlane, float farPlane);
     static Mat4 lookAt(Vec3 eye, Vec3 target, Vec3 up);
     static Mat4 translate(Vec3 offset);
+    static Mat4 rotateX(float radians);
     static Mat4 rotateY(float radians);
+    static Mat4 rotateZ(float radians);
     static Mat4 scale(Vec3 factors);
 
     [[nodiscard]] const float* data() const {

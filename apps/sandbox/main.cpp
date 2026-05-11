@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <vector>
 
 namespace {
 
@@ -43,6 +44,16 @@ std::string stringOption(std::span<char*> args, std::string_view name, std::stri
     return fallback;
 }
 
+std::vector<std::string> stringOptions(std::span<char*> args, std::string_view name) {
+    std::vector<std::string> values;
+    for (std::size_t i = 1; i + 1 < args.size(); ++i) {
+        if (std::string_view(args[i]) == name) {
+            values.emplace_back(args[i + 1]);
+        }
+    }
+    return values;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -56,6 +67,8 @@ int main(int argc, char** argv) {
     config.maxFrames = integerOption(args, "--frames", 0);
     config.startupRoomId = stringOption(args, "--room");
     config.startupSpawnId = stringOption(args, "--spawn");
+    config.startupFlags = stringOptions(args, "--flag");
+    config.inspectEntityId = stringOption(args, "--inspect-entity");
     config.showMenu = hasFlag(args, "--menu");
     if (hasFlag(args, "--workstation")) {
         config.showMenu = true;

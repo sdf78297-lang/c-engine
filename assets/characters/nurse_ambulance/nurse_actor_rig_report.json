@@ -1,0 +1,52 @@
+{
+  "input": "C:\\Users\\Vladimir\\Downloads\\Meshy_AI_Hopeful_Healer_0511092359_texture.glb",
+  "output": "assets\\characters\\nurse_ambulance\\nurse_actor_rigged.glb",
+  "mesh": {
+    "name": "nurse_actor_mesh",
+    "vertices": 134916,
+    "triangles": 234578,
+    "materials": [
+      "Material_0"
+    ],
+    "boundsMin": [
+      -0.4096,
+      -0.1816,
+      -0.9324
+    ],
+    "boundsMax": [
+      0.4106,
+      0.1821,
+      0.9301
+    ]
+  },
+  "armature": {
+    "name": "nurse_actor_rig",
+    "bones": [
+      "root",
+      "pelvis",
+      "spine_01",
+      "chest",
+      "neck",
+      "head",
+      "upper_arm.L",
+      "forearm.L",
+      "hand.L",
+      "upper_arm.R",
+      "forearm.R",
+      "hand.R",
+      "thigh.L",
+      "shin.L",
+      "foot.L",
+      "thigh.R",
+      "shin.R",
+      "foot.R"
+    ]
+  },
+  "actions": [
+    "brace_during_jolt",
+    "call_driver_urgent",
+    "lean_to_patient",
+    "look_to_monitor",
+    "sit_idle"
+  ]
+}

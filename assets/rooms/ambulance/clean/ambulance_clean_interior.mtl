@@ -1,0 +1,71 @@
+newmtl ambulance_wall
+Ka 0.045 0.052 0.058
+Kd 0.620 0.700 0.740
+Ks 0.080 0.095 0.105
+Ns 22
+
+newmtl ambulance_floor
+Ka 0.022 0.028 0.036
+Kd 0.115 0.160 0.195
+Ks 0.080 0.090 0.100
+Ns 20
+
+newmtl ambulance_ceiling
+Ka 0.044 0.052 0.060
+Kd 0.600 0.690 0.735
+Ks 0.075 0.088 0.100
+Ns 20
+
+newmtl ambulance_cabinet
+Ka 0.040 0.070 0.065
+Kd 0.430 0.650 0.610
+Ks 0.080 0.110 0.100
+Ns 18
+
+newmtl ambulance_bench
+Ka 0.045 0.050 0.055
+Kd 0.420 0.470 0.500
+Ks 0.070 0.075 0.080
+Ns 14
+
+newmtl ambulance_mattress
+Ka 0.065 0.070 0.078
+Kd 0.820 0.860 0.880
+Ks 0.070 0.075 0.080
+Ns 18
+
+newmtl ambulance_blanket
+Ka 0.035 0.045 0.055
+Kd 0.420 0.560 0.680
+Ks 0.040 0.050 0.060
+Ns 10
+
+newmtl ambulance_metal
+Ka 0.050 0.055 0.060
+Kd 0.530 0.570 0.600
+Ks 0.160 0.180 0.200
+Ns 44
+
+newmtl ambulance_dark
+Ka 0.006 0.008 0.010
+Kd 0.020 0.030 0.040
+Ks 0.040 0.050 0.060
+Ns 16
+
+newmtl ambulance_light
+Ka 0.110 0.130 0.150
+Kd 0.680 0.800 0.890
+Ks 0.080 0.090 0.100
+Ns 22
+
+newmtl ambulance_green
+Ka 0.030 0.080 0.045
+Kd 0.120 0.720 0.260
+Ks 0.050 0.070 0.050
+Ns 18
+
+newmtl ambulance_red
+Ka 0.080 0.015 0.012
+Kd 0.760 0.060 0.045
+Ks 0.070 0.035 0.030
+Ns 14

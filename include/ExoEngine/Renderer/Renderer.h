@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <ExoEngine/Assets/GltfLoader.h>
 #include <ExoEngine/Math/Mat4.h>
 #include <ExoEngine/Math/Vec.h>
 #include <ExoEngine/Renderer/MeshBuffer.h>
@@ -57,7 +58,8 @@ public:
     void drawSceneMesh(
         std::int32_t handle,
         const Mat4& modelTransform,
-        const RenderMaterialOverride& materialOverride = {});
+        const RenderMaterialOverride& materialOverride = {},
+        const std::vector<Mat4>* jointMatrices = nullptr);
     [[nodiscard]] bool sceneMeshBounds(std::int32_t handle, Vec3& minOut, Vec3& maxOut) const;
     void endFrame();
 
@@ -76,6 +78,10 @@ private:
         bool ownsTexture = false;
         std::uint32_t indexCount = 0;
         Vec3 baseColor {1.0f, 1.0f, 1.0f};
+        std::int32_t skinIndex = -1;
+        bool skinned = false;
+        std::vector<GltfVertex> baseVertices;
+        std::vector<GltfVertex> skinnedVertices;
     };
 
     struct GltfModel {
@@ -115,7 +121,8 @@ private:
     [[nodiscard]] std::int32_t loadObjMesh(const std::filesystem::path& path);
     [[nodiscard]] std::int32_t loadGltfMesh(const std::filesystem::path& path);
     void drawObjMesh(const SceneMesh& mesh);
-    void drawGltfModel(const GltfModel& model);
+    void drawGltfModel(GltfModel& model, const std::vector<Mat4>* jointMatrices);
+    void updateCpuSkinnedSubMesh(GltfSubMesh& subMesh, const std::vector<Mat4>& jointMatrices);
 
     std::uint32_t width_ = 0;
     std::uint32_t height_ = 0;

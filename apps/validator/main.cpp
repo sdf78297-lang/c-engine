@@ -231,6 +231,18 @@ private:
                 }
                 validateOptionalFlag(mesh, path, "visibleWhenFlag");
                 validateOptionalFlag(mesh, path, "hiddenWhenFlag");
+                if (const Json* animationRig = find(mesh, "animationRig");
+                    animationRig != nullptr && !animationRig->is_boolean()) {
+                    error(path, "staticMesh.animationRig must be a boolean");
+                }
+                if (const Json* defaultClip = find(mesh, "defaultClip");
+                    defaultClip != nullptr && !defaultClip->is_string()) {
+                    error(path, "staticMesh.defaultClip must be a string");
+                }
+                if (const Json* animationSet = find(mesh, "animationSet");
+                    animationSet != nullptr && !animationSet->is_string()) {
+                    error(path, "staticMesh.animationSet must be a string");
+                }
                 validateStaticMeshRenderOverrides(mesh, path);
             }
             if (root.value("id", "") == "ambulance_patient_compartment"
@@ -239,10 +251,13 @@ private:
                 error(path, "ambulance_patient_compartment has no existing meshSource assets; scene would render empty");
             }
         }
+        const std::unordered_set<std::string> roomEntityIds = collectRoomEntityIds(root, path);
+        const std::unordered_set<std::string> performanceActorIds = validatePerformanceBindings(root, path);
         validateCollisionBoxes(root, path);
         validateRenderEnvironment(root, path);
         const std::unordered_set<std::string> audioCueIds = validateAudioCues(root, path);
-        const std::unordered_set<std::string> sequenceIds = validateSequences(root, path, audioCueIds);
+        const std::unordered_set<std::string> sequenceIds =
+            validateSequences(root, path, audioCueIds, roomEntityIds, performanceActorIds);
         validateCollapseConfig(root, path, audioCueIds, sequenceIds);
         validateRoomTriggers(root, path, audioCueIds, sequenceIds);
         validateRoomEnterEvents(root, path, audioCueIds);
@@ -368,7 +383,9 @@ private:
     [[nodiscard]] std::unordered_set<std::string> validateSequences(
         const Json& room,
         const std::filesystem::path& path,
-        const std::unordered_set<std::string>& audioCueIds) {
+        const std::unordered_set<std::string>& audioCueIds,
+        const std::unordered_set<std::string>& roomEntityIds,
+        const std::unordered_set<std::string>& performanceActorIds) {
         std::unordered_set<std::string> ids;
         const Json* sequences = find(room, "sequences");
         if (sequences == nullptr) {
@@ -434,6 +451,16 @@ private:
                             "unlockPlayerControl",
                             "transitionRoom",
                             "setEntityVisible",
+                            "setEntityTransform",
+                            "animateEntityTransform",
+                            "clearEntityTransform",
+                            "startCharacterPerformance",
+                            "playCharacterPerformance",
+                            "stopCharacterPerformance",
+                            "playAnimation",
+                            "stopAnimation",
+                            "setFacialCue",
+                            "setLookAtTarget",
                             "setMusicVolume",
                             "adjustIdentity",
                             "setIdentity",
@@ -461,6 +488,22 @@ private:
                                     "transitionRoom target room missing");
                             }
                         }
+                        if (actionType == "setEntityTransform"
+                            || actionType == "animateEntityTransform"
+                            || actionType == "clearEntityTransform") {
+                            validateEntityTransformAction(action, path, actionType, roomEntityIds);
+                        }
+                        if (actionType == "startCharacterPerformance"
+                            || actionType == "playCharacterPerformance"
+                            || actionType == "stopCharacterPerformance") {
+                            validateCharacterPerformanceAction(action, path, actionType, performanceActorIds);
+                        }
+                        if (actionType == "playAnimation"
+                            || actionType == "stopAnimation"
+                            || actionType == "setFacialCue"
+                            || actionType == "setLookAtTarget") {
+                            validateAnimationAction(action, path, actionType, roomEntityIds);
+                        }
                     }
                     validateOptionalFlag(action, path, "flag");
                     validateAudioCueRef(action, path, audioCueIds);
@@ -468,6 +511,383 @@ private:
             }
         }
         return ids;
+    }
+
+    void validateEntityTransformAction(
+        const Json& action,
+        const std::filesystem::path& path,
+        const std::string& actionType,
+        const std::unordered_set<std::string>& roomEntityIds) {
+        const Json* entityId = find(action, "entityId");
+        if (entityId == nullptr) {
+            entityId = find(action, "entity");
+        }
+        if (entityId == nullptr || !entityId->is_string() || entityId->get<std::string>().empty()) {
+            error(path, actionType + " action must define entityId");
+        } else if (!roomEntityIds.empty() && !roomEntityIds.contains(entityId->get<std::string>())) {
+            error(path, actionType + " action references missing entityId: " + entityId->get<std::string>());
+        }
+
+        for (const std::string_view field : {"position", "rotation", "scale"}) {
+            const Json* value = find(action, field);
+            if (value != nullptr && !isVec3(value)) {
+                error(path, actionType + "." + std::string(field) + " must be a vec3");
+            }
+        }
+        validateOptionalTransformBlock(action, path, actionType, "transform");
+        validateOptionalTransformBlock(action, path, actionType, "targetTransform");
+
+        const Json* duration = find(action, "duration");
+        if (duration != nullptr) {
+            if (!duration->is_number() || !std::isfinite(duration->get<double>())) {
+                error(path, actionType + ".duration must be a finite number");
+            } else if (actionType == "animateEntityTransform" && duration->get<double>() < 0.0) {
+                error(path, actionType + ".duration must be >= 0");
+            }
+        }
+
+        const Json* easing = find(action, "easing");
+        if (easing != nullptr && !easing->is_string()) {
+            error(path, actionType + ".easing must be a string");
+        }
+    }
+
+    void validateOptionalTransformBlock(
+        const Json& action,
+        const std::filesystem::path& path,
+        const std::string& actionType,
+        std::string_view fieldName) {
+        const Json* transform = find(action, fieldName);
+        if (transform == nullptr) {
+            return;
+        }
+        if (!transform->is_object()) {
+            error(path, actionType + "." + std::string(fieldName) + " must be an object");
+            return;
+        }
+        for (const std::string_view field : {"position", "rotation", "scale"}) {
+            const Json* value = find(*transform, field);
+            if (value != nullptr && !isVec3(value)) {
+                error(path, actionType + "." + std::string(fieldName) + "." + std::string(field) + " must be a vec3");
+            }
+        }
+    }
+
+    void validateCharacterPerformanceAction(
+        const Json& action,
+        const std::filesystem::path& path,
+        const std::string& actionType,
+        const std::unordered_set<std::string>& performanceActorIds) {
+        const Json* entityId = find(action, "entityId");
+        if (entityId == nullptr) {
+            entityId = find(action, "entity");
+        }
+        if (entityId == nullptr || !entityId->is_string() || entityId->get<std::string>().empty()) {
+            error(path, actionType + " action must define entityId");
+        } else if (!performanceActorIds.empty() && !performanceActorIds.contains(entityId->get<std::string>())) {
+            error(path, actionType + " action references actor without performanceBinding: " + entityId->get<std::string>());
+        }
+
+        const Json* duration = find(action, "duration");
+        if (duration != nullptr && (!duration->is_number() || !std::isfinite(duration->get<double>()))) {
+            error(path, actionType + ".duration must be a finite number");
+        }
+
+        const Json* intensity = find(action, "intensity");
+        if (intensity != nullptr && (!intensity->is_number() || !std::isfinite(intensity->get<double>()))) {
+            error(path, actionType + ".intensity must be a finite number");
+        }
+
+        const Json* cueId = find(action, "cueId");
+        if (cueId != nullptr && !cueId->is_string()) {
+            error(path, actionType + ".cueId must be a string");
+        }
+    }
+
+    void validateAnimationAction(
+        const Json& action,
+        const std::filesystem::path& path,
+        const std::string& actionType,
+        const std::unordered_set<std::string>& roomEntityIds) {
+        const Json* entityId = find(action, "entityId");
+        if (entityId == nullptr) {
+            entityId = find(action, "entity");
+        }
+        if (entityId == nullptr || !entityId->is_string() || entityId->get<std::string>().empty()) {
+            error(path, actionType + " action must define entityId");
+        } else if (!roomEntityIds.empty() && !roomEntityIds.contains(entityId->get<std::string>())) {
+            error(path, actionType + " action references missing entityId: " + entityId->get<std::string>());
+        }
+
+        if (actionType == "playAnimation") {
+            const Json* clipId = find(action, "clipId");
+            if (clipId == nullptr) {
+                clipId = find(action, "animation");
+            }
+            if (clipId == nullptr) {
+                clipId = find(action, "clip");
+            }
+            if (clipId == nullptr || !clipId->is_string() || clipId->get<std::string>().empty()) {
+                error(path, "playAnimation action must define clipId");
+            }
+        }
+
+        for (std::string_view field : {"duration", "fadeSeconds", "playbackSpeed", "speed", "intensity"}) {
+            const Json* value = find(action, field);
+            if (value != nullptr && (!value->is_number() || !std::isfinite(value->get<double>()))) {
+                error(path, actionType + "." + std::string(field) + " must be a finite number");
+            }
+        }
+    }
+
+    [[nodiscard]] std::unordered_set<std::string> collectRoomEntityIds(
+        const Json& room,
+        const std::filesystem::path& path) {
+        std::unordered_set<std::string> ids;
+        collectStringIds(room, "staticMeshes", "name", ids, path, "staticMesh name");
+        collectStringIds(room, "interactables", "id", ids, path, "interactable id");
+        collectStringIds(room, "interactions", "id", ids, path, "interaction id");
+        collectStringIds(room, "spawns", "id", ids, path, "spawn id");
+        collectStringIds(room, "spawnPoints", "id", ids, path, "spawnPoint id");
+        return ids;
+    }
+
+    void collectStringIds(
+        const Json& object,
+        std::string_view arrayField,
+        std::string_view idField,
+        std::unordered_set<std::string>& ids,
+        const std::filesystem::path& path,
+        std::string_view label) {
+        const Json* entries = find(object, arrayField);
+        if (entries == nullptr || !entries->is_array()) {
+            return;
+        }
+        for (const Json& entry : *entries) {
+            if (!entry.is_object()) {
+                continue;
+            }
+            const Json* id = find(entry, idField);
+            if (id == nullptr) {
+                continue;
+            }
+            if (!id->is_string() || id->get<std::string>().empty()) {
+                error(path, std::string(label) + " must be a string");
+                continue;
+            }
+            ids.insert(id->get<std::string>());
+        }
+    }
+
+    [[nodiscard]] std::unordered_set<std::string> validatePerformanceBindings(
+        const Json& room,
+        const std::filesystem::path& path) {
+        std::unordered_set<std::string> actorIds;
+        const Json* bindings = find(room, "performanceBindings");
+        if (bindings == nullptr) {
+            return actorIds;
+        }
+        if (!bindings->is_array()) {
+            error(path, "performanceBindings must be an array");
+            return actorIds;
+        }
+
+        for (const Json& binding : *bindings) {
+            if (!binding.is_object()) {
+                error(path, "performanceBinding must be an object");
+                continue;
+            }
+
+            const Json* actorId = find(binding, "actorId");
+            if (actorId == nullptr || !actorId->is_string() || actorId->get<std::string>().empty()) {
+                error(path, "performanceBinding must define actorId");
+                continue;
+            }
+            const std::string actor = actorId->get<std::string>();
+            validateAsciiId(actor, path, "performanceBinding actorId");
+            if (!actorIds.insert(actor).second) {
+                error(path, "duplicate performanceBinding actorId: " + actor);
+            }
+
+            const Json* modelSlot = find(binding, "modelSlot");
+            if (modelSlot != nullptr) {
+                if (!modelSlot->is_string()) {
+                    error(path, "performanceBinding modelSlot must be a string");
+                } else {
+                    requireExists(resolve(modelSlot->get<std::string>()), path, "performanceBinding modelSlot missing");
+                }
+            }
+
+            const Json* performance = find(binding, "performance");
+            if (performance == nullptr || !performance->is_string() || performance->get<std::string>().empty()) {
+                error(path, "performanceBinding must define performance");
+            } else {
+                validatePerformanceFile(resolve(performance->get<std::string>()), path, actor);
+            }
+
+            const Json* anchors = find(binding, "anchors");
+            if (anchors != nullptr) {
+                validatePerformanceAnchors(*anchors, path);
+            }
+        }
+
+        return actorIds;
+    }
+
+    void validatePerformanceAnchors(const Json& anchors, const std::filesystem::path& path) {
+        if (!anchors.is_object()) {
+            error(path, "performanceBinding anchors must be an object");
+            return;
+        }
+        for (const auto& [name, anchor] : anchors.items()) {
+            if (!anchor.is_object()) {
+                error(path, "performanceBinding anchor must be an object: " + name);
+                continue;
+            }
+            const Json* position = find(anchor, "position");
+            if (position != nullptr && !isVec3(position)) {
+                error(path, "performanceBinding anchor position must be a vec3: " + name);
+            }
+            const Json* yawDeg = find(anchor, "yawDeg");
+            if (yawDeg != nullptr && (!yawDeg->is_number() || !std::isfinite(yawDeg->get<double>()))) {
+                error(path, "performanceBinding anchor yawDeg must be a finite number: " + name);
+            }
+        }
+    }
+
+    void validatePerformanceFile(
+        const std::filesystem::path& performancePath,
+        const std::filesystem::path& source,
+        const std::string& expectedActorId) {
+        requireExists(performancePath, source, "performanceBinding performance file missing");
+        if (!std::filesystem::exists(performancePath)) {
+            return;
+        }
+
+        Json performance = parseJsonFile(performancePath);
+        if (!performance.is_object()) {
+            return;
+        }
+        requireString(performance, performancePath, "schema");
+
+        const Json* actorId = find(performance, "actorId");
+        if (actorId == nullptr || !actorId->is_string()) {
+            error(performancePath, "performance actorId must be a string");
+        } else if (actorId->get<std::string>() != expectedActorId) {
+            error(performancePath, "performance actorId does not match binding actorId: " + expectedActorId);
+        }
+
+        validatePerformanceClipIds(performance, performancePath);
+        validatePerformanceDialogueCues(performance, performancePath);
+        validatePerformanceTransformKeyframes(performance, performancePath);
+    }
+
+    void validatePerformanceClipIds(const Json& performance, const std::filesystem::path& path) {
+        const Json* clips = find(performance, "requiredAnimationClips");
+        if (clips == nullptr) {
+            return;
+        }
+        if (!clips->is_array()) {
+            error(path, "requiredAnimationClips must be an array");
+            return;
+        }
+        std::unordered_set<std::string> ids;
+        for (const Json& clip : *clips) {
+            if (!clip.is_object()) {
+                error(path, "requiredAnimationClip must be an object");
+                continue;
+            }
+            const Json* id = find(clip, "id");
+            if (id == nullptr || !id->is_string()) {
+                error(path, "requiredAnimationClip must define id");
+                continue;
+            }
+            const std::string value = id->get<std::string>();
+            validateAsciiId(value, path, "requiredAnimationClip id");
+            if (!ids.insert(value).second) {
+                error(path, "duplicate requiredAnimationClip id: " + value);
+            }
+        }
+    }
+
+    void validatePerformanceDialogueCues(const Json& performance, const std::filesystem::path& path) {
+        const Json* cues = find(performance, "dialogueCues");
+        if (cues == nullptr) {
+            return;
+        }
+        if (!cues->is_array()) {
+            error(path, "dialogueCues must be an array");
+            return;
+        }
+        std::unordered_set<std::string> ids;
+        for (const Json& cue : *cues) {
+            if (!cue.is_object()) {
+                error(path, "dialogueCue must be an object");
+                continue;
+            }
+            const Json* id = find(cue, "id");
+            if (id == nullptr || !id->is_string()) {
+                error(path, "dialogueCue must define id");
+                continue;
+            }
+            const std::string value = id->get<std::string>();
+            validateAsciiId(value, path, "dialogueCue id");
+            if (!ids.insert(value).second) {
+                error(path, "duplicate dialogueCue id: " + value);
+            }
+
+            const Json* audioPath = find(cue, "audioPath");
+            if (audioPath != nullptr) {
+                if (!audioPath->is_string()) {
+                    error(path, "dialogueCue audioPath must be a string");
+                } else {
+                    requireExists(resolve(audioPath->get<std::string>()), path, "dialogueCue audioPath missing");
+                }
+            }
+
+            const Json* duration = find(cue, "duration");
+            if (duration != nullptr && (!duration->is_number() || !std::isfinite(duration->get<double>()))) {
+                error(path, "dialogueCue duration must be a finite number");
+            }
+        }
+    }
+
+    void validatePerformanceTransformKeyframes(const Json& performance, const std::filesystem::path& path) {
+        const Json* keyframes = find(performance, "transformKeyframes");
+        if (keyframes == nullptr) {
+            return;
+        }
+        if (!keyframes->is_array()) {
+            error(path, "transformKeyframes must be an array");
+            return;
+        }
+        std::unordered_set<std::string> ids;
+        for (const Json& keyframe : *keyframes) {
+            if (!keyframe.is_object()) {
+                error(path, "transformKeyframe must be an object");
+                continue;
+            }
+            const Json* id = find(keyframe, "id");
+            if (id != nullptr) {
+                if (!id->is_string()) {
+                    error(path, "transformKeyframe id must be a string");
+                } else if (!ids.insert(id->get<std::string>()).second) {
+                    error(path, "duplicate transformKeyframe id: " + id->get<std::string>());
+                }
+            }
+            for (const std::string_view field : {"position", "rotation", "scale"}) {
+                const Json* value = find(keyframe, field);
+                if (value != nullptr && !isVec3(value)) {
+                    error(path, "transformKeyframe." + std::string(field) + " must be a vec3");
+                }
+            }
+            for (const std::string_view field : {"roomTime", "duration"}) {
+                const Json* value = find(keyframe, field);
+                if (value != nullptr && (!value->is_number() || !std::isfinite(value->get<double>()))) {
+                    error(path, "transformKeyframe." + std::string(field) + " must be a finite number");
+                }
+            }
+        }
     }
 
     void validateRoomEnterEvents(

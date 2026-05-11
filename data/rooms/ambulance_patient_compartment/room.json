@@ -18,267 +18,492 @@
     "unknownFieldsIgnored": true
   },
   "renderEnvironment": {
-    "clearColor": [0.008, 0.012, 0.018],
-    "ambientColor": [0.62, 0.74, 0.88],
-    "ambientIntensity": 0.85,
-    "keyLightDirection": [-0.25, 0.92, 0.18],
-    "keyLightColor": [0.82, 0.92, 1.0],
-    "keyLightIntensity": 0.92,
-    "fogColor": [0.020, 0.028, 0.038],
+    "clearColor": [
+      0.004,
+      0.006,
+      0.01
+    ],
+    "ambientColor": [
+      0.34,
+      0.43,
+      0.54
+    ],
+    "ambientIntensity": 0.38,
+    "keyLightDirection": [
+      -0.18,
+      0.96,
+      -0.08
+    ],
+    "keyLightColor": [
+      0.72,
+      0.84,
+      1
+    ],
+    "keyLightIntensity": 0.44,
+    "fogColor": [
+      0.014,
+      0.02,
+      0.03
+    ],
     "fogStart": 5.5,
-    "fogDensity": 0.020,
-    "exposure": 1.28,
-    "contrast": 1.12,
-    "saturation": 0.86,
-    "vignetteStrength": 0.26
+    "fogDensity": 0.014,
+    "exposure": 0.94,
+    "contrast": 1.16,
+    "saturation": 0.76,
+    "vignetteStrength": 0.3
   },
   "walkBounds": {
-    "min": [-2.2, -0.5, -4.2],
-    "max": [2.2, 2.5, 4.2]
+    "min": [
+      -2.2,
+      -0.5,
+      -4.2
+    ],
+    "max": [
+      2.2,
+      2.5,
+      4.2
+    ]
   },
   "spawns": [
     {
       "id": "stretcher_head_spawn",
-      "position": [0.0, 0.92, 1.45],
-      "yawDeg": 0.0
+      "position": [
+        0,
+        0.9,
+        0.84
+      ],
+      "yawDeg": 0
     },
     {
       "id": "stretcher_head_anchor",
-      "position": [0.0, 1.08, 1.45],
-      "yawDeg": 0.0
+      "position": [
+        0,
+        0.98,
+        0.84
+      ],
+      "yawDeg": 0
     },
     {
       "id": "wake_on_stretcher",
-      "position": [0.0, 0.92, 1.45],
-      "yawDeg": 0.0
+      "position": [
+        0,
+        0.9,
+        0.84
+      ],
+      "yawDeg": 0
     }
   ],
   "staticMeshes": [
     {
-      "name": "ambulance_interior",
-      "meshAsset": "game/rooms/ambulance/ambulance_interior.mesh",
-      "materialAsset": "game/rooms/ambulance/ambulance_interior.material",
-      "meshSource": "assets/rooms/ambulance/imported/ambulance_interior.glb",
+      "name": "ambulance_clean_shell",
+      "meshAsset": "game/rooms/ambulance/ambulance_clean_shell.mesh",
+      "materialAsset": "game/rooms/ambulance/ambulance_clean_shell.material",
+      "meshSource": "assets/rooms/ambulance/clean/ambulance_clean_shell.obj",
       "renderOverrides": {
-        "colorTint": [0.92, 0.94, 1.0]
+        "colorTint": [
+          0.95,
+          0.98,
+          1
+        ]
       },
       "transform": {
-        "position": [0.0, 1.0, 0.0],
-        "rotation": [0.0, 0.0, 0.0],
-        "scale": [1.55, 1.45, 4.20]
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
       }
     },
     {
-      "name": "stretcher",
-      "meshAsset": "game/rooms/ambulance/stretcher.mesh",
-      "materialAsset": "game/rooms/ambulance/stretcher.material",
-      "meshSource": "assets/rooms/ambulance/imported/stretcher.glb",
+      "name": "patient_stretcher_modern",
+      "meshAsset": "game/rooms/ambulance/patient_stretcher_modern.mesh",
+      "materialAsset": "game/rooms/ambulance/patient_stretcher_modern.material",
+      "meshSource": "assets/rooms/ambulance/optimized/patient_stretcher_proxy.obj",
       "renderOverrides": {
-        "colorTint": [0.96, 0.97, 0.98]
+        "colorTint": [
+          0.98,
+          0.99,
+          1
+        ]
       },
       "transform": {
-        "position": [0.0, 0.55, 0.82],
-        "rotation": [0.0, 0.0, 0.0],
-        "scale": [0.55, 0.55, 1.85]
+        "position": [
+          0,
+          0.5,
+          0.24
+        ],
+        "rotation": [
+          0,
+          3.14159,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
       }
     },
     {
       "name": "medical_cabinet",
       "meshAsset": "game/rooms/ambulance/medical_cabinet.mesh",
       "materialAsset": "game/rooms/ambulance/medical_cabinet.material",
-      "meshSource": "assets/rooms/ambulance/imported/medical_cabinet.glb",
+      "meshSource": "assets/rooms/ambulance/optimized/medical_cabinet_proxy.obj",
       "renderOverrides": {
-        "colorTint": [0.92, 0.96, 1.0]
+        "colorTint": [
+          0.92,
+          0.96,
+          1
+        ]
       },
       "transform": {
-        "position": [-1.10, 1.05, -0.35],
-        "rotation": [0.0, 1.5708, 0.0],
-        "scale": [0.62, 0.68, 0.62]
-      }
-    },
-    {
-      "name": "oxygen_cylinders",
-      "meshAsset": "game/rooms/ambulance/oxygen_cylinders.mesh",
-      "materialAsset": "game/rooms/ambulance/oxygen_cylinders.material",
-      "meshSource": "assets/rooms/ambulance/imported/oxygen_cylinders.glb",
-      "renderOverrides": {
-        "colorTint": [0.78, 0.95, 0.82]
-      },
-      "transform": {
-        "position": [1.08, 0.78, -0.55],
-        "rotation": [0.0, -1.5708, 0.0],
-        "scale": [0.50, 0.55, 0.50]
-      }
-    },
-    {
-      "name": "patient_monitor",
-      "meshAsset": "game/rooms/ambulance/patient_monitor.mesh",
-      "materialAsset": "game/rooms/ambulance/patient_monitor.material",
-      "meshSource": "assets/rooms/ambulance/imported/patient_monitor.glb",
-      "renderOverrides": {
-        "colorTint": [0.78, 0.82, 0.86],
-        "emissiveColor": [0.15, 1.0, 0.42],
-        "emissiveIntensity": 0.55
-      },
-      "transform": {
-        "position": [-0.85, 1.18, 0.25],
-        "rotation": [0.0, 1.5708, 0.0],
-        "scale": [0.38, 0.38, 0.38]
-      }
-    },
-    {
-      "name": "rear_doors_inside",
-      "meshAsset": "game/rooms/ambulance/rear_doors.mesh",
-      "materialAsset": "game/rooms/ambulance/rear_doors.material",
-      "meshSource": "assets/rooms/ambulance/imported/rear_doors.glb",
-      "renderOverrides": {
-        "colorTint": [0.72, 0.78, 0.84]
-      },
-      "transform": {
-        "position": [0.0, 0.92, 2.62],
-        "rotation": [0.0, 3.14159, 0.0],
-        "scale": [0.95, 0.95, 0.95]
-      }
-    },
-    {
-      "name": "medical_bag",
-      "meshAsset": "game/rooms/ambulance/medical_bag.mesh",
-      "materialAsset": "game/rooms/ambulance/medical_bag.material",
-      "meshSource": "assets/rooms/ambulance/imported/medical_bag.glb",
-      "renderOverrides": {
-        "colorTint": [0.88, 0.18, 0.16]
-      },
-      "transform": {
-        "position": [0.72, 0.58, 1.10],
-        "rotation": [0.0, -0.55, 0.0],
-        "scale": [0.36, 0.36, 0.36]
-      }
-    },
-    {
-      "name": "iv_stand",
-      "meshAsset": "game/rooms/ambulance/iv_stand.mesh",
-      "materialAsset": "game/rooms/ambulance/iv_stand.material",
-      "meshSource": "assets/rooms/ambulance/imported/iv_stand.glb",
-      "renderOverrides": {
-        "colorTint": [0.94, 0.96, 0.98]
-      },
-      "transform": {
-        "position": [0.45, 0.0, 1.85],
-        "rotation": [0.0, 0.4, 0.0],
-        "scale": [0.30, 0.55, 0.30]
+        "position": [
+          -1.1,
+          0.82,
+          -1.42
+        ],
+        "rotation": [
+          0,
+          1.5708,
+          0
+        ],
+        "scale": [
+          0.28,
+          0.34,
+          0.28
+        ]
       }
     },
     {
       "name": "medical_equipment_rack",
       "meshAsset": "game/rooms/ambulance/medical_equipment.mesh",
       "materialAsset": "game/rooms/ambulance/medical_equipment.material",
-      "meshSource": "assets/rooms/ambulance/imported/medical_equipment.glb",
+      "meshSource": "assets/rooms/ambulance/optimized/medical_equipment_rack_proxy.obj",
       "renderOverrides": {
-        "colorTint": [0.86, 0.90, 0.96]
+        "colorTint": [
+          0.86,
+          0.9,
+          0.96
+        ]
       },
       "transform": {
-        "position": [-1.05, 0.62, -1.85],
-        "rotation": [0.0, 1.5708, 0.0],
-        "scale": [0.42, 0.55, 0.42]
+        "position": [
+          -1.06,
+          0.5,
+          -2.08
+        ],
+        "rotation": [
+          0,
+          1.5708,
+          0
+        ],
+        "scale": [
+          0.24,
+          0.3,
+          0.24
+        ]
       }
     },
     {
-      "name": "defibrillator",
-      "meshAsset": "game/rooms/ambulance/defibrillator.mesh",
-      "materialAsset": "game/rooms/ambulance/defibrillator.material",
-      "meshSource": "assets/rooms/ambulance/imported/defibrillator.glb",
+      "name": "patient_monitor",
+      "meshAsset": "game/rooms/ambulance/patient_monitor.mesh",
+      "materialAsset": "game/rooms/ambulance/patient_monitor.material",
+      "meshSource": "assets/rooms/ambulance/optimized/patient_monitor_proxy.obj",
       "renderOverrides": {
-        "colorTint": [0.92, 0.78, 0.20],
-        "emissiveColor": [1.0, 0.62, 0.10],
-        "emissiveIntensity": 0.18
+        "colorTint": [
+          0.78,
+          0.82,
+          0.86
+        ],
+        "emissiveColor": [
+          0.15,
+          1,
+          0.42
+        ],
+        "emissiveIntensity": 0.55
       },
       "transform": {
-        "position": [-0.82, 1.55, -0.40],
-        "rotation": [0.0, 1.5708, 0.0],
-        "scale": [0.32, 0.32, 0.32]
+        "position": [
+          -1.02,
+          1.18,
+          0.72
+        ],
+        "rotation": [
+          0,
+          1.5708,
+          0
+        ],
+        "scale": [
+          0.24,
+          0.24,
+          0.24
+        ]
       }
     },
     {
-      "name": "overhead_rail",
-      "meshAsset": "game/rooms/ambulance/overhead_rail.mesh",
-      "materialAsset": "game/rooms/ambulance/overhead_rail.material",
-      "meshSource": "assets/rooms/ambulance/imported/overhead_rail.glb",
+      "name": "nurse_actor",
+      "meshAsset": "game/characters/nurse_ambulance/nurse_actor.mesh",
+      "materialAsset": "game/characters/nurse_ambulance/nurse_actor.material",
+      "meshSource": "assets/characters/nurse_ambulance/nurse_actor_rigged.glb",
+      "animationRig": true,
+      "animationSet": "data/characters/nurse_ambulance.performance.json",
+      "defaultClip": "sit_idle",
       "renderOverrides": {
-        "colorTint": [0.78, 0.85, 0.92],
-        "emissiveColor": [0.85, 0.95, 1.0],
-        "emissiveIntensity": 0.15
+        "colorTint": [
+          0.96,
+          0.98,
+          1
+        ]
       },
       "transform": {
-        "position": [0.0, 2.18, 0.0],
-        "rotation": [0.0, 0.0, 0.0],
-        "scale": [1.20, 0.20, 2.80]
+        "position": [
+          1.04,
+          0.66,
+          -0.18
+        ],
+        "rotation": [
+          -0.1,
+          -1.42,
+          0.06
+        ],
+        "scale": [
+          0.74,
+          0.74,
+          0.74
+        ]
+      }
+    },
+    {
+      "name": "oxygen_cylinders",
+      "meshAsset": "game/rooms/ambulance/oxygen_cylinders.mesh",
+      "materialAsset": "game/rooms/ambulance/oxygen_cylinders.material",
+      "meshSource": "assets/rooms/ambulance/optimized/oxygen_cylinders_proxy.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.78,
+          0.95,
+          0.82
+        ]
+      },
+      "transform": {
+        "position": [
+          1.05,
+          0.58,
+          -1.48
+        ],
+        "rotation": [
+          0,
+          -1.5708,
+          0
+        ],
+        "scale": [
+          0.28,
+          0.32,
+          0.28
+        ]
+      }
+    },
+    {
+      "name": "medical_bag",
+      "meshAsset": "game/rooms/ambulance/medical_bag.mesh",
+      "materialAsset": "game/rooms/ambulance/medical_bag.material",
+      "meshSource": "assets/rooms/ambulance/optimized/medical_bag_proxy.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.88,
+          0.18,
+          0.16
+        ]
+      },
+      "transform": {
+        "position": [
+          0.78,
+          0.3,
+          -0.28
+        ],
+        "rotation": [
+          0,
+          -0.55,
+          0
+        ],
+        "scale": [
+          0.22,
+          0.22,
+          0.22
+        ]
+      }
+    },
+    {
+      "name": "iv_stand",
+      "meshAsset": "game/rooms/ambulance/iv_stand.mesh",
+      "materialAsset": "game/rooms/ambulance/iv_stand.material",
+      "meshSource": "assets/rooms/ambulance/optimized/iv_stand_proxy.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.94,
+          0.96,
+          0.98
+        ]
+      },
+      "transform": {
+        "position": [
+          0.62,
+          0.82,
+          1.12
+        ],
+        "rotation": [
+          0,
+          0.4,
+          0
+        ],
+        "scale": [
+          0.18,
+          0.75,
+          0.18
+        ]
       }
     }
   ],
   "pointLights": [
     {
-      "position": [0.0, 2.10, 0.85],
-      "color": [0.82, 0.90, 1.0],
-      "radius": 5.0,
-      "intensity": 1.35
+      "position": [
+        0,
+        1.92,
+        0.88
+      ],
+      "color": [
+        0.68,
+        0.82,
+        1
+      ],
+      "radius": 3.35,
+      "intensity": 0.86
     },
     {
-      "position": [0.0, 2.05, -1.75],
-      "color": [0.72, 0.86, 1.0],
-      "radius": 3.4,
-      "intensity": 0.78
+      "position": [
+        0,
+        1.9,
+        -1.82
+      ],
+      "color": [
+        0.55,
+        0.72,
+        1
+      ],
+      "radius": 2.65,
+      "intensity": 0.42
     },
     {
-      "position": [-0.85, 1.22, 0.38],
-      "color": [0.20, 1.0, 0.48],
-      "radius": 1.55,
-      "intensity": 0.62
+      "position": [
+        -1,
+        1.18,
+        0.64
+      ],
+      "color": [
+        0.14,
+        1,
+        0.4
+      ],
+      "radius": 1.05,
+      "intensity": 0.58
     },
     {
-      "position": [-0.82, 1.62, -0.40],
-      "color": [1.0, 0.65, 0.15],
-      "radius": 1.10,
-      "intensity": 0.45
-    },
-    {
-      "position": [0.0, 2.15, 0.0],
-      "color": [0.88, 0.94, 1.0],
-      "radius": 2.20,
+      "position": [
+        1.05,
+        1.08,
+        -1.35
+      ],
+      "color": [
+        0.16,
+        0.34,
+        1
+      ],
+      "radius": 1.9,
       "intensity": 0.32
     },
     {
-      "position": [1.18, 1.30, 1.85],
-      "color": [0.22, 0.42, 1.0],
-      "radius": 2.20,
-      "intensity": 0.30
+      "position": [
+        0,
+        1.15,
+        -3.05
+      ],
+      "color": [
+        0.42,
+        0.52,
+        0.74
+      ],
+      "radius": 1.75,
+      "intensity": 0.1
     }
   ],
   "fixedCameras": [
     {
       "name": "ambulance_patient_laying_view",
       "bounds": {
-        "min": [-2.2, -0.5, -4.2],
-        "max": [2.2, 2.5, 4.2]
+        "min": [
+          -2.2,
+          -0.5,
+          -4.2
+        ],
+        "max": [
+          2.2,
+          2.5,
+          4.2
+        ]
       },
-      "position": [0.0, 1.08, 1.92],
-      "target": [0.0, 0.92, -0.25],
-      "fovDeg": 62.0,
-      "near": 0.03,
-      "far": 80.0,
+      "position": [
+        0,
+        0.98,
+        0.86
+      ],
+      "target": [
+        0,
+        0.8,
+        -0.78
+      ],
+      "fovDeg": 62,
+      "near": 0.02,
+      "far": 80,
       "priority": 50,
-      "blendSeconds": 0.0
+      "blendSeconds": 0
     },
     {
       "name": "ambulance_side_equipment_view",
       "bounds": {
-        "min": [-2.2, -0.5, -4.2],
-        "max": [2.2, 2.5, 4.2]
+        "min": [
+          -2.2,
+          -0.5,
+          -4.2
+        ],
+        "max": [
+          2.2,
+          2.5,
+          4.2
+        ]
       },
-      "position": [1.45, 1.22, 1.05],
-      "target": [-0.55, 0.95, -0.55],
-      "fovDeg": 54.0,
+      "position": [
+        1.45,
+        1.22,
+        1.05
+      ],
+      "target": [
+        -0.55,
+        0.86,
+        -0.55
+      ],
+      "fovDeg": 54,
       "near": 0.03,
-      "far": 80.0,
+      "far": 80,
       "priority": 40,
       "blendSeconds": 0.15
     }
@@ -287,8 +512,16 @@
     {
       "id": "door_ambulance_hold",
       "bounds": {
-        "min": [-0.55, -0.5, 3.45],
-        "max": [0.55, 2.2, 4.15]
+        "min": [
+          -0.55,
+          -0.5,
+          -3.75
+        ],
+        "max": [
+          0.55,
+          2.2,
+          -2.45
+        ]
       },
       "targetRoomId": "ambulance_patient_compartment",
       "targetSpawnId": "stretcher_head_spawn",
@@ -300,28 +533,24 @@
     {
       "id": "stretcher_head_anchor",
       "type": "scene_anchor",
-      "position": [0.0, 1.08, 1.45],
-      "radius": 0.30,
-      "choiceText": "Anton is waking up.",
-      "once": false
-    },
-    {
-      "id": "defibrillator_inspect",
-      "type": "examine",
-      "position": [-0.82, 1.55, -0.40],
-      "radius": 0.45,
-      "title": "Дефибриллятор",
-      "body": [
-        "Жёлтый Lifepak. Заряд 200 Дж готов. Электроды в пакете, на бирке: «POST-12.10.1994»."
+      "position": [
+        0,
+        0.98,
+        0.84
       ],
-      "choiceText": "Осмотреть дефибриллятор.",
+      "radius": 0.3,
+      "choiceText": "Anton is waking up.",
       "once": false
     },
     {
       "id": "iv_stand_inspect",
       "type": "examine",
-      "position": [0.45, 1.05, 1.85],
-      "radius": 0.40,
+      "position": [
+        0.58,
+        1.05,
+        1.15
+      ],
+      "radius": 0.4,
       "title": "Капельница",
       "body": [
         "Физраствор, ⅔ опустошён. Игла прикреплена к левой руке Антона.",
@@ -333,7 +562,11 @@
     {
       "id": "medical_bag_inspect",
       "type": "examine",
-      "position": [0.72, 0.58, 1.10],
+      "position": [
+        0.78,
+        0.36,
+        -0.25
+      ],
       "radius": 0.35,
       "title": "Медицинская сумка",
       "body": [
@@ -346,7 +579,11 @@
     {
       "id": "patient_monitor_inspect",
       "type": "examine",
-      "position": [-0.85, 1.18, 0.25],
+      "position": [
+        -0.98,
+        1.18,
+        0.6
+      ],
       "radius": 0.45,
       "title": "Монитор пациента",
       "body": [
@@ -357,26 +594,126 @@
       "once": false
     }
   ],
+  "performanceBindings": [
+    {
+      "actorId": "nurse_actor",
+      "performance": "data/characters/nurse_ambulance.performance.json",
+      "modelSlot": "assets/characters/nurse_ambulance/nurse_actor_rigged.glb",
+      "anchors": {
+        "seat": {
+          "position": [
+            1.08,
+            0.74,
+            -0.12
+          ],
+          "yawDeg": -72
+        },
+        "leanToPatient": {
+          "position": [
+            0.74,
+            0.84,
+            0.18
+          ],
+          "yawDeg": -105
+        },
+        "monitorLook": {
+          "position": [
+            0.98,
+            0.76,
+            -0.18
+          ],
+          "yawDeg": -118
+        },
+        "driverCall": {
+          "position": [
+            1.03,
+            0.76,
+            -0.22
+          ],
+          "yawDeg": -168
+        }
+      },
+      "notes": [
+        "Rigged nurse GLB is active; body motion comes from skeletal clips and broad staging transforms.",
+        "The generated rig is a first-pass runtime asset and should be replaced by a hand-polished production rig later."
+      ]
+    }
+  ],
   "collisionBoxes": [
     {
       "id": "ambulance_wall_left",
-      "bounds": {"min": [-2.2, -0.5, -4.2], "max": [-1.95, 2.5, 4.2]}
+      "bounds": {
+        "min": [
+          -2.2,
+          -0.5,
+          -4.2
+        ],
+        "max": [
+          -1.95,
+          2.5,
+          4.2
+        ]
+      }
     },
     {
       "id": "ambulance_wall_right",
-      "bounds": {"min": [1.95, -0.5, -4.2], "max": [2.2, 2.5, 4.2]}
+      "bounds": {
+        "min": [
+          1.95,
+          -0.5,
+          -4.2
+        ],
+        "max": [
+          2.2,
+          2.5,
+          4.2
+        ]
+      }
     },
     {
       "id": "ambulance_partition_collision",
-      "bounds": {"min": [-2.2, -0.5, -4.2], "max": [2.2, 2.5, -3.95]}
+      "bounds": {
+        "min": [
+          -2.2,
+          -0.5,
+          -4.2
+        ],
+        "max": [
+          2.2,
+          2.5,
+          -3.95
+        ]
+      }
     },
     {
       "id": "ambulance_rear_doors_collision",
-      "bounds": {"min": [-2.2, -0.5, 3.95], "max": [2.2, 2.5, 4.2]}
+      "bounds": {
+        "min": [
+          -2.2,
+          -0.5,
+          3.95
+        ],
+        "max": [
+          2.2,
+          2.5,
+          4.2
+        ]
+      }
     },
     {
       "id": "stretcher_collision",
-      "bounds": {"min": [-0.45, -0.5, -0.55], "max": [0.45, 0.95, 2.35]}
+      "bounds": {
+        "min": [
+          -0.46,
+          -0.5,
+          -0.78
+        ],
+        "max": [
+          0.46,
+          1.04,
+          1.2
+        ]
+      }
     }
   ],
   "audio": {
@@ -387,11 +724,31 @@
       },
       {
         "id": "siren_muffled_loop",
-        "path": "assets/audio/ambience/siren_muffled_loop.wav"
+        "path": "assets/audio/ambience/ambulance_siren_real.mp3"
       },
       {
         "id": "patient_monitor_beep_loop",
         "path": "assets/audio/sfx/patient_monitor_beep_loop.wav"
+      },
+      {
+        "id": "ambulance_wakeup_consciousness",
+        "path": "assets/audio/voice/ambulance_wakeup_consciousness.mp3"
+      },
+      {
+        "id": "anton_where_am_i",
+        "path": "assets/audio/voice/anton_where_am_i.mp3"
+      },
+      {
+        "id": "nurse_hold_on_brain_bleed",
+        "path": "assets/audio/voice/nurse/nurse_hold_on_brain_bleed.mp3"
+      },
+      {
+        "id": "nurse_losing_him",
+        "path": "assets/audio/voice/nurse/nurse_losing_him.mp3"
+      },
+      {
+        "id": "ambulance_body_shift",
+        "path": "assets/audio/sfx/ambulance_body_shift.mp3"
       }
     ]
   },
@@ -405,56 +762,388 @@
       ],
       "steps": [
         {
-          "time": 0.0,
+          "time": 0,
           "actions": [
-            {"type": "lockPlayerControl", "mode": "lying", "entityId": "stretcher_head_anchor"},
-            {"type": "setCameraMode", "cameraMode": "LyingLimitedLook", "entityId": "stretcher_head_anchor"},
-            {"type": "playAudio", "audioCue": "ambulance_engine_muffled_loop", "loop": true},
-            {"type": "playAudio", "audioCue": "siren_muffled_loop", "loop": true},
-            {"type": "playAudio", "audioCue": "patient_monitor_beep_loop", "loop": true},
-            {"type": "fadeScreen", "blackFade": 1.0, "noiseIntensity": 0.20, "duration": 0.0},
-            {"type": "setFlag", "flag": "ambulance_blackout_started"}
+            {
+              "type": "lockPlayerControl",
+              "mode": "lying",
+              "entityId": "stretcher_head_anchor"
+            },
+            {
+              "type": "setCameraMode",
+              "cameraMode": "LyingLimitedLook",
+              "entityId": "stretcher_head_anchor"
+            },
+            {
+              "type": "setEntityTransform",
+              "entityId": "nurse_actor",
+              "transform": {
+                "position": [
+                  1.04,
+                  0.66,
+                  -0.18
+                ],
+                "rotation": [
+                  -0.1,
+                  -1.42,
+                  0.06
+                ],
+                "scale": [
+                  0.74,
+                  0.74,
+                  0.74
+                ]
+              }
+            },
+            {
+              "type": "playAnimation",
+              "entityId": "nurse_actor",
+              "clipId": "sit_idle",
+              "loop": true,
+              "fadeSeconds": 0,
+              "playbackSpeed": 1.08
+            },
+            {
+              "type": "startCharacterPerformance",
+              "entityId": "nurse_actor",
+              "cueId": "nurse_idle_in_vehicle",
+              "duration": 120,
+              "intensity": 1.35
+            },
+            {
+              "type": "playAudio",
+              "audioCue": "ambulance_engine_muffled_loop",
+              "loop": true
+            },
+            {
+              "type": "playAudio",
+              "audioCue": "siren_muffled_loop",
+              "loop": true
+            },
+            {
+              "type": "playAudio",
+              "audioCue": "patient_monitor_beep_loop",
+              "loop": true
+            },
+            {
+              "type": "fadeScreen",
+              "blackFade": 1,
+              "noiseIntensity": 0.2,
+              "duration": 0
+            },
+            {
+              "type": "setFlag",
+              "flag": "ambulance_blackout_started"
+            }
           ]
         },
         {
-          "time": 2.0,
+          "time": 2,
           "actions": [
-            {"type": "fadeScreen", "blackFade": 0.58, "noiseIntensity": 0.24, "duration": 0.16},
-            {"type": "setFlag", "flag": "ambulance_first_blink"}
+            {
+              "type": "fadeScreen",
+              "blackFade": 0.58,
+              "noiseIntensity": 0.24,
+              "duration": 0.16
+            },
+            {
+              "type": "setFlag",
+              "flag": "ambulance_first_blink"
+            }
           ]
         },
         {
           "time": 2.24,
           "actions": [
-            {"type": "fadeScreen", "blackFade": 1.0, "noiseIntensity": 0.18, "duration": 0.12}
+            {
+              "type": "fadeScreen",
+              "blackFade": 1,
+              "noiseIntensity": 0.18,
+              "duration": 0.12
+            }
           ]
         },
         {
-          "time": 4.0,
+          "time": 4,
           "actions": [
-            {"type": "fadeScreen", "blackFade": 0.42, "noiseIntensity": 0.28, "duration": 0.22},
-            {"type": "setFlag", "flag": "ambulance_ceiling_light_seen"}
+            {
+              "type": "playAudio",
+              "audioCue": "ambulance_wakeup_consciousness"
+            },
+            {
+              "type": "fadeScreen",
+              "blackFade": 0.42,
+              "noiseIntensity": 0.28,
+              "duration": 0.22
+            },
+            {
+              "type": "setFlag",
+              "flag": "ambulance_ceiling_light_seen"
+            }
           ]
         },
         {
           "time": 4.42,
           "actions": [
-            {"type": "fadeScreen", "blackFade": 0.82, "noiseIntensity": 0.22, "duration": 0.26}
+            {
+              "type": "fadeScreen",
+              "blackFade": 0.82,
+              "noiseIntensity": 0.22,
+              "duration": 0.26
+            }
           ]
         },
         {
-          "time": 6.0,
+          "time": 6,
           "actions": [
-            {"type": "fadeScreen", "blackFade": 0.30, "noiseIntensity": 0.12, "duration": 1.25},
-            {"type": "setFlag", "flag": "ambulance_blanket_seen"}
+            {
+              "type": "fadeScreen",
+              "blackFade": 0.3,
+              "noiseIntensity": 0.12,
+              "duration": 1.25
+            },
+            {
+              "type": "setFlag",
+              "flag": "ambulance_blanket_seen"
+            }
           ]
         },
         {
-          "time": 8.0,
+          "time": 8,
           "actions": [
-            {"type": "lockPlayerControl", "mode": "limited", "entityId": "stretcher_head_anchor"},
-            {"type": "setFlag", "flag": "ambulance_awake"},
-            {"type": "fadeScreen", "blackFade": 0.12, "noiseIntensity": 0.03, "duration": 1.0}
+            {
+              "type": "playAudio",
+              "audioCue": "ambulance_body_shift"
+            },
+            {
+              "type": "playAnimation",
+              "entityId": "nurse_actor",
+              "clipId": "brace_during_jolt",
+              "loop": false,
+              "fadeSeconds": 0.08
+            },
+            {
+              "type": "playAudio",
+              "audioCue": "anton_where_am_i"
+            },
+            {
+              "type": "lockPlayerControl",
+              "mode": "limited",
+              "entityId": "stretcher_head_anchor"
+            },
+            {
+              "type": "setFlag",
+              "flag": "ambulance_awake"
+            },
+            {
+              "type": "fadeScreen",
+              "blackFade": 0.12,
+              "noiseIntensity": 0.03,
+              "duration": 1
+            }
+          ]
+        },
+        {
+          "time": 9.82,
+          "actions": [
+            {
+              "type": "playAnimation",
+              "entityId": "nurse_actor",
+              "clipId": "lean_to_patient",
+              "loop": false,
+              "fadeSeconds": 0.22
+            },
+            {
+              "type": "animateEntityTransform",
+              "entityId": "nurse_actor",
+              "targetTransform": {
+                "position": [
+                  0.9,
+                  0.66,
+                  0.02
+                ],
+                "rotation": [
+                  -0.16,
+                  -1.62,
+                  0.04
+                ],
+                "scale": [
+                  0.74,
+                  0.74,
+                  0.74
+                ]
+              },
+              "duration": 0.65,
+              "easing": "easeOutSine"
+            }
+          ]
+        },
+        {
+          "time": 10.2,
+          "actions": [
+            {
+              "type": "setFacialCue",
+              "entityId": "nurse_actor",
+              "cueId": "nurse_hold_on_brain_bleed",
+              "duration": 7.2,
+              "intensity": 1
+            },
+            {
+              "type": "startCharacterPerformance",
+              "entityId": "nurse_actor",
+              "cueId": "nurse_hold_on_brain_bleed",
+              "duration": 7.2,
+              "intensity": 1.65
+            },
+            {
+              "type": "playAudio",
+              "audioCue": "nurse_hold_on_brain_bleed"
+            },
+            {
+              "type": "setFlag",
+              "flag": "nurse_warned_brain_bleed"
+            }
+          ]
+        },
+        {
+          "time": 17.44,
+          "actions": [
+            {
+              "type": "playAnimation",
+              "entityId": "nurse_actor",
+              "clipId": "look_to_monitor",
+              "loop": false,
+              "fadeSeconds": 0.16
+            },
+            {
+              "type": "animateEntityTransform",
+              "entityId": "nurse_actor",
+              "targetTransform": {
+                "position": [
+                  1.02,
+                  0.66,
+                  -0.18
+                ],
+                "rotation": [
+                  -0.08,
+                  -1.86,
+                  -0.03
+                ],
+                "scale": [
+                  0.74,
+                  0.74,
+                  0.74
+                ]
+              },
+              "duration": 0.48,
+              "easing": "easeInOutSine"
+            }
+          ]
+        },
+        {
+          "time": 17.56,
+          "actions": [
+            {
+              "type": "fadeScreen",
+              "blackFade": 0.72,
+              "noiseIntensity": 0.2,
+              "duration": 0.5
+            },
+            {
+              "type": "setFlag",
+              "flag": "ambulance_consciousness_fading"
+            }
+          ]
+        },
+        {
+          "time": 17.62,
+          "actions": [
+            {
+              "type": "playAnimation",
+              "entityId": "nurse_actor",
+              "clipId": "call_driver_urgent",
+              "loop": false,
+              "fadeSeconds": 0.12
+            },
+            {
+              "type": "animateEntityTransform",
+              "entityId": "nurse_actor",
+              "targetTransform": {
+                "position": [
+                  1.06,
+                  0.66,
+                  -0.23
+                ],
+                "rotation": [
+                  -0.04,
+                  -2.08,
+                  -0.04
+                ],
+                "scale": [
+                  0.74,
+                  0.74,
+                  0.74
+                ]
+              },
+              "duration": 0.42,
+              "easing": "easeOutSine"
+            }
+          ]
+        },
+        {
+          "time": 18.1,
+          "actions": [
+            {
+              "type": "setFacialCue",
+              "entityId": "nurse_actor",
+              "cueId": "nurse_losing_him",
+              "duration": 2.4,
+              "intensity": 1.35
+            },
+            {
+              "type": "startCharacterPerformance",
+              "entityId": "nurse_actor",
+              "cueId": "nurse_losing_him",
+              "duration": 2.4,
+              "intensity": 2
+            },
+            {
+              "type": "playAudio",
+              "audioCue": "nurse_losing_him"
+            },
+            {
+              "type": "fadeScreen",
+              "blackFade": 0.95,
+              "noiseIntensity": 0.28,
+              "duration": 1.4
+            },
+            {
+              "type": "setFlag",
+              "flag": "nurse_losing_him_played"
+            }
+          ]
+        },
+        {
+          "time": 20.6,
+          "actions": [
+            {
+              "type": "playAnimation",
+              "entityId": "nurse_actor",
+              "clipId": "sit_idle",
+              "loop": true,
+              "fadeSeconds": 0.2
+            },
+            {
+              "type": "startCharacterPerformance",
+              "entityId": "nurse_actor",
+              "cueId": "nurse_idle_in_vehicle",
+              "duration": 120,
+              "intensity": 1.0
+            },
+            {
+              "type": "clearEntityTransform",
+              "entityId": "nurse_actor"
+            }
           ]
         }
       ]
@@ -466,10 +1155,16 @@
     "ambulance_first_blink",
     "ambulance_ceiling_light_seen",
     "ambulance_blanket_seen",
-    "ambulance_awake"
+    "ambulance_awake",
+    "nurse_warned_brain_bleed",
+    "ambulance_consciousness_fading",
+    "nurse_losing_him_played"
   ],
   "debugNotes": [
     "This room renders through staticMeshes. Do not replace it with an unsupported entities-only format.",
-    "The active meshSource paths use imported Meshy GLB assets; blockout OBJ files remain only as emergency fallback."
+    "The active meshSource paths use optimized gameplay proxy OBJ files for heavy ambulance equipment; imported Meshy GLB files remain as high-poly source references.",
+    "The stretcher uses patient_stretcher_modern.glb from Meshy at near-real scale; avoid stretching it in Z because the lying camera is close to the pillow.",
+    "patient_stretcher_modern is rotated 180 degrees because the generated pillow is on the opposite side of the GLB local Z axis.",
+    "nurse_actor uses nurse_actor_rigged.glb with generated humanoid bones and first-pass clips; replace with a polished production rig when available."
   ]
 }

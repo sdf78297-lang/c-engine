@@ -1,0 +1,330 @@
+{
+  "schema": "zero_patient.character_performance.v1",
+  "actorId": "nurse_actor",
+  "character": {
+    "id": "ambulance_nurse",
+    "title": "Медсестра скорой",
+    "role": "reality_anchor",
+    "assetSlot": "assets/characters/nurse_ambulance/nurse_actor_rigged.glb",
+    "notes": [
+      "The previous static nurse GLB is removed from active project content.",
+      "The active rigged nurse asset is a first-pass generated skeleton with required runtime clips."
+    ]
+  },
+  "requiredAnimationClips": [
+    {
+      "id": "sit_idle",
+      "body": "Сидит справа от носилок, держит устойчивую позу в движущейся машине."
+    },
+    {
+      "id": "lean_to_patient",
+      "body": "Наклоняется к лицу Антона, проверяет реакцию и говорит ближе к камере."
+    },
+    {
+      "id": "look_to_monitor",
+      "body": "Коротко смотрит на монитор пациента, не теряя контроля над ситуацией."
+    },
+    {
+      "id": "brace_during_jolt",
+      "body": "Левой рукой держится за поручень или край носилок во время толчка машины."
+    },
+    {
+      "id": "call_driver_urgent",
+      "body": "Поворачивает голову к кабине и повышает голос, оставаясь рядом с пациентом."
+    }
+  ],
+  "mouthShapes": [
+    "mouth_closed",
+    "mouth_open_small",
+    "mouth_open_medium",
+    "mouth_open_wide",
+    "mouth_round_o",
+    "mouth_fv",
+    "mouth_l",
+    "mouth_mbp",
+    "jaw_clench"
+  ],
+  "transformKeyframes": [
+    {
+      "id": "seat_side_idle",
+      "sequenceId": "ambulance_wakeup_sequence",
+      "roomTime": 0,
+      "position": [
+        1.04,
+        0.66,
+        -0.18
+      ],
+      "rotation": [
+        -0.1,
+        -1.42,
+        0.06
+      ],
+      "scale": [
+        0.74,
+        0.74,
+        0.74
+      ],
+      "duration": 120,
+      "runtimeIntensity": 1.15,
+      "direction": "Lowered, restrained medical idle beside the stretcher; kept alive as a long-running ambient performance."
+    },
+    {
+      "id": "lean_to_anton",
+      "sequenceId": "ambulance_wakeup_sequence",
+      "roomTime": 9.82,
+      "cueId": "nurse_hold_on_brain_bleed",
+      "position": [
+        0.9,
+        0.66,
+        0.02
+      ],
+      "rotation": [
+        -0.16,
+        -1.62,
+        0.04
+      ],
+      "scale": [
+        0.74,
+        0.74,
+        0.74
+      ],
+      "duration": 0.65,
+      "easing": "easeOutSine",
+      "direction": "Controlled lean toward Anton while staying beside the stretcher rail."
+    },
+    {
+      "id": "recover_to_monitor",
+      "sequenceId": "ambulance_wakeup_sequence",
+      "roomTime": 17.44,
+      "position": [
+        1.02,
+        0.66,
+        -0.18
+      ],
+      "rotation": [
+        -0.08,
+        -1.86,
+        -0.03
+      ],
+      "scale": [
+        0.74,
+        0.74,
+        0.74
+      ],
+      "duration": 0.48,
+      "easing": "easeInOutSine",
+      "direction": "After the first line, pull back slightly and check the patient monitor."
+    },
+    {
+      "id": "turn_to_driver",
+      "sequenceId": "ambulance_wakeup_sequence",
+      "roomTime": 17.62,
+      "cueId": "nurse_losing_him",
+      "position": [
+        1.06,
+        0.66,
+        -0.23
+      ],
+      "rotation": [
+        -0.04,
+        -2.08,
+        -0.04
+      ],
+      "scale": [
+        0.74,
+        0.74,
+        0.74
+      ],
+      "duration": 0.42,
+      "easing": "easeOutSine",
+      "direction": "During the fade, turn toward the driver cabin before the second line."
+    }
+  ],
+  "lipSyncAuthoringNotes": [
+    "Use the MP3 duration from the final audio files as source of truth; current cue durations are staging estimates.",
+    "Keep the first line controlled and medical, with clearer jaw opening on the middle phrase and no exaggerated facial acting.",
+    "For nurse_losing_him, start mouth motion after the body has begun turning to the cabin; the line should read as urgent but partly offscreen under the fade.",
+    "Do not add subtitle or dialogue UI for these lines in the ambulance wake sequence."
+  ],
+  "dialogueCues": [
+    {
+      "id": "nurse_hold_on_brain_bleed",
+      "audioPath": "assets/audio/voice/nurse/nurse_hold_on_brain_bleed.mp3",
+      "replaceWithFinalVoice": "",
+      "text": "Держитесь, только держитесь. Похоже, у вас кровоизлияние в мозг. Оставайтесь в сознании.",
+      "duration": 7.2,
+      "bodyPerformance": [
+        {
+          "time": 0,
+          "clip": "lean_to_patient",
+          "weight": 0.65
+        },
+        {
+          "time": 1.8,
+          "clip": "look_to_monitor",
+          "weight": 0.35
+        },
+        {
+          "time": 3.2,
+          "clip": "lean_to_patient",
+          "weight": 0.85
+        },
+        {
+          "time": 5.8,
+          "clip": "brace_during_jolt",
+          "weight": 0.25
+        }
+      ],
+      "emotionCurve": [
+        {
+          "time": 0,
+          "professional_focus": 0.8,
+          "concern": 0.3,
+          "fear_suppressed": 0.05
+        },
+        {
+          "time": 2.4,
+          "professional_focus": 0.7,
+          "concern": 0.58,
+          "fear_suppressed": 0.18
+        },
+        {
+          "time": 4.6,
+          "professional_focus": 0.62,
+          "concern": 0.74,
+          "fear_suppressed": 0.28
+        },
+        {
+          "time": 6.7,
+          "professional_focus": 0.78,
+          "concern": 0.68,
+          "fear_suppressed": 0.22
+        }
+      ],
+      "visemeTimeline": [
+        {
+          "time": 0,
+          "shape": "mouth_closed",
+          "weight": 1
+        },
+        {
+          "time": 0.12,
+          "shape": "mouth_open_medium",
+          "weight": 0.72
+        },
+        {
+          "time": 0.48,
+          "shape": "mouth_mbp",
+          "weight": 0.55
+        },
+        {
+          "time": 0.78,
+          "shape": "mouth_open_small",
+          "weight": 0.65
+        },
+        {
+          "time": 1.25,
+          "shape": "mouth_closed",
+          "weight": 0.65
+        },
+        {
+          "time": 1.46,
+          "shape": "mouth_open_medium",
+          "weight": 0.78
+        },
+        {
+          "time": 2.35,
+          "shape": "mouth_round_o",
+          "weight": 0.48
+        },
+        {
+          "time": 3.15,
+          "shape": "mouth_open_wide",
+          "weight": 0.68
+        },
+        {
+          "time": 4.3,
+          "shape": "mouth_fv",
+          "weight": 0.45
+        },
+        {
+          "time": 5.35,
+          "shape": "mouth_l",
+          "weight": 0.44
+        },
+        {
+          "time": 6.22,
+          "shape": "mouth_open_medium",
+          "weight": 0.72
+        },
+        {
+          "time": 7.05,
+          "shape": "mouth_closed",
+          "weight": 1
+        }
+      ],
+      "runtimeIntensity": 1.65
+    },
+    {
+      "id": "nurse_losing_him",
+      "audioPath": "assets/audio/voice/nurse/nurse_losing_him.mp3",
+      "replaceWithFinalVoice": "",
+      "text": "Мы его теряем.",
+      "duration": 2.4,
+      "offscreenDuringFade": true,
+      "bodyPerformance": [
+        {
+          "time": 0,
+          "clip": "call_driver_urgent",
+          "weight": 0.85
+        }
+      ],
+      "emotionCurve": [
+        {
+          "time": 0,
+          "professional_focus": 0.52,
+          "concern": 0.88,
+          "fear_suppressed": 0.46
+        },
+        {
+          "time": 1.5,
+          "professional_focus": 0.62,
+          "concern": 0.9,
+          "fear_suppressed": 0.34
+        }
+      ],
+      "visemeTimeline": [
+        {
+          "time": 0,
+          "shape": "mouth_mbp",
+          "weight": 0.7
+        },
+        {
+          "time": 0.28,
+          "shape": "mouth_open_medium",
+          "weight": 0.75
+        },
+        {
+          "time": 0.82,
+          "shape": "mouth_round_o",
+          "weight": 0.44
+        },
+        {
+          "time": 1.32,
+          "shape": "mouth_open_wide",
+          "weight": 0.58
+        },
+        {
+          "time": 2.05,
+          "shape": "mouth_closed",
+          "weight": 1
+        }
+      ],
+      "runtimeIntensity": 2
+    }
+  ],
+  "runtimePlan": {
+    "current": "Timeline plays final nurse MP3 files, drives restrained transform keyframes, and keeps a long-running idle performance active so the nurse does not freeze between cues.",
+    "nextEngineStep": "If a future nurse GLB has a skeleton or morph targets, extend the GLB renderer with skeletal animation and real viseme sampling from this file."
+  }
+}

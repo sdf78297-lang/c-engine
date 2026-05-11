@@ -53,6 +53,8 @@ Scene Scene::createReferenceScene() {
         .meshSource = "",
         .visibleWhenFlag = "",
         .hiddenWhenFlag = "",
+        .animationSet = "",
+        .defaultClip = "",
     });
 
     scene.addPointLight({

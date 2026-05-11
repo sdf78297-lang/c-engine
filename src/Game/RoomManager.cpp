@@ -202,6 +202,19 @@ private:
         return vec3(requiredField(object, field, path), childPath(path, field));
     }
 
+    [[nodiscard]] bool optionalVec3(
+        const Json& object,
+        std::string_view field,
+        std::string_view path,
+        Vec3& out) const {
+        const Json* value = optionalField(object, field);
+        if (value == nullptr) {
+            return false;
+        }
+        out = vec3(*value, childPath(path, field));
+        return true;
+    }
+
     [[nodiscard]] Bounds3 bounds(const Json& value, std::string_view path) const {
         expectObject(value, path);
         Bounds3 result;
@@ -600,6 +613,39 @@ private:
             if (action.entityId.empty()) {
                 action.entityId = optionalString(actionJson, "entity", actionPath, "");
             }
+            action.cueId = optionalString(actionJson, "cueId", actionPath, "");
+            if (action.cueId.empty()) {
+                action.cueId = optionalString(actionJson, "performanceCue", actionPath, "");
+            }
+            action.clipId = optionalString(actionJson, "clipId", actionPath, "");
+            if (action.clipId.empty()) {
+                action.clipId = optionalString(actionJson, "animation", actionPath, "");
+            }
+            if (action.clipId.empty()) {
+                action.clipId = optionalString(actionJson, "clip", actionPath, "");
+            }
+            action.easing = optionalString(actionJson, "easing", actionPath, "");
+            action.hasPosition = optionalVec3(actionJson, "position", actionPath, action.position);
+            action.hasRotation = optionalVec3(actionJson, "rotation", actionPath, action.rotation);
+            action.hasScale = optionalVec3(actionJson, "scale", actionPath, action.scale);
+            if (const Json* transformJson = optionalField(actionJson, "transform")) {
+                expectObject(*transformJson, childPath(actionPath, "transform"));
+                action.hasPosition = optionalVec3(*transformJson, "position", childPath(actionPath, "transform"), action.position)
+                    || action.hasPosition;
+                action.hasRotation = optionalVec3(*transformJson, "rotation", childPath(actionPath, "transform"), action.rotation)
+                    || action.hasRotation;
+                action.hasScale = optionalVec3(*transformJson, "scale", childPath(actionPath, "transform"), action.scale)
+                    || action.hasScale;
+            }
+            if (const Json* targetTransformJson = optionalField(actionJson, "targetTransform")) {
+                expectObject(*targetTransformJson, childPath(actionPath, "targetTransform"));
+                action.hasPosition = optionalVec3(*targetTransformJson, "position", childPath(actionPath, "targetTransform"), action.position)
+                    || action.hasPosition;
+                action.hasRotation = optionalVec3(*targetTransformJson, "rotation", childPath(actionPath, "targetTransform"), action.rotation)
+                    || action.hasRotation;
+                action.hasScale = optionalVec3(*targetTransformJson, "scale", childPath(actionPath, "targetTransform"), action.scale)
+                    || action.hasScale;
+            }
             action.visible = optionalBool(actionJson, "visible", actionPath, action.visible);
             action.loop = optionalBool(actionJson, "loop", actionPath, action.loop);
             action.blackFade = optionalNumber(actionJson, "blackFade", actionPath, action.blackFade);
@@ -607,6 +653,10 @@ private:
             action.noiseIntensity = optionalNumber(actionJson, "noiseIntensity", actionPath, action.noiseIntensity);
             action.duration = optionalNumber(actionJson, "duration", actionPath, action.duration);
             action.volume = optionalNumber(actionJson, "volume", actionPath, action.volume);
+            action.intensity = optionalNumber(actionJson, "intensity", actionPath, action.intensity);
+            action.fadeSeconds = optionalNumber(actionJson, "fadeSeconds", actionPath, action.fadeSeconds);
+            action.playbackSpeed = optionalNumber(actionJson, "playbackSpeed", actionPath, action.playbackSpeed);
+            action.playbackSpeed = optionalNumber(actionJson, "speed", actionPath, action.playbackSpeed);
             actions.push_back(std::move(action));
         }
         return actions;

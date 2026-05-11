@@ -137,6 +137,11 @@ bool blockedByRoomCollider(Vec3 position, const RoomDefinition& room, float radi
 Application::Application(ApplicationConfig config)
     : config_(std::move(config)),
       scene_(Scene::createReferenceScene()) {
+    for (const std::string& flag : config_.startupFlags) {
+        if (!flag.empty()) {
+            gameState_.flags.insert(flag);
+        }
+    }
     if (!config_.startupRoomId.empty()) {
         gameState_.roomId = config_.startupRoomId;
         gameState_.spawnId = config_.startupSpawnId;
@@ -434,6 +439,8 @@ int Application::runWindowed() {
         const auto now = SDL_GetPerformanceCounter();
         const float deltaSeconds = static_cast<float>(now - lastTime) / perfFreq;
         lastTime = now;
+        const float frameDeltaSeconds = std::clamp(deltaSeconds, 0.0f, 0.05f);
+        visualTime_ += frameDeltaSeconds;
 
         float mouseDeltaX = 0.0f;
         float mouseDeltaY = 0.0f;
@@ -628,6 +635,18 @@ int Application::runWindowed() {
             window_.swapBuffers();
             const auto menuSwapEnd = SDL_GetPerformanceCounter();
 
+            if (config_.maxFrames == 0) {
+                constexpr double targetMenuFrameSeconds = 1.0 / 45.0;
+                const double menuFrameSeconds = ticksToSeconds(menuSwapEnd - now);
+                if (menuFrameSeconds < targetMenuFrameSeconds) {
+                    const auto delayMs = static_cast<std::uint32_t>(
+                        (targetMenuFrameSeconds - menuFrameSeconds) * 1000.0);
+                    if (delayMs > 0) {
+                        SDL_Delay(delayMs);
+                    }
+                }
+            }
+
             if (config_.maxFrames != 0) {
                 const double updateSeconds = ticksToSeconds(menuUpdateEnd - menuUpdateStart);
                 const double renderSeconds = ticksToSeconds(menuRenderEnd - menuUpdateEnd);
@@ -666,13 +685,21 @@ int Application::runWindowed() {
 
         std::vector<RenderPointLight> renderLights;
         renderLights.reserve(scene_.pointLights().size());
-        for (const PointLight& light : scene_.pointLights()) {
-            renderLights.push_back({
+        for (std::size_t lightIndex = 0; lightIndex < scene_.pointLights().size(); ++lightIndex) {
+            const PointLight& light = scene_.pointLights()[lightIndex];
+            const float phase = static_cast<float>(lightIndex) * 1.713f;
+            const float lightBreath = std::sin((visualTime_ * 2.1f) + phase) * 0.006f;
+            const float electricalNoise = std::sin((visualTime_ * 8.7f) + (phase * 0.63f)) * 0.003f;
+            const float verticalDrift = std::sin((visualTime_ * 5.4f) + phase) * 0.002f;
+            RenderPointLight renderLight {
                 .position = light.position,
                 .color = light.color,
                 .radius = light.radius,
                 .intensity = light.intensity,
-            });
+            };
+            renderLight.position.y += verticalDrift;
+            renderLight.intensity *= std::clamp(1.0f + lightBreath + electricalNoise, 0.96f, 1.04f);
+            renderLights.push_back(renderLight);
         }
         renderer_.setPointLights(renderLights);
         renderer_.setEnvironment(scene_.renderEnvironment());
@@ -686,9 +713,15 @@ int Application::runWindowed() {
             const Transform renderTransform = animatedStaticMeshTransform(instance);
             const Mat4 model = Mat4::translate(renderTransform.position)
                 * Mat4::rotateY(renderTransform.rotation.y)
+                * Mat4::rotateX(renderTransform.rotation.x)
+                * Mat4::rotateZ(renderTransform.rotation.z)
                 * Mat4::scale(renderTransform.scale);
             if (sceneMeshHandles_[i] >= 0) {
-                renderer_.drawSceneMesh(sceneMeshHandles_[i], model, instance.materialOverride);
+                renderer_.drawSceneMesh(
+                    sceneMeshHandles_[i],
+                    model,
+                    instance.materialOverride,
+                    animationSystem_.jointMatricesFor(instance.name));
             }
         }
         renderer_.endFrame();
@@ -746,12 +779,16 @@ void Application::updatePlayer(float deltaSeconds, float mouseDeltaX, float mous
     constexpr float kWalkSpeed = 2.2f;
     constexpr float kRunMultiplier = 1.65f;
     constexpr float kEyeHeight = 1.65f;
+    const float dt = std::clamp(deltaSeconds, 0.0f, 0.05f);
 
     if (lyingLimitedLookActive()) {
+        const float settle = 1.0f - std::exp(-dt * 8.0f);
+        walkCameraAmount_ = lerpFloat(walkCameraAmount_, 0.0f, settle);
         updateLyingLimitedLook(deltaSeconds, mouseDeltaX, mouseDeltaY);
         return;
     }
 
+    const Vec3 frameStartPosition = gameState_.playerPosition;
     const float control = collapseControlMultiplier();
 
     gameState_.playerYaw += mouseDeltaX * kMouseSensitivity * control;
@@ -819,6 +856,16 @@ void Application::updatePlayer(float deltaSeconds, float mouseDeltaX, float mous
     gameState_.playerPosition.x = std::clamp(gameState_.playerPosition.x, walkBounds.min.x, walkBounds.max.x);
     gameState_.playerPosition.z = std::clamp(gameState_.playerPosition.z, walkBounds.min.z, walkBounds.max.z);
     gameState_.playerPosition.y = kEyeHeight;
+
+    const Vec3 frameMovement = gameState_.playerPosition - frameStartPosition;
+    const float frameDistance = std::sqrt((frameMovement.x * frameMovement.x) + (frameMovement.z * frameMovement.z));
+    const float movementSpeed = dt > 0.0001f ? frameDistance / dt : 0.0f;
+    const float targetWalkAmount = std::clamp(movementSpeed / (kWalkSpeed * kRunMultiplier), 0.0f, 1.0f);
+    const float walkResponse = 1.0f - std::exp(-dt * (targetWalkAmount > walkCameraAmount_ ? 9.0f : 6.0f));
+    walkCameraAmount_ = lerpFloat(walkCameraAmount_, targetWalkAmount, walkResponse);
+    if (walkCameraAmount_ > 0.001f) {
+        walkCameraPhase_ += dt * (5.15f + (targetWalkAmount * 2.0f));
+    }
 
     currentFocusPrompt_.clear();
     currentFocusInteractionId_.clear();
@@ -952,6 +999,9 @@ bool Application::loadRoomScene(const std::string& roomId, const std::string& sp
                 + " exists=" + (exists ? std::string("true") : std::string("false")));
         }
         Logger::info("Room loaded: " + roomManager_.currentRoom().id + " -> " + scenePath.string());
+        sequenceHiddenEntities_.clear();
+        animationSystem_.clear();
+        characterPerformances_.clear();
         if (renderer_.stats().frameIndex > 0 || !sceneMeshHandles_.empty()) {
             reloadSceneMeshes();
         }
@@ -971,7 +1021,6 @@ bool Application::loadRoomScene(const std::string& roomId, const std::string& sp
         sequenceFadeTarget_ = 0.0f;
         sequenceFadeDuration_ = 0.0f;
         sequenceFadeTimer_ = 0.0f;
-        sequenceHiddenEntities_.clear();
         sequenceManager_.setSequences(roomManager_.currentRoom().sequences, gameState_.flags);
         if (audioSystem_.available()) {
             processRoomEnterEvents();
@@ -1036,6 +1085,16 @@ void Application::reloadSceneMeshes() {
             handle = renderer_.loadSceneMesh(debugMesh);
         }
         sceneMeshHandles_[i] = handle;
+
+        const std::string ext = lowerExtension(loadPath);
+        if (instance.animationRig && (ext == ".glb" || ext == ".gltf")) {
+            try {
+                GltfModelData rigData = GltfLoader::loadFromFile(loadPath);
+                animationSystem_.registerRig(instance.name, std::move(rigData), instance.defaultClip);
+            } catch (const std::exception& error) {
+                Logger::warn("Animation rig load failed for " + instance.name + ": " + error.what());
+            }
+        }
     }
 }
 
@@ -1163,6 +1222,9 @@ bool Application::workstationSequenceBlocksPlayer() const {
 }
 
 void Application::updateSequenceRuntime(float deltaSeconds) {
+    animationSystem_.update(deltaSeconds);
+    updateCharacterPerformances(deltaSeconds);
+
     if (sequenceFadeDuration_ > 0.0f && sequenceFadeTimer_ < sequenceFadeDuration_) {
         sequenceFadeTimer_ = std::min(sequenceFadeTimer_ + std::max(deltaSeconds, 0.0f), sequenceFadeDuration_);
         const float t = smoothStep01(sequenceFadeTimer_ / sequenceFadeDuration_);
@@ -1181,6 +1243,7 @@ void Application::executeSequenceAction(const SequenceAction& action) {
             return;
         }
         gameState_.flags.insert(action.flag);
+        sequenceManager_.startAutoSequences(gameState_.flags);
         return;
     }
 
@@ -1309,6 +1372,65 @@ void Application::executeSequenceAction(const SequenceAction& action) {
         return;
     }
 
+    if (action.type == "setEntityTransform") {
+        setEntityTransformOverride(action);
+        return;
+    }
+
+    if (action.type == "animateEntityTransform") {
+        animateEntityTransformOverride(action);
+        return;
+    }
+
+    if (action.type == "clearEntityTransform") {
+        clearEntityTransformOverride(action);
+        return;
+    }
+
+    if (action.type == "playAnimation") {
+        if (action.entityId.empty() || action.clipId.empty()) {
+            Logger::warn("Sequence playAnimation action missing entityId or clipId");
+            return;
+        }
+        animationSystem_.setPlaybackSpeed(action.entityId, action.playbackSpeed);
+        animationSystem_.playClip(action.entityId, action.clipId, action.loop, action.fadeSeconds);
+        return;
+    }
+
+    if (action.type == "stopAnimation") {
+        if (action.entityId.empty()) {
+            Logger::warn("Sequence stopAnimation action missing entityId");
+            return;
+        }
+        animationSystem_.stopClip(action.entityId, action.fadeSeconds);
+        return;
+    }
+
+    if (action.type == "setFacialCue") {
+        if (action.entityId.empty()) {
+            Logger::warn("Sequence setFacialCue action missing entityId");
+            return;
+        }
+        const std::string cue = !action.cueId.empty() ? action.cueId : action.audioCue;
+        animationSystem_.setFacialCue(action.entityId, cue, action.intensity, action.duration);
+        return;
+    }
+
+    if (action.type == "setLookAtTarget") {
+        Logger::warn("Sequence setLookAtTarget is not implemented yet; action skipped safely");
+        return;
+    }
+
+    if (action.type == "startCharacterPerformance" || action.type == "playCharacterPerformance") {
+        startCharacterPerformance(action);
+        return;
+    }
+
+    if (action.type == "stopCharacterPerformance") {
+        stopCharacterPerformance(action);
+        return;
+    }
+
     Logger::warn("Unknown sequence action type: " + action.type);
 }
 
@@ -1343,13 +1465,24 @@ void Application::armCollapseAfterWorkstation() {
     collapseBlackFade_ = 0.0f;
     collapseNoiseIntensity_ = 0.0f;
     collapseCameraRoll_ = 0.0f;
-    collapseSequenceState_ = CollapseSequenceState::ArmedAfterWorkstation;
-    Logger::info("Collapse sequence armed after workstation");
+    collapseStoredMusicVolume_ = audioSystem_.musicVolume();
+
+    if (!room.collapseSequenceId.empty() && sequenceManager_.startSequence(room.collapseSequenceId, gameState_.flags)) {
+        collapseDrivenBySequence_ = true;
+        collapseSequenceState_ = CollapseSequenceState::None;
+        sequencePlayerControlLocked_ = true;
+        Logger::info("Collapse timeline sequence started after workstation: " + room.collapseSequenceId);
+        return;
+    }
+
+    Logger::warn("Collapse timeline unavailable after workstation; using legacy collapse runtime");
+    beginCollapseDizzy();
 }
 
 void Application::skipToCollapseShortcut() {
     if (gameState_.roomId == "ambulance_patient_compartment") {
         gameState_.flags.insert("entered_ambulance");
+        sequenceManager_.startAutoSequences(gameState_.flags);
         updateSequenceRuntime(0.0f);
         Logger::info("Skip-to-collapse ignored: already in ambulance");
         return;
@@ -1388,6 +1521,8 @@ void Application::skipToCollapseShortcut() {
     sequencePlayerControlLocked_ = false;
     sequenceOverlay_ = {};
     sequenceHiddenEntities_.clear();
+    animationSystem_.clear();
+    characterPerformances_.clear();
 
     gameState_.flags.insert("flag_workstation_task_complete");
     gameState_.flags.insert("office_report_completed");
@@ -1711,26 +1846,180 @@ ScreenOverlay Application::collapseScreenOverlay() const {
 }
 
 Transform Application::animatedStaticMeshTransform(const StaticMeshInstance& instance) const {
-    Transform result = instance.transform;
-    if (instance.name != "office_chair_pc_02") {
-        return result;
+    Transform result = animationSystem_.transformFor(instance.name, instance.transform);
+
+    if (instance.name == "office_chair_pc_02") {
+        float t = 0.0f;
+        if (workstationSequenceState_ == WorkstationSequenceState::Entering) {
+            t = smoothStep01(workstationSequenceTimer_ / 1.25f);
+        } else if (workstationSequenceState_ == WorkstationSequenceState::AtWorkstation) {
+            t = 1.0f;
+        } else if (workstationSequenceState_ == WorkstationSequenceState::Exiting) {
+            t = 1.0f - smoothStep01(workstationSequenceTimer_ / 1.05f);
+        } else {
+            return applyCharacterPerformance(instance.name, result);
+        }
+
+        const Vec3 seatedPosition {-1.22f, result.position.y, -0.78f};
+        result.position = lerpVec3(result.position, seatedPosition, t);
+        result.rotation.y = lerpFloat(result.rotation.y, 3.14159f, t);
     }
 
-    float t = 0.0f;
-    if (workstationSequenceState_ == WorkstationSequenceState::Entering) {
-        t = smoothStep01(workstationSequenceTimer_ / 1.25f);
-    } else if (workstationSequenceState_ == WorkstationSequenceState::AtWorkstation) {
-        t = 1.0f;
-    } else if (workstationSequenceState_ == WorkstationSequenceState::Exiting) {
-        t = 1.0f - smoothStep01(workstationSequenceTimer_ / 1.05f);
-    } else {
-        return result;
+    return applyCharacterPerformance(instance.name, result);
+}
+
+Transform Application::applyCharacterPerformance(const std::string& entityId, Transform base) const {
+    const auto activeIt = characterPerformances_.find(entityId);
+    if (activeIt == characterPerformances_.end()) {
+        return base;
     }
 
-    const Vec3 seatedPosition {-1.22f, result.position.y, -0.78f};
-    result.position = lerpVec3(result.position, seatedPosition, t);
-    result.rotation.y = lerpFloat(result.rotation.y, 3.14159f, t);
-    return result;
+    const ActiveCharacterPerformance& performance = activeIt->second;
+    const float duration = std::max(performance.duration, 0.001f);
+    const float fadeIn = smoothStep01(std::min(performance.elapsed / 0.28f, 1.0f));
+    const float fadeOut = smoothStep01(std::min((duration - performance.elapsed) / 0.45f, 1.0f));
+    const float envelope = fadeIn * fadeOut * std::clamp(performance.intensity, 0.0f, 2.5f);
+    if (envelope <= 0.0f) {
+        return base;
+    }
+
+    const bool urgent = performance.cueId.find("losing") != std::string::npos
+        || performance.cueId.find("urgent") != std::string::npos;
+    const bool idle = performance.cueId.find("idle") != std::string::npos;
+    const bool speech = performance.cueId.find("nurse_") != std::string::npos
+        || performance.cueId.find("voice") != std::string::npos;
+    const float time = performance.elapsed;
+    const float breath = (std::sin(time * 1.45f) * 0.75f + std::sin(time * 2.35f + 0.45f) * 0.25f)
+        * (idle ? 0.050f : 0.020f);
+    const float bodySway = (std::sin(time * 0.72f + 0.7f) * 0.65f + std::sin(time * 1.18f + 1.4f) * 0.35f)
+        * (idle ? 0.032f : 0.010f);
+    const float weightShift = (std::sin(time * 0.54f + 1.1f) * 0.55f + std::sin(time * 0.96f) * 0.45f)
+        * (idle ? 0.026f : 0.010f);
+    const float speechPulse = speech ? std::abs(std::sin(time * (urgent ? 14.5f : 10.5f))) : 0.0f;
+    const float stress = urgent ? 1.25f : 1.0f;
+
+    base.position.y += (breath + (speechPulse * 0.007f)) * envelope;
+    base.position.x += bodySway * envelope;
+    base.position.z += weightShift * envelope;
+    base.rotation.x += ((speech ? -0.038f : -0.025f) + (std::sin(time * 2.9f) * (idle ? 0.045f : 0.024f))) * envelope * stress;
+    base.rotation.z += (std::sin(time * (urgent ? 4.6f : 1.45f) + 0.35f) * (idle ? 0.115f : 0.050f)) * envelope * stress;
+    base.rotation.y += (std::sin(time * (urgent ? 3.4f : 0.95f) + 0.2f) * (idle ? 0.090f : 0.038f)) * envelope;
+    base.scale.y *= 1.0f + (breath * 0.004f * envelope);
+    return base;
+}
+
+const StaticMeshInstance* Application::findStaticMeshInstance(const std::string& entityId) const {
+    if (entityId.empty()) {
+        return nullptr;
+    }
+    for (const StaticMeshInstance& instance : scene_.staticMeshes()) {
+        if (instance.name == entityId) {
+            return &instance;
+        }
+    }
+    return nullptr;
+}
+
+Transform Application::currentEntityTransform(const StaticMeshInstance& instance) const {
+    return animationSystem_.transformFor(instance.name, instance.transform);
+}
+
+Transform Application::actionTargetTransform(const SequenceAction& action, Transform current) const {
+    if (action.hasPosition) {
+        current.position = action.position;
+    }
+    if (action.hasRotation) {
+        current.rotation = action.rotation;
+    }
+    if (action.hasScale) {
+        current.scale = action.scale;
+    }
+    return current;
+}
+
+void Application::setEntityTransformOverride(const SequenceAction& action) {
+    if (action.entityId.empty()) {
+        Logger::warn("Sequence setEntityTransform action missing entityId");
+        return;
+    }
+
+    const StaticMeshInstance* instance = findStaticMeshInstance(action.entityId);
+    if (instance == nullptr) {
+        Logger::warn("Sequence setEntityTransform unknown entityId: " + action.entityId);
+        return;
+    }
+
+    animationSystem_.setTransform(action.entityId, actionTargetTransform(action, currentEntityTransform(*instance)));
+}
+
+void Application::animateEntityTransformOverride(const SequenceAction& action) {
+    if (action.entityId.empty()) {
+        Logger::warn("Sequence animateEntityTransform action missing entityId");
+        return;
+    }
+
+    const StaticMeshInstance* instance = findStaticMeshInstance(action.entityId);
+    if (instance == nullptr) {
+        Logger::warn("Sequence animateEntityTransform unknown entityId: " + action.entityId);
+        return;
+    }
+
+    const Transform start = currentEntityTransform(*instance);
+    const Transform target = actionTargetTransform(action, start);
+    std::string easing = action.easing.empty() ? std::string("linear") : action.easing;
+    animationSystem_.animateTransform(action.entityId, start, target, action.duration, easing);
+}
+
+void Application::clearEntityTransformOverride(const SequenceAction& action) {
+    if (action.entityId.empty()) {
+        Logger::warn("Sequence clearEntityTransform action missing entityId");
+        return;
+    }
+    if (findStaticMeshInstance(action.entityId) == nullptr) {
+        Logger::warn("Sequence clearEntityTransform unknown entityId: " + action.entityId);
+        return;
+    }
+    animationSystem_.clearTransform(action.entityId);
+}
+
+void Application::startCharacterPerformance(const SequenceAction& action) {
+    if (action.entityId.empty()) {
+        Logger::warn("Sequence startCharacterPerformance action missing entityId");
+        return;
+    }
+    if (findStaticMeshInstance(action.entityId) == nullptr) {
+        Logger::warn("Sequence startCharacterPerformance unknown entityId: " + action.entityId);
+        return;
+    }
+
+    const float duration = action.duration > 0.0f ? action.duration : 1.0f;
+    characterPerformances_[action.entityId] = {
+        .cueId = action.cueId.empty() ? action.audioCue : action.cueId,
+        .duration = duration,
+        .elapsed = 0.0f,
+        .intensity = action.intensity,
+    };
+}
+
+void Application::stopCharacterPerformance(const SequenceAction& action) {
+    if (action.entityId.empty()) {
+        Logger::warn("Sequence stopCharacterPerformance action missing entityId");
+        return;
+    }
+    characterPerformances_.erase(action.entityId);
+}
+
+void Application::updateCharacterPerformances(float deltaSeconds) {
+    const float dt = std::max(deltaSeconds, 0.0f);
+    for (auto it = characterPerformances_.begin(); it != characterPerformances_.end();) {
+        ActiveCharacterPerformance& performance = it->second;
+        performance.elapsed += dt;
+        if (performance.elapsed >= performance.duration) {
+            it = characterPerformances_.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 void Application::evaluateCurrentTrigger() {
@@ -1863,6 +2152,20 @@ RenderView Application::makeCurrentView() const {
         ? 16.0f / 9.0f
         : static_cast<float>(window_.width()) / static_cast<float>(window_.height());
 
+    if (!config_.inspectEntityId.empty()) {
+        if (const StaticMeshInstance* instance = findStaticMeshInstance(config_.inspectEntityId)) {
+            const Transform transform = currentEntityTransform(*instance);
+            const Vec3 target = transform.position + Vec3 {0.0f, 0.62f, 0.0f};
+            const Vec3 cameraPosition = target + Vec3 {-1.20f, 0.16f, 1.16f};
+
+            RenderView view;
+            view.view = Mat4::lookAt(cameraPosition, target, {0.0f, 1.0f, 0.0f});
+            view.projection = Mat4::perspective(0.95f, aspect, 0.03f, 90.0f);
+            view.cameraPosition = cameraPosition;
+            return view;
+        }
+    }
+
     Vec3 cameraPosition = gameState_.playerPosition;
     float yaw = gameState_.playerYaw;
     float pitch = playerPitch_;
@@ -1871,12 +2174,15 @@ RenderView Application::makeCurrentView() const {
     if (lyingLimitedLookActive()) {
         const float breath = std::sin(lyingLookTimer_ * 1.55f);
         const float slowBreath = std::sin(lyingLookTimer_ * 0.72f);
+        const float vehicleTremor = (std::sin(visualTime_ * 9.4f) * 0.0018f)
+            + (std::sin((visualTime_ * 17.6f) + 0.7f) * 0.0009f);
         cameraPosition = lyingAnchorPosition_;
-        cameraPosition.y += breath * 0.010f;
+        cameraPosition.x += vehicleTremor * 0.45f;
+        cameraPosition.y += (breath * 0.010f) + vehicleTremor;
         cameraPosition.z += slowBreath * 0.006f;
         yaw = lyingBaseYaw_ + lyingYawOffset_;
         pitch = lyingBasePitch_ + lyingPitchOffset_ + (breath * 0.008f);
-        roll = slowBreath * 0.010f;
+        roll = (slowBreath * 0.010f) + (vehicleTremor * 1.2f);
     } else if (collapseSequenceState_ == CollapseSequenceState::Dizzy) {
         const float t = smoothStep01(collapseSequenceTimer_ / 3.15f);
         const float sway = std::sin(collapseSequenceTimer_ * 5.4f) * 0.045f * t;
@@ -1901,6 +2207,17 @@ RenderView Application::makeCurrentView() const {
         cameraPosition = lerpVec3(collapseStartPosition_, {floorPosition.x, 0.36f, floorPosition.z}, t);
         yaw = collapseStartYaw_ + (0.28f * t);
         pitch = lerpFloat(collapseStartPitch_, -1.04f, t);
+    } else if (cameraMode_ == CameraMode::FreeFirstPerson) {
+        const float sinYawBase = std::sin(yaw);
+        const float cosYawBase = std::cos(yaw);
+        const Vec3 right {cosYawBase, 0.0f, sinYawBase};
+        const float idleBreath = std::sin(visualTime_ * 1.18f) * 0.0025f;
+        const float footBob = std::sin(walkCameraPhase_ * 2.0f) * 0.010f * walkCameraAmount_;
+        const float footSway = std::sin(walkCameraPhase_) * 0.006f * walkCameraAmount_;
+        cameraPosition = cameraPosition + (right * footSway);
+        cameraPosition.y += idleBreath + footBob;
+        pitch += std::sin((walkCameraPhase_ * 2.0f) + 0.35f) * 0.0025f * walkCameraAmount_;
+        roll += std::sin(walkCameraPhase_) * 0.0065f * walkCameraAmount_;
     }
 
     const float cosPitch = std::cos(pitch);

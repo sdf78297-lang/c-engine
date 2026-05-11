@@ -23,6 +23,20 @@ struct Vec3 {
     }
 };
 
+struct Vec4 {
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+    float w = 0.0f;
+};
+
+struct Quat {
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+    float w = 1.0f;
+};
+
 inline Vec3 operator+(Vec3 lhs, Vec3 rhs) {
     return {lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
 }

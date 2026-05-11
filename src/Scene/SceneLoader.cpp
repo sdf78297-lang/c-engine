@@ -126,6 +126,24 @@ private:
         return value->get<std::string>();
     }
 
+    [[nodiscard]] bool optionalBoolField(
+        const Json& object,
+        std::string_view field,
+        std::string_view path,
+        bool fallback) const {
+        const Json* value = optionalField(object, field);
+        if (value == nullptr) {
+            return fallback;
+        }
+
+        const std::string fieldPath = childPath(path, field);
+        if (!value->is_boolean()) {
+            fail(fieldPath, "expected boolean");
+        }
+
+        return value->get<bool>();
+    }
+
     [[nodiscard]] float numberValue(const Json& value, std::string_view path) const {
         if (!value.is_number()) {
             fail(path, "expected number");
@@ -300,6 +318,9 @@ private:
             instance.meshSource = optionalStringField(mesh, "meshSource", meshPath, "");
             instance.visibleWhenFlag = optionalStringField(mesh, "visibleWhenFlag", meshPath, "");
             instance.hiddenWhenFlag = optionalStringField(mesh, "hiddenWhenFlag", meshPath, "");
+            instance.animationRig = optionalBoolField(mesh, "animationRig", meshPath, false);
+            instance.defaultClip = optionalStringField(mesh, "defaultClip", meshPath, "");
+            instance.animationSet = optionalStringField(mesh, "animationSet", meshPath, "");
 
             if (const Json* transform = optionalField(mesh, "transform")) {
                 instance.transform = transformValue(*transform, childPath(meshPath, "transform"));

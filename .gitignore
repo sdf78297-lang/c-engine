@@ -15,6 +15,7 @@ compile_commands.json
 *.pdb
 *.log
 *.tmp
+tmp_debug_shots/
 *.user
 imgui.ini
 *.exe

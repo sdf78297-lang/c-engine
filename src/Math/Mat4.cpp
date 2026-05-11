@@ -63,6 +63,18 @@ Mat4 Mat4::scale(Vec3 factors) {
     return result;
 }
 
+Mat4 Mat4::rotateX(float radians) {
+    const float c = std::cos(radians);
+    const float s = std::sin(radians);
+
+    Mat4 result = Mat4::identity();
+    result.values[5] = c;
+    result.values[6] = s;
+    result.values[9] = -s;
+    result.values[10] = c;
+    return result;
+}
+
 Mat4 Mat4::rotateY(float radians) {
     const float c = std::cos(radians);
     const float s = std::sin(radians);
@@ -72,6 +84,18 @@ Mat4 Mat4::rotateY(float radians) {
     result.values[2] = -s;
     result.values[8] = s;
     result.values[10] = c;
+    return result;
+}
+
+Mat4 Mat4::rotateZ(float radians) {
+    const float c = std::cos(radians);
+    const float s = std::sin(radians);
+
+    Mat4 result = Mat4::identity();
+    result.values[0] = c;
+    result.values[1] = s;
+    result.values[4] = -s;
+    result.values[5] = c;
     return result;
 }
 

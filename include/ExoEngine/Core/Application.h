@@ -3,9 +3,11 @@
 #include <cstdint>
 #include <filesystem>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
+#include <ExoEngine/Animation/AnimationSystem.h>
 #include <ExoEngine/Audio/AudioSystem.h>
 #include <ExoEngine/Debug/DebugOverlay.h>
 #include <ExoEngine/Game/CameraDirector.h>
@@ -30,6 +32,8 @@ struct ApplicationConfig {
     bool cycleWorkstationOverlay = false;
     std::string startupRoomId;
     std::string startupSpawnId;
+    std::vector<std::string> startupFlags;
+    std::string inspectEntityId;
 };
 
 class Application {
@@ -93,6 +97,16 @@ private:
     [[nodiscard]] float collapseControlMultiplier() const;
     [[nodiscard]] ScreenOverlay collapseScreenOverlay() const;
     [[nodiscard]] Transform animatedStaticMeshTransform(const StaticMeshInstance& instance) const;
+    [[nodiscard]] Transform applyCharacterPerformance(const std::string& entityId, Transform base) const;
+    [[nodiscard]] const StaticMeshInstance* findStaticMeshInstance(const std::string& entityId) const;
+    [[nodiscard]] Transform currentEntityTransform(const StaticMeshInstance& instance) const;
+    [[nodiscard]] Transform actionTargetTransform(const SequenceAction& action, Transform current) const;
+    void setEntityTransformOverride(const SequenceAction& action);
+    void animateEntityTransformOverride(const SequenceAction& action);
+    void clearEntityTransformOverride(const SequenceAction& action);
+    void startCharacterPerformance(const SequenceAction& action);
+    void stopCharacterPerformance(const SequenceAction& action);
+    void updateCharacterPerformances(float deltaSeconds);
     void evaluateCurrentTrigger();
     void processRoomEnterEvents();
     void playAudioCue(const std::string& cueId, bool loop = false);
@@ -115,9 +129,20 @@ private:
     SequenceManager sequenceManager_;
     PlayerMotor playerMotor_;
     CameraDirector cameraDirector_;
+    AnimationSystem animationSystem_;
     GameState gameState_;
 
+    struct ActiveCharacterPerformance {
+        std::string cueId;
+        float duration = 0.0f;
+        float elapsed = 0.0f;
+        float intensity = 1.0f;
+    };
+
     float playerPitch_ = 0.0f;
+    float visualTime_ = 0.0f;
+    float walkCameraPhase_ = 0.0f;
+    float walkCameraAmount_ = 0.0f;
     std::string currentFocusPrompt_;
     std::string currentFocusInteractionId_;
     std::string pendingUiOverlay_;
@@ -159,6 +184,7 @@ private:
     float sequenceFadeDuration_ = 0.0f;
     float sequenceFadeTimer_ = 0.0f;
     std::unordered_set<std::string> sequenceHiddenEntities_;
+    std::unordered_map<std::string, ActiveCharacterPerformance> characterPerformances_;
 };
 
 } // namespace Exo

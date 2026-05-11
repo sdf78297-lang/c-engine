@@ -23,8 +23,11 @@ struct StaticMeshInstance {
     std::string meshSource;
     std::string visibleWhenFlag;
     std::string hiddenWhenFlag;
+    std::string animationSet;
+    std::string defaultClip;
     RenderMaterialOverride materialOverride {};
     Transform transform {};
+    bool animationRig = false;
 };
 
 struct PointLight {
