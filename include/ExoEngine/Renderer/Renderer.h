@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -93,6 +94,8 @@ private:
     struct ObjMaterialBinding {
         std::string name = "default";
         Vec3 baseColor {0.72f, 0.72f, 0.68f};
+        Vec3 specularColor {0.04f, 0.04f, 0.04f};
+        float shininess = 16.0f;
         std::size_t albedoTextureIndex = static_cast<std::size_t>(-1);
     };
 
@@ -120,9 +123,43 @@ private:
 
     [[nodiscard]] std::int32_t loadObjMesh(const std::filesystem::path& path);
     [[nodiscard]] std::int32_t loadGltfMesh(const std::filesystem::path& path);
+    void cacheTexturedShaderUniforms();
     void drawObjMesh(const SceneMesh& mesh);
     void drawGltfModel(GltfModel& model, const std::vector<Mat4>* jointMatrices);
     void updateCpuSkinnedSubMesh(GltfSubMesh& subMesh, const std::vector<Mat4>& jointMatrices);
+
+    struct TexturedShaderUniforms {
+        int viewProjection = -1;
+        int model = -1;
+        int albedo = -1;
+        int baseColor = -1;
+        int materialSpecularColor = -1;
+        int materialShininess = -1;
+        int colorTint = -1;
+        int emissiveColor = -1;
+        int emissiveIntensity = -1;
+        int cameraPosition = -1;
+        int viewportSize = -1;
+        int ambientColor = -1;
+        int ambientIntensity = -1;
+        int keyLightDirection = -1;
+        int keyLightColor = -1;
+        int keyLightIntensity = -1;
+        int fogColor = -1;
+        int fogStart = -1;
+        int fogDensity = -1;
+        int exposure = -1;
+        int contrast = -1;
+        int saturation = -1;
+        int vignetteStrength = -1;
+        int useSkinning = -1;
+        int jointMatrices = -1;
+        int pointLightCount = -1;
+        std::array<int, 8> pointLightPosition {};
+        std::array<int, 8> pointLightColor {};
+        std::array<int, 8> pointLightRadius {};
+        std::array<int, 8> pointLightIntensity {};
+    };
 
     std::uint32_t width_ = 0;
     std::uint32_t height_ = 0;
@@ -130,6 +167,7 @@ private:
     Vec3 currentCameraPosition_ {};
     RenderEnvironment activeEnvironment_ {};
     std::uint32_t texturedShader_ = 0;
+    TexturedShaderUniforms texturedUniforms_ {};
     std::uint32_t screenOverlayShader_ = 0;
     std::uint32_t screenOverlayVao_ = 0;
     std::uint32_t whiteTexture_ = 0;

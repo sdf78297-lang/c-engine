@@ -333,6 +333,7 @@ int Application::runWindowed() {
     }
 
     reloadSceneMeshes();
+    preloadLinkedRoomMeshes();
 
     HtmlMenu htmlMenu;
     enum class HtmlOverlayKind {
@@ -469,6 +470,22 @@ int Application::runWindowed() {
                     }
                     if (htmlMenuActive) {
                         break;
+                    }
+                    if (event.key.repeat == 0
+                        && (event.key.keysym.sym == SDLK_p || event.key.keysym.scancode == SDL_SCANCODE_P)) {
+                        debugTeleportToRoom(
+                            "hospital_patient_ward",
+                            "bed_wakeup",
+                            {"entered_hospital_ward"});
+                        break;
+                    }
+                    if (event.key.keysym.sym == SDLK_r || event.key.keysym.scancode == SDL_SCANCODE_R) {
+                        if (tryStandFromHospitalBed()) {
+                            break;
+                        }
+                        if (event.key.repeat == 0 && gameState_.roomId == "hospital_patient_ward") {
+                            logHospitalBedStandBlocked();
+                        }
                     }
                     if (workstationSequenceBlocksPlayer() || collapseSequenceBlocksPlayer() || sequenceBlocksPlayer()) {
                         if (event.key.keysym.sym == SDLK_q) {
@@ -725,10 +742,33 @@ int Application::runWindowed() {
             }
         }
         renderer_.endFrame();
+        std::string promptInteractionId = currentFocusInteractionId_;
+        if (promptInteractionId == "hospital_bed_stand") {
+            if (!hospitalBedStandPromptAvailable()) {
+                promptInteractionId.clear();
+                currentFocusPrompt_.clear();
+                currentFocusInteractionId_.clear();
+            }
+        } else if (!promptInteractionId.empty()) {
+            const RoomInteraction* interaction = roomManager_.loaded()
+                ? roomManager_.interactionAt(gameState_.playerPosition)
+                : nullptr;
+            const bool promptStillValid = interaction != nullptr
+                && interaction->id == promptInteractionId
+                && !collapseSequenceBlocksPlayer()
+                && !sequenceBlocksPlayer()
+                && cameraMode_ == CameraMode::FreeFirstPerson;
+            if (!promptStillValid) {
+                promptInteractionId.clear();
+                currentFocusPrompt_.clear();
+                currentFocusInteractionId_.clear();
+            }
+        }
+
         if (debugOverlay_.isInitialized()) {
             debugOverlay_.beginFrame();
             debugOverlay_.drawInteractionPrompt(
-                currentFocusInteractionId_,
+                promptInteractionId,
                 workstationSequenceBlocksPlayer(),
                 gameState_.flags.contains("flag_workstation_task_complete"));
             debugOverlay_.endFrame();
@@ -927,6 +967,74 @@ void Application::updateLyingLimitedLook(float deltaSeconds, float mouseDeltaX, 
     playerPitch_ = std::clamp(lyingBasePitch_ + lyingPitchOffset_, kMinAbsolutePitch, kMaxAbsolutePitch);
     currentFocusPrompt_.clear();
     currentFocusInteractionId_.clear();
+    if (hospitalBedStandPromptAvailable()) {
+        currentFocusPrompt_ = "R: встать с койки.";
+        currentFocusInteractionId_ = "hospital_bed_stand";
+    }
+}
+
+bool Application::hospitalBedStandPromptAvailable() const {
+    if (!roomManager_.loaded() || gameState_.roomId != "hospital_patient_ward") {
+        return false;
+    }
+    if (gameState_.flags.contains("ward_stood_up")) {
+        return false;
+    }
+
+    const bool isBedCamera = lyingLimitedLookActive();
+    const bool isAwake = gameState_.flags.contains("ward_awake");
+    return isBedCamera || isAwake;
+}
+
+void Application::logHospitalBedStandBlocked() const {
+    Logger::warn(
+        std::string("Hospital bed exit blocked: loaded=") + (roomManager_.loaded() ? "true" : "false")
+        + ", room=" + gameState_.roomId
+        + ", camera=" + (lyingLimitedLookActive() ? "LyingLimitedLook" : "not_lying")
+        + ", ward_awake=" + (gameState_.flags.contains("ward_awake") ? "true" : "false")
+        + ", ward_stood_up=" + (gameState_.flags.contains("ward_stood_up") ? "true" : "false")
+        + ", sequenceLocked=" + (sequencePlayerControlLocked_ ? "true" : "false"));
+}
+
+bool Application::tryStandFromHospitalBed() {
+    if (!hospitalBedStandPromptAvailable()) {
+        return false;
+    }
+
+    Vec3 standPosition {1.55f, 1.65f, 0.38f};
+    float standYaw = -1.57079632679f;
+    for (const RoomSpawn& spawn : roomManager_.currentRoom().spawns) {
+        if (spawn.id == "bed_stand") {
+            standPosition = spawn.position;
+            standYaw = spawn.yaw;
+            break;
+        }
+    }
+
+    gameState_.spawnId = "bed_stand";
+    gameState_.playerPosition = standPosition;
+    gameState_.playerYaw = standYaw;
+    playerPitch_ = -0.08f;
+    cameraMode_ = CameraMode::FreeFirstPerson;
+    sequencePlayerControlLocked_ = false;
+    sequenceOverlay_ = {};
+    sequenceFadeStart_ = 0.0f;
+    sequenceFadeTarget_ = 0.0f;
+    sequenceFadeDuration_ = 0.0f;
+    sequenceFadeTimer_ = 0.0f;
+    lyingLookInputEnabled_ = false;
+    lyingYawOffset_ = 0.0f;
+    lyingPitchOffset_ = 0.0f;
+    lyingYawTarget_ = 0.0f;
+    lyingPitchTarget_ = 0.0f;
+    walkCameraAmount_ = 0.0f;
+    currentFocusPrompt_.clear();
+    currentFocusInteractionId_.clear();
+    gameState_.flags.insert("ward_awake");
+    gameState_.flags.insert("ward_stood_up");
+    sequenceManager_.stopSequence("hospital_ward_wakeup_sequence");
+    Logger::info("Hospital bed exit: player stood up with R");
+    return true;
 }
 
 bool Application::loadStartupScene(bool required) {
@@ -962,6 +1070,10 @@ bool Application::loadRoomScene(const std::string& roomId, const std::string& sp
         }
         return false;
     }
+
+    currentFocusPrompt_.clear();
+    currentFocusInteractionId_.clear();
+    pendingUiOverlay_.clear();
 
     gameState_.roomId = roomManager_.currentRoom().id;
     gameState_.spawnId = roomManager_.activeSpawn().id;
@@ -1002,8 +1114,11 @@ bool Application::loadRoomScene(const std::string& roomId, const std::string& sp
         sequenceHiddenEntities_.clear();
         animationSystem_.clear();
         characterPerformances_.clear();
+        currentFocusPrompt_.clear();
+        currentFocusInteractionId_.clear();
         if (renderer_.stats().frameIndex > 0 || !sceneMeshHandles_.empty()) {
             reloadSceneMeshes();
+            preloadLinkedRoomMeshes();
         }
         cameraMode_ = CameraMode::FreeFirstPerson;
         lyingAnchorPosition_ = gameState_.playerPosition;
@@ -1095,6 +1210,75 @@ void Application::reloadSceneMeshes() {
                 Logger::warn("Animation rig load failed for " + instance.name + ": " + error.what());
             }
         }
+    }
+}
+
+void Application::preloadLinkedRoomMeshes() {
+    if (!roomManager_.loaded()) {
+        return;
+    }
+
+    const RoomDefinition& room = roomManager_.currentRoom();
+    if (!room.collapseTargetRoom.empty()) {
+        preloadRoomMeshes(room.collapseTargetRoom, room.collapseTargetSpawn);
+    }
+
+    for (const RoomSequence& sequence : room.sequences) {
+        for (const SequenceStep& step : sequence.steps) {
+            for (const SequenceAction& action : step.actions) {
+                if (action.type == "transitionRoom" && !action.roomId.empty()) {
+                    preloadRoomMeshes(action.roomId, action.spawnId.empty() ? "entry" : action.spawnId);
+                }
+            }
+        }
+    }
+}
+
+void Application::preloadRoomMeshes(const std::string& roomId, const std::string& spawnId) {
+    if (roomId.empty() || (roomManager_.loaded() && roomId == roomManager_.currentRoom().id)) {
+        return;
+    }
+
+    const std::string cacheKey = roomId;
+    if (!preloadedRoomMeshKeys_.insert(cacheKey).second) {
+        return;
+    }
+
+    RoomManager preloadRoom;
+    const std::string resolvedSpawn = spawnId.empty() ? "entry" : spawnId;
+    if (!preloadRoom.loadRoom(dataRoot(), roomId, resolvedSpawn)) {
+        Logger::warn("[Preload] room skipped: " + roomId + " (" + preloadRoom.lastError() + ")");
+        return;
+    }
+
+    std::filesystem::path scenePath = preloadRoom.currentRoom().scenePath;
+    if (scenePath.empty()) {
+        scenePath = preloadRoom.currentRoom().sourcePath;
+    }
+    if (!scenePath.is_absolute()) {
+        scenePath = engineRoot() / scenePath;
+    }
+
+    try {
+        const Scene preloadScene = SceneLoader::loadFromFile(scenePath);
+        const std::filesystem::path root = engineRoot();
+        std::uint32_t loadedMeshes = 0;
+        for (const StaticMeshInstance& instance : preloadScene.staticMeshes()) {
+            std::filesystem::path source(instance.meshSource);
+            if (!source.empty() && !source.is_absolute()) {
+                source = root / source;
+            }
+            if (source.empty() || !std::filesystem::exists(source)) {
+                continue;
+            }
+            if (renderer_.loadSceneMesh(source) >= 0) {
+                ++loadedMeshes;
+            }
+        }
+        Logger::info("[Preload] room meshes resident: " + roomId
+            + " (" + std::to_string(loadedMeshes) + " mesh refs)");
+    } catch (const std::exception& error) {
+        Logger::warn(std::string("[Preload] room failed: ") + roomId + " (" + error.what() + ")");
     }
 }
 
@@ -1253,6 +1437,7 @@ void Application::executeSequenceAction(const SequenceAction& action) {
     }
 
     if (action.type == "stopAudio") {
+        audioSystem_.stopAllCues();
         audioSystem_.stopMusic();
         return;
     }
@@ -1279,6 +1464,8 @@ void Application::executeSequenceAction(const SequenceAction& action) {
     }
 
     if (action.type == "setCameraMode") {
+        currentFocusPrompt_.clear();
+        currentFocusInteractionId_.clear();
         if (action.cameraMode == "collapse_dizzy"
             || action.cameraMode == "collapse_sway"
             || action.cameraMode == "collapse_camera_sway") {
@@ -1295,6 +1482,14 @@ void Application::executeSequenceAction(const SequenceAction& action) {
             setCollapseCameraStage(CollapseSequenceState::Blackout);
             return;
         }
+        if (action.cameraMode == "BedLimitedLook"
+            || action.cameraMode == "bed_limited_look"
+            || action.cameraMode == "bed_limited") {
+            const std::string anchorId = action.entityId.empty() ? std::string("bed_head_anchor") : action.entityId;
+            constexpr float kBedLookPitch = -4.0f * 0.017453292519943295769f;
+            enterLyingLimitedLook(anchorId, true, kBedLookPitch);
+            return;
+        }
         if (action.cameraMode == "LyingLimitedLook"
             || action.cameraMode == "lying_limited_look"
             || action.cameraMode == "lying"
@@ -1302,6 +1497,13 @@ void Application::executeSequenceAction(const SequenceAction& action) {
             const std::string anchorId = action.entityId.empty() ? std::string("stretcher_head_anchor") : action.entityId;
             const bool inputEnabled = action.cameraMode == "limited";
             enterLyingLimitedLook(anchorId, inputEnabled);
+            return;
+        }
+        if (action.cameraMode == "FixedCinematic"
+            || action.cameraMode == "fixed_cinematic"
+            || action.cameraMode == "cinematic"
+            || action.cameraMode == "fixed") {
+            enterFixedCinematicCamera();
             return;
         }
         if (action.cameraMode == "SeatedComputer" || action.cameraMode == "seated_computer") {
@@ -1324,14 +1526,27 @@ void Application::executeSequenceAction(const SequenceAction& action) {
     }
 
     if (action.type == "lockPlayerControl") {
+        currentFocusPrompt_.clear();
+        currentFocusInteractionId_.clear();
         sequencePlayerControlLocked_ = true;
-        if (action.cameraMode == "lying"
+        if (action.cameraMode == "BedLimitedLook"
+            || action.cameraMode == "bed_limited_look"
+            || action.cameraMode == "bed_limited") {
+            const std::string anchorId = action.entityId.empty() ? std::string("bed_head_anchor") : action.entityId;
+            constexpr float kBedLookPitch = -4.0f * 0.017453292519943295769f;
+            enterLyingLimitedLook(anchorId, true, kBedLookPitch);
+        } else if (action.cameraMode == "lying"
             || action.cameraMode == "limited"
             || action.cameraMode == "LyingLimitedLook"
             || action.cameraMode == "lying_limited_look") {
             const std::string anchorId = action.entityId.empty() ? std::string("stretcher_head_anchor") : action.entityId;
             const bool inputEnabled = action.cameraMode == "limited";
             enterLyingLimitedLook(anchorId, inputEnabled);
+        } else if (action.cameraMode == "FixedCinematic"
+            || action.cameraMode == "fixed_cinematic"
+            || action.cameraMode == "cinematic"
+            || action.cameraMode == "fixed") {
+            enterFixedCinematicCamera();
         }
         return;
     }
@@ -1562,6 +1777,46 @@ void Application::skipToCollapseShortcut() {
     beginCollapseDizzy();
 }
 
+void Application::debugTeleportToRoom(
+    const std::string& roomId,
+    const std::string& spawnId,
+    std::initializer_list<std::string_view> flags) {
+    workstationSequenceState_ = WorkstationSequenceState::None;
+    workstationSequenceTimer_ = 0.0f;
+    pendingUiOverlay_.clear();
+    currentFocusPrompt_.clear();
+    currentFocusInteractionId_.clear();
+    sequencePlayerControlLocked_ = false;
+    sequenceHiddenEntities_.clear();
+    characterPerformances_.clear();
+    sequenceOverlay_ = {};
+    sequenceFadeStart_ = 0.0f;
+    sequenceFadeTarget_ = 0.0f;
+    sequenceFadeDuration_ = 0.0f;
+    sequenceFadeTimer_ = 0.0f;
+    resetCollapseRuntime();
+    animationSystem_.clear();
+    audioSystem_.stopAllCues();
+    audioSystem_.stopMusic();
+
+    for (std::string_view flag : flags) {
+        if (!flag.empty()) {
+            gameState_.flags.insert(std::string(flag));
+        }
+    }
+
+    if (!loadRoomScene(roomId, spawnId, false)) {
+        Logger::warn("Debug teleport failed: " + roomId + "." + spawnId);
+        return;
+    }
+
+    updateSequenceRuntime(0.0f);
+    if (config_.maxFrames == 0) {
+        SDL_SetRelativeMouseMode(SDL_TRUE);
+    }
+    Logger::info("Debug teleport loaded room: " + roomId + "." + spawnId);
+}
+
 void Application::beginCollapseDizzy() {
     if (!roomManager_.loaded()) {
         return;
@@ -1638,13 +1893,13 @@ void Application::resetCollapseRuntime() {
     }
 }
 
-void Application::enterLyingLimitedLook(const std::string& anchorId, bool inputEnabled) {
+void Application::enterLyingLimitedLook(const std::string& anchorId, bool inputEnabled, float basePitchRadians) {
     constexpr float kCeilingLookPitch = 76.0f * 0.017453292519943295769f;
 
     cameraMode_ = CameraMode::LyingLimitedLook;
     lyingAnchorPosition_ = roomAnchorPosition(anchorId, gameState_.playerPosition);
     lyingBaseYaw_ = gameState_.playerYaw;
-    lyingBasePitch_ = kCeilingLookPitch;
+    lyingBasePitch_ = basePitchRadians == 0.0f ? kCeilingLookPitch : basePitchRadians;
     lyingYawOffset_ = 0.0f;
     lyingPitchOffset_ = 0.0f;
     lyingYawTarget_ = 0.0f;
@@ -1657,6 +1912,18 @@ void Application::enterLyingLimitedLook(const std::string& anchorId, bool inputE
         SDL_SetRelativeMouseMode(SDL_TRUE);
     }
     Logger::info("Camera mode: LyingLimitedLook at " + anchorId);
+}
+
+void Application::enterFixedCinematicCamera() {
+    cameraMode_ = CameraMode::FixedCinematic;
+    walkCameraAmount_ = 0.0f;
+    lyingLookInputEnabled_ = false;
+    currentFocusPrompt_.clear();
+    currentFocusInteractionId_.clear();
+    if (config_.maxFrames == 0) {
+        SDL_SetRelativeMouseMode(SDL_FALSE);
+    }
+    Logger::info("Camera mode: FixedCinematic");
 }
 
 bool Application::lyingLimitedLookActive() const {
@@ -2055,6 +2322,7 @@ void Application::processRoomEnterEvents() {
 
     playRoomMusic();
 
+    bool sequenceFlagsChanged = false;
     for (const RoomEnterEvent& event : roomManager_.currentRoom().roomEnterEvents) {
         if (event.once && !event.setFlag.empty() && gameState_.flags.contains(event.setFlag)) {
             continue;
@@ -2062,9 +2330,14 @@ void Application::processRoomEnterEvents() {
 
         if (!event.setFlag.empty()) {
             gameState_.flags.insert(event.setFlag);
+            sequenceFlagsChanged = true;
         }
         playAudioCue(event.audioCue);
         Logger::info("Room enter event: " + event.id);
+    }
+
+    if (sequenceFlagsChanged || gameState_.roomId == "hospital_patient_ward") {
+        sequenceManager_.startAutoSequences(gameState_.flags);
     }
 }
 
@@ -2170,6 +2443,12 @@ RenderView Application::makeCurrentView() const {
     float yaw = gameState_.playerYaw;
     float pitch = playerPitch_;
     float roll = collapseCameraRoll_;
+
+    if (cameraMode_ == CameraMode::FixedCinematic && !scene_.cameraRig().empty()) {
+        if (const FixedCameraShot* shot = scene_.cameraRig().chooseShot(gameState_.playerPosition)) {
+            return scene_.cameraRig().makeRenderView(*shot, aspect);
+        }
+    }
 
     if (lyingLimitedLookActive()) {
         const float breath = std::sin(lyingLookTimer_ * 1.55f);

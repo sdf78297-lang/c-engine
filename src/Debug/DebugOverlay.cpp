@@ -481,7 +481,12 @@ void DebugOverlay::drawGameOverlay(const RoomManager& roomManager, const GameSta
 
 void DebugOverlay::drawInteractionPrompt(const std::string& interactionId, bool workstationBusy, bool workstationComplete) {
 #if EXO_DEBUG_OVERLAY_HAS_IMGUI
-    if (!initialized_ || !frameOpen_ || interactionId != "anton_desk" || workstationBusy) {
+    const bool workstationPrompt = interactionId == "anton_desk";
+    const bool hospitalBedPrompt = interactionId == "hospital_bed_stand";
+    if (!initialized_
+        || !frameOpen_
+        || (!workstationPrompt && !hospitalBedPrompt)
+        || (workstationPrompt && workstationBusy)) {
         return;
     }
 
@@ -515,17 +520,21 @@ void DebugOverlay::drawInteractionPrompt(const std::string& interactionId, bool 
 
         ImGui::SetCursorScreenPos(ImVec2(keyMin.x + 19.0f, keyMin.y + 13.0f));
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.04f, 0.08f, 0.09f, 1.0f));
-        ImGui::TextUnformatted("E");
+        ImGui::TextUnformatted(hospitalBedPrompt ? "R" : "E");
         ImGui::PopStyleColor();
 
         ImGui::SetCursorScreenPos(ImVec2(origin.x + 82.0f, origin.y + 13.0f));
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.91f, 0.96f, 0.98f, 1.0f));
-        ImGui::TextUnformatted(workstationComplete ? "Вернуться к рабочему месту" : "Сесть за компьютер");
+        ImGui::TextUnformatted(hospitalBedPrompt
+            ? "Встать с койки"
+            : (workstationComplete ? "Вернуться к рабочему месту" : "Сесть за компьютер"));
         ImGui::PopStyleColor();
 
         ImGui::SetCursorScreenPos(ImVec2(origin.x + 82.0f, origin.y + 39.0f));
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.70f, 0.76f, 1.0f));
-        ImGui::TextUnformatted(workstationComplete ? "Отчёт уже отправлен. Экран выключен." : "GROMOV REPORT SUITE: отчёт за ноябрь");
+        ImGui::TextUnformatted(hospitalBedPrompt
+            ? "Палата затихла. Можно двигаться."
+            : (workstationComplete ? "Отчёт уже отправлен. Экран выключен." : "GROMOV REPORT SUITE: отчёт за ноябрь"));
         ImGui::PopStyleColor();
 
         draw->AddLine(

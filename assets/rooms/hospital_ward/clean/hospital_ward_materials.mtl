@@ -1,0 +1,125 @@
+# Generated hospital ward material library
+newmtl wall_cold
+Kd 0.730 0.760 0.700
+Ks 0.030 0.030 0.026
+Ns 14.0
+newmtl wall_trim
+Kd 0.480 0.550 0.500
+Ks 0.045 0.050 0.044
+Ns 18.0
+newmtl floor_blue
+Kd 0.120 0.130 0.140
+Ks 0.030 0.030 0.028
+Ns 16.0
+newmtl ceiling_dim
+Kd 0.680 0.700 0.660
+Ks 0.035 0.035 0.030
+Ns 16.0
+newmtl metal
+Kd 0.660 0.670 0.650
+Ks 0.360 0.370 0.340
+Ns 108.0
+newmtl bed_sheet
+Kd 0.860 0.850 0.800
+Ks 0.018 0.017 0.014
+Ns 8.0
+newmtl blanket
+Kd 0.560 0.630 0.580
+Ks 0.018 0.018 0.015
+Ns 9.0
+newmtl linen_shadow
+Kd 0.480 0.500 0.460
+Ks 0.012 0.012 0.010
+Ns 7.0
+newmtl dark_glass
+Kd 0.020 0.030 0.040
+Ks 0.420 0.460 0.500
+Ns 120.0
+newmtl monitor_glass
+Kd 0.010 0.180 0.110
+Ks 0.240 0.500 0.320
+Ns 112.0
+newmtl curtain
+Kd 0.720 0.760 0.700
+Ks 0.018 0.018 0.015
+Ns 9.0
+newmtl cabinet
+Kd 0.580 0.610 0.570
+Ks 0.070 0.075 0.065
+Ns 34.0
+newmtl warning_red
+Kd 0.400 0.050 0.040
+Ks 0.030 0.018 0.016
+Ns 14.0
+newmtl medical_green
+Kd 0.050 0.350 0.190
+Ks 0.055 0.090 0.060
+Ns 24.0
+newmtl fluid_blue
+Kd 0.380 0.580 0.660
+Ks 0.070 0.110 0.120
+Ns 36.0
+newmtl signal_yellow
+Kd 0.900 0.700 0.180
+Ks 0.055 0.040 0.018
+Ns 18.0
+newmtl rubber_dark
+Kd 0.035 0.045 0.050
+Ks 0.012 0.012 0.012
+Ns 8.0
+newmtl soft_light
+Kd 0.960 0.880 0.680
+Ks 0.160 0.110 0.060
+Ns 42.0
+newmtl paper
+Kd 0.860 0.840 0.760
+Ks 0.015 0.014 0.012
+Ns 8.0
+newmtl door
+Kd 0.400 0.430 0.400
+Ks 0.055 0.058 0.050
+Ns 24.0
+newmtl outlet_white
+Kd 0.800 0.790 0.720
+Ks 0.080 0.080 0.070
+Ns 30.0
+newmtl gas_oxygen
+Kd 0.120 0.380 0.220
+Ks 0.045 0.070 0.050
+Ns 24.0
+newmtl gas_air
+Kd 0.360 0.520 0.620
+Ks 0.065 0.090 0.105
+Ns 30.0
+newmtl gas_vacuum
+Kd 0.480 0.380 0.300
+Ks 0.050 0.040 0.032
+Ns 22.0
+newmtl vinyl_scuff
+Kd 0.210 0.210 0.200
+Ks 0.014 0.014 0.013
+Ns 9.0
+newmtl wall_stain
+Kd 0.420 0.450 0.400
+Ks 0.010 0.010 0.008
+Ns 6.0
+newmtl rail_bumper
+Kd 0.620 0.660 0.600
+Ks 0.050 0.055 0.047
+Ns 18.0
+newmtl sterile_blue
+Kd 0.280 0.480 0.620
+Ks 0.060 0.090 0.110
+Ns 30.0
+newmtl tape
+Kd 0.880 0.860 0.760
+Ks 0.015 0.014 0.012
+Ns 8.0
+newmtl warm_indicator
+Kd 1.000 0.580 0.180
+Ks 0.150 0.070 0.020
+Ns 40.0
+newmtl old_bruise
+Kd 0.240 0.180 0.160
+Ks 0.006 0.005 0.004
+Ns 6.0

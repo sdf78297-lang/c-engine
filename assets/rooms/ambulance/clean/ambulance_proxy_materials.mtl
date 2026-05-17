@@ -1,0 +1,105 @@
+# Generated ambulance proxy material library
+newmtl clinical_blue
+Kd 0.560 0.670 0.720
+Ks 0.055 0.060 0.060
+Ns 22.0
+newmtl painted_metal
+Kd 0.660 0.690 0.690
+Ks 0.260 0.280 0.270
+Ns 70.0
+newmtl dark_rubber
+Kd 0.025 0.029 0.030
+Ks 0.012 0.012 0.012
+Ns 8.0
+newmtl screen_glass
+Kd 0.010 0.055 0.042
+Ks 0.500 0.700 0.580
+Ns 128.0
+newmtl oxygen_green
+Kd 0.055 0.360 0.160
+Ks 0.080 0.110 0.080
+Ns 28.0
+newmtl strap_red
+Kd 0.420 0.018 0.012
+Ks 0.035 0.020 0.018
+Ns 16.0
+newmtl soft_white
+Kd 0.860 0.860 0.820
+Ks 0.055 0.055 0.050
+Ns 24.0
+newmtl abs_panel
+Kd 0.780 0.780 0.720
+Ks 0.075 0.075 0.065
+Ns 30.0
+newmtl abs_shadow
+Kd 0.550 0.570 0.550
+Ks 0.050 0.050 0.048
+Ns 22.0
+newmtl rubber_floor
+Kd 0.075 0.083 0.083
+Ks 0.018 0.018 0.016
+Ns 10.0
+newmtl ceiling_panel
+Kd 0.800 0.800 0.740
+Ks 0.070 0.070 0.060
+Ns 28.0
+newmtl cabinet_off_white
+Kd 0.830 0.840 0.790
+Ks 0.080 0.080 0.070
+Ns 36.0
+newmtl cabinet_glass
+Kd 0.260 0.340 0.340
+Ks 0.350 0.440 0.400
+Ns 96.0
+newmtl linen_off_white
+Kd 0.880 0.880 0.830
+Ks 0.018 0.017 0.015
+Ns 8.0
+newmtl blanket_desaturated_blue
+Kd 0.350 0.480 0.550
+Ks 0.020 0.020 0.018
+Ns 9.0
+newmtl stainless
+Kd 0.620 0.640 0.630
+Ks 0.440 0.460 0.430
+Ns 112.0
+newmtl monitor_green
+Kd 0.060 0.860 0.340
+Ks 0.180 0.400 0.220
+Ns 82.0
+newmtl label_blue
+Kd 0.120 0.280 0.440
+Ks 0.035 0.045 0.055
+Ns 18.0
+newmtl label_yellow
+Kd 0.800 0.620 0.180
+Ks 0.045 0.040 0.025
+Ns 18.0
+newmtl paper_label
+Kd 0.780 0.760 0.660
+Ks 0.018 0.017 0.014
+Ns 9.0
+newmtl amber_light
+Kd 1.000 0.760 0.440
+Ks 0.180 0.120 0.060
+Ns 48.0
+newmtl grime
+Kd 0.110 0.105 0.090
+Ks 0.006 0.006 0.005
+Ns 6.0
+newmtl tape_white
+Kd 0.920 0.910 0.840
+Ks 0.016 0.015 0.012
+Ns 8.0
+newmtl warning_orange
+Kd 0.920 0.380 0.080
+Ks 0.060 0.026 0.010
+Ns 18.0
+newmtl dried_wear
+Kd 0.230 0.180 0.140
+Ks 0.006 0.005 0.004
+Ns 6.0
+newmtl cable_black
+Kd 0.010 0.012 0.012
+Ks 0.020 0.020 0.018
+Ns 14.0

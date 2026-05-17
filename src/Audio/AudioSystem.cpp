@@ -174,6 +174,14 @@ bool AudioSystem::playMusic(const std::filesystem::path& path, int loops) {
 #endif
 }
 
+void AudioSystem::stopAllCues() {
+#if EXO_ENABLE_AUDIO
+    if (initialized_) {
+        Mix_HaltChannel(-1);
+    }
+#endif
+}
+
 void AudioSystem::stopMusic() {
 #if EXO_ENABLE_AUDIO
     if (initialized_) {

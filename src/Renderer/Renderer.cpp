@@ -68,6 +68,8 @@ out vec4 FragColor;
 
 uniform sampler2D uAlbedo;
 uniform vec3 uBaseColor;
+uniform vec3 uMaterialSpecularColor;
+uniform float uMaterialShininess;
 uniform vec3 uColorTint;
 uniform vec3 uEmissiveColor;
 uniform float uEmissiveIntensity;
@@ -100,15 +102,61 @@ vec3 filmicAces(vec3 x) {
     return clamp((x * ((a * x) + b)) / ((x * ((c * x) + d)) + e), 0.0, 1.0);
 }
 
+float hash13(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+float valueNoise(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float n000 = hash13(i + vec3(0.0, 0.0, 0.0));
+    float n100 = hash13(i + vec3(1.0, 0.0, 0.0));
+    float n010 = hash13(i + vec3(0.0, 1.0, 0.0));
+    float n110 = hash13(i + vec3(1.0, 1.0, 0.0));
+    float n001 = hash13(i + vec3(0.0, 0.0, 1.0));
+    float n101 = hash13(i + vec3(1.0, 0.0, 1.0));
+    float n011 = hash13(i + vec3(0.0, 1.0, 1.0));
+    float n111 = hash13(i + vec3(1.0, 1.0, 1.0));
+
+    float nx00 = mix(n000, n100, f.x);
+    float nx10 = mix(n010, n110, f.x);
+    float nx01 = mix(n001, n101, f.x);
+    float nx11 = mix(n011, n111, f.x);
+    float nxy0 = mix(nx00, nx10, f.y);
+    float nxy1 = mix(nx01, nx11, f.y);
+    return mix(nxy0, nxy1, f.z);
+}
+
 void main() {
     vec4 sampled = texture(uAlbedo, vUV);
     vec3 albedo = sampled.rgb * uBaseColor * uColorTint;
     vec3 normal = normalize(vNormalWS);
+    vec3 viewDir = normalize(uCameraPosition - vWorldPos);
+    vec3 specularColor = clamp(uMaterialSpecularColor, vec3(0.0), vec3(1.0));
+    float specularStrength = clamp(max(max(specularColor.r, specularColor.g), specularColor.b), 0.0, 1.0);
+    float materialShininess = clamp(uMaterialShininess, 4.0, 160.0);
+
+    float panelNoise = valueNoise(vWorldPos * 4.7 + vec3(vUV * 2.0, 0.0));
+    float fineNoise = valueNoise(vWorldPos * 19.0 + vec3(7.0, 3.0, 11.0));
+    albedo *= 0.935 + panelNoise * 0.095 + fineNoise * 0.025;
+    float floorContact = 1.0 - smoothstep(0.02, 0.42, vWorldPos.y);
 
     vec3 keyDir = normalize(uKeyLightDirection);
     float ndotl = max(dot(normal, keyDir), 0.0);
-    vec3 lit = albedo * (uAmbientColor * uAmbientIntensity);
+    float hemi = 0.58 + 0.42 * clamp(normal.y * 0.5 + 0.5, 0.0, 1.0);
+    float cavity = clamp((1.0 - hemi) * 0.36 + floorContact * 0.22, 0.0, 0.42);
+    float ambientOcclusion = 1.0 - cavity;
+    vec3 lit = albedo * (uAmbientColor * uAmbientIntensity * hemi * ambientOcclusion);
+    lit += albedo * vec3(0.52, 0.47, 0.38) * uAmbientIntensity * max(-normal.y, 0.0) * 0.16 * ambientOcclusion;
     lit += albedo * (uKeyLightColor * ndotl * uKeyLightIntensity);
+    vec3 keyHalfVector = normalize(keyDir + viewDir);
+    float keySpecular = pow(max(dot(normal, keyHalfVector), 0.0), materialShininess)
+        * uKeyLightIntensity * (0.015 + specularStrength * 0.17);
+    lit += uKeyLightColor * specularColor * keySpecular;
 
     for (int i = 0; i < 8; ++i) {
         if (i >= uPointLightCount) {
@@ -126,14 +174,16 @@ void main() {
         vec3 pointLight = uPointLightColor[i] * uPointLightIntensity[i] * attenuation * (0.20 + pointDiffuse * 0.85);
         lit += albedo * pointLight;
 
-        vec3 viewDir = normalize(uCameraPosition - vWorldPos);
         vec3 halfVector = normalize(lightVector + viewDir);
-        float specular = pow(max(dot(normal, halfVector), 0.0), 32.0) * attenuation * uPointLightIntensity[i] * 0.10;
-        lit += uPointLightColor[i] * specular;
+        float specular = pow(max(dot(normal, halfVector), 0.0), materialShininess)
+            * attenuation * uPointLightIntensity[i] * (0.03 + specularStrength * 0.42);
+        lit += uPointLightColor[i] * specularColor * specular;
     }
 
     float fogAmount = clamp((length(uCameraPosition - vWorldPos) - uFogStart) * uFogDensity, 0.0, 0.82);
     vec3 color = mix(lit, uFogColor, fogAmount);
+    float fresnel = pow(1.0 - clamp(dot(normal, viewDir), 0.0, 1.0), 5.0);
+    color += specularColor * fresnel * specularStrength * 0.035;
     color += uEmissiveColor * uEmissiveIntensity;
     color = max(color, vec3(0.0));
     float preToneLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -414,53 +464,47 @@ void Renderer::drawSceneMesh(
 
     glUseProgram(texturedShader_);
 
-    const GLint vpLoc = glGetUniformLocation(texturedShader_, "uViewProjection");
-    const GLint modelLoc = glGetUniformLocation(texturedShader_, "uModel");
-    const GLint texLoc = glGetUniformLocation(texturedShader_, "uAlbedo");
-    const GLint pointCountLoc = glGetUniformLocation(texturedShader_, "uPointLightCount");
-
-    glUniformMatrix4fv(vpLoc, 1, GL_FALSE, currentViewProjection_.data());
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, modelTransform.data());
-    glUniform1i(texLoc, 0);
-    glUniform3f(glGetUniformLocation(texturedShader_, "uColorTint"),
+    glUniformMatrix4fv(texturedUniforms_.viewProjection, 1, GL_FALSE, currentViewProjection_.data());
+    glUniformMatrix4fv(texturedUniforms_.model, 1, GL_FALSE, modelTransform.data());
+    glUniform1i(texturedUniforms_.albedo, 0);
+    glUniform3f(texturedUniforms_.colorTint,
         materialOverride.colorTint.x, materialOverride.colorTint.y, materialOverride.colorTint.z);
-    glUniform3f(glGetUniformLocation(texturedShader_, "uEmissiveColor"),
+    glUniform3f(texturedUniforms_.emissiveColor,
         materialOverride.emissiveColor.x, materialOverride.emissiveColor.y, materialOverride.emissiveColor.z);
-    glUniform1f(glGetUniformLocation(texturedShader_, "uEmissiveIntensity"), materialOverride.emissiveIntensity);
-    glUniform3f(glGetUniformLocation(texturedShader_, "uCameraPosition"),
+    glUniform1f(texturedUniforms_.emissiveIntensity, materialOverride.emissiveIntensity);
+    glUniform3f(texturedUniforms_.cameraPosition,
         currentCameraPosition_.x, currentCameraPosition_.y, currentCameraPosition_.z);
-    glUniform2f(glGetUniformLocation(texturedShader_, "uViewportSize"),
+    glUniform2f(texturedUniforms_.viewportSize,
         static_cast<float>(std::max(width_, 1u)), static_cast<float>(std::max(height_, 1u)));
-    glUniform3f(glGetUniformLocation(texturedShader_, "uAmbientColor"),
+    glUniform3f(texturedUniforms_.ambientColor,
         activeEnvironment_.ambientColor.x, activeEnvironment_.ambientColor.y, activeEnvironment_.ambientColor.z);
-    glUniform1f(glGetUniformLocation(texturedShader_, "uAmbientIntensity"), activeEnvironment_.ambientIntensity);
+    glUniform1f(texturedUniforms_.ambientIntensity, activeEnvironment_.ambientIntensity);
     const Vec3 keyLightDirection = normalize(activeEnvironment_.keyLightDirection);
-    glUniform3f(glGetUniformLocation(texturedShader_, "uKeyLightDirection"),
+    glUniform3f(texturedUniforms_.keyLightDirection,
         keyLightDirection.x, keyLightDirection.y, keyLightDirection.z);
-    glUniform3f(glGetUniformLocation(texturedShader_, "uKeyLightColor"),
+    glUniform3f(texturedUniforms_.keyLightColor,
         activeEnvironment_.keyLightColor.x, activeEnvironment_.keyLightColor.y, activeEnvironment_.keyLightColor.z);
-    glUniform1f(glGetUniformLocation(texturedShader_, "uKeyLightIntensity"), activeEnvironment_.keyLightIntensity);
-    glUniform3f(glGetUniformLocation(texturedShader_, "uFogColor"),
+    glUniform1f(texturedUniforms_.keyLightIntensity, activeEnvironment_.keyLightIntensity);
+    glUniform3f(texturedUniforms_.fogColor,
         activeEnvironment_.fogColor.x, activeEnvironment_.fogColor.y, activeEnvironment_.fogColor.z);
-    glUniform1f(glGetUniformLocation(texturedShader_, "uFogStart"), activeEnvironment_.fogStart);
-    glUniform1f(glGetUniformLocation(texturedShader_, "uFogDensity"), activeEnvironment_.fogDensity);
-    glUniform1f(glGetUniformLocation(texturedShader_, "uExposure"), activeEnvironment_.exposure);
-    glUniform1f(glGetUniformLocation(texturedShader_, "uContrast"), activeEnvironment_.contrast);
-    glUniform1f(glGetUniformLocation(texturedShader_, "uSaturation"), activeEnvironment_.saturation);
-    glUniform1f(glGetUniformLocation(texturedShader_, "uVignetteStrength"), activeEnvironment_.vignetteStrength);
-    glUniform1i(glGetUniformLocation(texturedShader_, "uUseSkinning"), GL_FALSE);
-    glUniform1i(pointCountLoc, static_cast<GLint>(activePointLights_.size()));
+    glUniform1f(texturedUniforms_.fogStart, activeEnvironment_.fogStart);
+    glUniform1f(texturedUniforms_.fogDensity, activeEnvironment_.fogDensity);
+    glUniform1f(texturedUniforms_.exposure, activeEnvironment_.exposure);
+    glUniform1f(texturedUniforms_.contrast, activeEnvironment_.contrast);
+    glUniform1f(texturedUniforms_.saturation, activeEnvironment_.saturation);
+    glUniform1f(texturedUniforms_.vignetteStrength, activeEnvironment_.vignetteStrength);
+    glUniform1i(texturedUniforms_.useSkinning, GL_FALSE);
+    glUniform1i(texturedUniforms_.pointLightCount, static_cast<GLint>(activePointLights_.size()));
     glActiveTexture(GL_TEXTURE0);
 
     for (std::size_t i = 0; i < activePointLights_.size(); ++i) {
         const RenderPointLight& light = activePointLights_[i];
-        const std::string index = std::to_string(i);
-        glUniform3f(glGetUniformLocation(texturedShader_, ("uPointLightPosition[" + index + "]").c_str()),
+        glUniform3f(texturedUniforms_.pointLightPosition[i],
             light.position.x, light.position.y, light.position.z);
-        glUniform3f(glGetUniformLocation(texturedShader_, ("uPointLightColor[" + index + "]").c_str()),
+        glUniform3f(texturedUniforms_.pointLightColor[i],
             light.color.x, light.color.y, light.color.z);
-        glUniform1f(glGetUniformLocation(texturedShader_, ("uPointLightRadius[" + index + "]").c_str()), light.radius);
-        glUniform1f(glGetUniformLocation(texturedShader_, ("uPointLightIntensity[" + index + "]").c_str()), light.intensity);
+        glUniform1f(texturedUniforms_.pointLightRadius[i], light.radius);
+        glUniform1f(texturedUniforms_.pointLightIntensity[i], light.intensity);
     }
 
     SceneMesh& mesh = sceneMeshes_[handle];
@@ -511,6 +555,7 @@ bool Renderer::createTexturedShader() {
     if (texturedShader_ == 0) {
         return false;
     }
+    cacheTexturedShaderUniforms();
 
     glGenTextures(1, &whiteTexture_);
     glBindTexture(GL_TEXTURE_2D, whiteTexture_);
@@ -523,6 +568,47 @@ bool Renderer::createTexturedShader() {
     glBindTexture(GL_TEXTURE_2D, 0);
 
     return true;
+}
+
+void Renderer::cacheTexturedShaderUniforms() {
+    texturedUniforms_.viewProjection = glGetUniformLocation(texturedShader_, "uViewProjection");
+    texturedUniforms_.model = glGetUniformLocation(texturedShader_, "uModel");
+    texturedUniforms_.albedo = glGetUniformLocation(texturedShader_, "uAlbedo");
+    texturedUniforms_.baseColor = glGetUniformLocation(texturedShader_, "uBaseColor");
+    texturedUniforms_.materialSpecularColor = glGetUniformLocation(texturedShader_, "uMaterialSpecularColor");
+    texturedUniforms_.materialShininess = glGetUniformLocation(texturedShader_, "uMaterialShininess");
+    texturedUniforms_.colorTint = glGetUniformLocation(texturedShader_, "uColorTint");
+    texturedUniforms_.emissiveColor = glGetUniformLocation(texturedShader_, "uEmissiveColor");
+    texturedUniforms_.emissiveIntensity = glGetUniformLocation(texturedShader_, "uEmissiveIntensity");
+    texturedUniforms_.cameraPosition = glGetUniformLocation(texturedShader_, "uCameraPosition");
+    texturedUniforms_.viewportSize = glGetUniformLocation(texturedShader_, "uViewportSize");
+    texturedUniforms_.ambientColor = glGetUniformLocation(texturedShader_, "uAmbientColor");
+    texturedUniforms_.ambientIntensity = glGetUniformLocation(texturedShader_, "uAmbientIntensity");
+    texturedUniforms_.keyLightDirection = glGetUniformLocation(texturedShader_, "uKeyLightDirection");
+    texturedUniforms_.keyLightColor = glGetUniformLocation(texturedShader_, "uKeyLightColor");
+    texturedUniforms_.keyLightIntensity = glGetUniformLocation(texturedShader_, "uKeyLightIntensity");
+    texturedUniforms_.fogColor = glGetUniformLocation(texturedShader_, "uFogColor");
+    texturedUniforms_.fogStart = glGetUniformLocation(texturedShader_, "uFogStart");
+    texturedUniforms_.fogDensity = glGetUniformLocation(texturedShader_, "uFogDensity");
+    texturedUniforms_.exposure = glGetUniformLocation(texturedShader_, "uExposure");
+    texturedUniforms_.contrast = glGetUniformLocation(texturedShader_, "uContrast");
+    texturedUniforms_.saturation = glGetUniformLocation(texturedShader_, "uSaturation");
+    texturedUniforms_.vignetteStrength = glGetUniformLocation(texturedShader_, "uVignetteStrength");
+    texturedUniforms_.useSkinning = glGetUniformLocation(texturedShader_, "uUseSkinning");
+    texturedUniforms_.jointMatrices = glGetUniformLocation(texturedShader_, "uJointMatrices[0]");
+    texturedUniforms_.pointLightCount = glGetUniformLocation(texturedShader_, "uPointLightCount");
+
+    for (std::size_t i = 0; i < texturedUniforms_.pointLightPosition.size(); ++i) {
+        const std::string index = std::to_string(i);
+        texturedUniforms_.pointLightPosition[i] =
+            glGetUniformLocation(texturedShader_, ("uPointLightPosition[" + index + "]").c_str());
+        texturedUniforms_.pointLightColor[i] =
+            glGetUniformLocation(texturedShader_, ("uPointLightColor[" + index + "]").c_str());
+        texturedUniforms_.pointLightRadius[i] =
+            glGetUniformLocation(texturedShader_, ("uPointLightRadius[" + index + "]").c_str());
+        texturedUniforms_.pointLightIntensity[i] =
+            glGetUniformLocation(texturedShader_, ("uPointLightIntensity[" + index + "]").c_str());
+    }
 }
 
 bool Renderer::createScreenOverlayResources() {
@@ -612,6 +698,8 @@ std::int32_t Renderer::loadObjMesh(const std::filesystem::path& path) {
         ObjMaterialBinding binding;
         binding.name = material.name.empty() ? "default" : material.name;
         binding.baseColor = material.diffuse;
+        binding.specularColor = material.specular;
+        binding.shininess = std::clamp(material.shininess, 4.0f, 160.0f);
 
         if (!material.textures.albedo.empty()) {
             const std::string textureKey = material.textures.albedo.lexically_normal().string();
@@ -797,14 +885,15 @@ std::int32_t Renderer::loadGltfMesh(const std::filesystem::path& path) {
 }
 
 void Renderer::drawObjMesh(const SceneMesh& mesh) {
-    const GLint baseLoc = glGetUniformLocation(texturedShader_, "uBaseColor");
-
     for (const ObjDrawRange& range : mesh.objDrawRanges) {
         const ObjMaterialBinding& material = range.materialIndex < mesh.objMaterials.size()
             ? mesh.objMaterials[range.materialIndex]
             : mesh.objMaterials.front();
 
-        glUniform3f(baseLoc, material.baseColor.x, material.baseColor.y, material.baseColor.z);
+        glUniform3f(texturedUniforms_.baseColor, material.baseColor.x, material.baseColor.y, material.baseColor.z);
+        glUniform3f(texturedUniforms_.materialSpecularColor,
+            material.specularColor.x, material.specularColor.y, material.specularColor.z);
+        glUniform1f(texturedUniforms_.materialShininess, material.shininess);
         if (material.albedoTextureIndex < mesh.objTextures.size() && mesh.objTextures[material.albedoTextureIndex].valid()) {
             mesh.objTextures[material.albedoTextureIndex].bind(0);
         } else {
@@ -817,23 +906,23 @@ void Renderer::drawObjMesh(const SceneMesh& mesh) {
 }
 
 void Renderer::drawGltfModel(GltfModel& model, const std::vector<Mat4>* jointMatrices) {
-    const GLint baseLoc = glGetUniformLocation(texturedShader_, "uBaseColor");
-    const GLint skinLoc = glGetUniformLocation(texturedShader_, "uUseSkinning");
-
     for (GltfSubMesh& sub : model.subMeshes) {
         const bool useSkinning = sub.skinned && jointMatrices != nullptr && !jointMatrices->empty();
         if (useSkinning) {
-            updateCpuSkinnedSubMesh(sub, *jointMatrices);
+            const auto jointCount = static_cast<GLsizei>(std::min<std::size_t>(jointMatrices->size(), 96));
+            glUniformMatrix4fv(texturedUniforms_.jointMatrices, jointCount, GL_FALSE, jointMatrices->front().data());
         }
 
-        glUniform1i(skinLoc, GL_FALSE);
-        glUniform3f(baseLoc, sub.baseColor.x, sub.baseColor.y, sub.baseColor.z);
+        glUniform1i(texturedUniforms_.useSkinning, useSkinning ? GL_TRUE : GL_FALSE);
+        glUniform3f(texturedUniforms_.baseColor, sub.baseColor.x, sub.baseColor.y, sub.baseColor.z);
+        glUniform3f(texturedUniforms_.materialSpecularColor, 0.08f, 0.08f, 0.08f);
+        glUniform1f(texturedUniforms_.materialShininess, 48.0f);
         glBindTexture(GL_TEXTURE_2D, sub.texture);
         glBindVertexArray(sub.vao);
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sub.indexCount), GL_UNSIGNED_INT, nullptr);
         ++stats_.drawCalls;
     }
-    glUniform1i(skinLoc, GL_FALSE);
+    glUniform1i(texturedUniforms_.useSkinning, GL_FALSE);
 }
 
 void Renderer::updateCpuSkinnedSubMesh(GltfSubMesh& subMesh, const std::vector<Mat4>& jointMatrices) {

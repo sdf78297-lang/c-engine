@@ -1,0 +1,829 @@
+{
+  "schema": "zero_patient.room.v1",
+  "id": "hospital_patient_ward",
+  "name": "hospital_patient_ward",
+  "title": "Ночная палата",
+  "body": [
+    "Антон просыпается в больничной палате после скорой."
+  ],
+  "runtimeCompatibility": {
+    "sceneLoader": "ExoEngine.SceneLoader.v1",
+    "compatibleFields": [
+      "name",
+      "staticMeshes",
+      "pointLights",
+      "renderEnvironment",
+      "fixedCameras"
+    ],
+    "unknownFieldsIgnored": true
+  },
+  "renderEnvironment": {
+    "clearColor": [
+      0.012,
+      0.013,
+      0.012
+    ],
+    "ambientColor": [
+      0.46,
+      0.48,
+      0.44
+    ],
+    "ambientIntensity": 0.33,
+    "keyLightDirection": [
+      -0.18,
+      0.94,
+      -0.28
+    ],
+    "keyLightColor": [
+      0.86,
+      0.90,
+      0.86
+    ],
+    "keyLightIntensity": 0.31,
+    "fogColor": [
+      0.020,
+      0.021,
+      0.020
+    ],
+    "fogStart": 5.8,
+    "fogDensity": 0.010,
+    "exposure": 1.02,
+    "contrast": 1.12,
+    "saturation": 0.92,
+    "vignetteStrength": 0.22
+  },
+  "walkBounds": {
+    "min": [
+      -1.82,
+      -0.2,
+      -2.25
+    ],
+    "max": [
+      1.82,
+      2.55,
+      2.35
+    ]
+  },
+  "spawns": [
+    {
+      "id": "bed_wakeup",
+      "position": [
+        0.0,
+        1.22,
+        2.04
+      ],
+      "yawDeg": 0
+    },
+    {
+      "id": "bed_head_anchor",
+      "position": [
+        0.0,
+        1.22,
+        2.04
+      ],
+      "yawDeg": 0
+    },
+    {
+      "id": "bed_stand",
+      "position": [
+        1.55,
+        1.65,
+        0.38
+      ],
+      "yawDeg": -90
+    },
+    {
+      "id": "ward_entry",
+      "position": [
+        1.58,
+        1.65,
+        -1.42
+      ],
+      "yawDeg": -90
+    }
+  ],
+  "staticMeshes": [
+    {
+      "name": "hospital_ward_shell",
+      "meshAsset": "game/rooms/hospital_ward/hospital_ward_shell.mesh",
+      "materialAsset": "game/rooms/hospital_ward/hospital_ward_shell.material",
+      "meshSource": "assets/rooms/hospital_ward/clean/hospital_ward_shell.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.96,
+          0.98,
+          0.92
+        ]
+      },
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "hospital_bed",
+      "meshAsset": "game/rooms/hospital_ward/hospital_bed.mesh",
+      "materialAsset": "game/rooms/hospital_ward/hospital_bed.material",
+      "meshSource": "assets/rooms/hospital_ward/clean/hospital_bed.obj",
+      "renderOverrides": {
+        "colorTint": [
+          1.0,
+          0.98,
+          0.92
+        ]
+      },
+      "transform": {
+        "position": [
+          0.0,
+          0.0,
+          1.14
+        ],
+        "rotation": [
+          0,
+          0.0,
+          0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "bedside_table",
+      "meshAsset": "game/rooms/hospital_ward/bedside_table.mesh",
+      "materialAsset": "game/rooms/hospital_ward/bedside_table.material",
+      "meshSource": "assets/rooms/hospital_ward/clean/bedside_table.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.96,
+          0.95,
+          0.89
+        ]
+      },
+      "transform": {
+        "position": [
+          1.18,
+          0.0,
+          1.45
+        ],
+        "rotation": [
+          0,
+          1.5708,
+          0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "ward_iv_stand",
+      "meshAsset": "game/rooms/hospital_ward/iv_stand.mesh",
+      "materialAsset": "game/rooms/hospital_ward/iv_stand.material",
+      "meshSource": "assets/rooms/hospital_ward/clean/iv_stand.obj",
+      "transform": {
+        "position": [
+          -1.18,
+          0.0,
+          1.34
+        ],
+        "rotation": [
+          0,
+          0.0,
+          0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "ward_patient_monitor",
+      "meshAsset": "game/rooms/hospital_ward/patient_monitor.mesh",
+      "materialAsset": "game/rooms/hospital_ward/patient_monitor.material",
+      "meshSource": "assets/rooms/hospital_ward/clean/patient_monitor.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.92,
+          0.94,
+          0.88
+        ],
+        "emissiveColor": [
+          0.12,
+          1.0,
+          0.36
+        ],
+        "emissiveIntensity": 0.56
+      },
+      "transform": {
+        "position": [
+          -1.2,
+          0.0,
+          0.74
+        ],
+        "rotation": [
+          0,
+          -1.5708,
+          0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "privacy_curtain",
+      "meshAsset": "game/rooms/hospital_ward/privacy_curtain.mesh",
+      "materialAsset": "game/rooms/hospital_ward/privacy_curtain.material",
+      "meshSource": "assets/rooms/hospital_ward/clean/privacy_curtain.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.92,
+          0.96,
+          0.88
+        ]
+      },
+      "transform": {
+        "position": [
+          1.42,
+          0.0,
+          1.02
+        ],
+        "rotation": [
+          0,
+          1.5708,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "ward_door",
+      "meshAsset": "game/rooms/hospital_ward/ward_door.mesh",
+      "materialAsset": "game/rooms/hospital_ward/ward_door.material",
+      "meshSource": "assets/rooms/hospital_ward/clean/ward_door.obj",
+      "transform": {
+        "position": [
+          2.14,
+          0.0,
+          -1.42
+        ],
+        "rotation": [
+          0,
+          1.5708,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "ward_medical_headwall",
+      "meshAsset": "game/rooms/hospital_ward/medical_headwall.mesh",
+      "materialAsset": "game/rooms/hospital_ward/medical_headwall.material",
+      "meshSource": "assets/rooms/hospital_ward/clean/medical_headwall.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.96,
+          0.96,
+          0.90
+        ]
+      },
+      "transform": {
+        "position": [
+          0.0,
+          0.0,
+          2.58
+        ],
+        "rotation": [
+          0,
+          0.0,
+          0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "ward_overbed_light",
+      "meshAsset": "game/rooms/hospital_ward/overbed_light.mesh",
+      "materialAsset": "game/rooms/hospital_ward/overbed_light.material",
+      "meshSource": "assets/rooms/hospital_ward/clean/overbed_light.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.98,
+          0.94,
+          0.82
+        ],
+        "emissiveColor": [
+          1.0,
+          0.82,
+          0.46
+        ],
+        "emissiveIntensity": 0.26
+      },
+      "transform": {
+        "position": [
+          0.0,
+          0.0,
+          2.52
+        ],
+        "rotation": [
+          0,
+          0.0,
+          0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "ward_clinical_details",
+      "meshAsset": "game/rooms/hospital_ward/ward_clinical_details.mesh",
+      "materialAsset": "game/rooms/hospital_ward/ward_clinical_details.material",
+      "meshSource": "assets/rooms/hospital_ward/clean/ward_clinical_details.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.96,
+          0.95,
+          0.88
+        ]
+      },
+      "transform": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0,
+          0.0,
+          0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    }
+  ],
+  "pointLights": [
+    {
+      "position": [
+        0.0,
+        2.02,
+        2.1
+      ],
+      "color": [
+        0.82,
+        0.86,
+        0.82
+      ],
+      "radius": 3.9,
+      "intensity": 0.54
+    },
+    {
+      "position": [
+        -1.08,
+        1.18,
+        0.78
+      ],
+      "color": [
+        0.12,
+        1.0,
+        0.36
+      ],
+      "radius": 1.45,
+      "intensity": 0.50
+    },
+    {
+      "position": [
+        -1.95,
+        1.65,
+        -0.95
+      ],
+      "color": [
+        0.78,
+        0.82,
+        0.76
+      ],
+      "radius": 2.7,
+      "intensity": 0.18
+    },
+    {
+      "position": [
+        1.74,
+        1.55,
+        -1.42
+      ],
+      "color": [
+        1.0,
+        0.78,
+        0.46
+      ],
+      "radius": 1.8,
+      "intensity": 0.28
+    },
+    {
+      "position": [
+        0.10,
+        1.95,
+        2.22
+      ],
+      "color": [
+        1.0,
+        0.62,
+        0.30
+      ],
+      "radius": 1.35,
+      "intensity": 0.14
+    }
+  ],
+  "fixedCameras": [
+    {
+      "name": "ward_bed_wakeup_view",
+      "bounds": {
+        "min": [
+          -1.1,
+          -0.2,
+          1.55
+        ],
+        "max": [
+          1.1,
+          2.4,
+          2.35
+        ]
+      },
+      "position": [
+        0.0,
+        1.22,
+        2.04
+      ],
+      "target": [
+        0.0,
+        0.92,
+        0.18
+      ],
+      "fovDeg": 50,
+      "near": 0.04,
+      "far": 60,
+      "priority": 12,
+      "blendSeconds": 0
+    },
+    {
+      "name": "ward_bedside_equipment_view",
+      "bounds": {
+        "min": [
+          -2.0,
+          -0.2,
+          -0.18
+        ],
+        "max": [
+          2.0,
+          2.4,
+          2.35
+        ]
+      },
+      "position": [
+        1.68,
+        1.55,
+        2.22
+      ],
+      "target": [
+        -0.38,
+        0.96,
+        0.64
+      ],
+      "fovDeg": 46,
+      "near": 0.04,
+      "far": 60,
+      "priority": 9,
+      "blendSeconds": 0.18
+    },
+    {
+      "name": "ward_door_window_view",
+      "bounds": {
+        "min": [
+          -2.0,
+          -0.2,
+          -2.35
+        ],
+        "max": [
+          2.0,
+          2.4,
+          -0.18
+        ]
+      },
+      "position": [
+        1.55,
+        1.52,
+        -2.08
+      ],
+      "target": [
+        -0.68,
+        1.08,
+        0.42
+      ],
+      "fovDeg": 46,
+      "near": 0.04,
+      "far": 60,
+      "priority": 8,
+      "blendSeconds": 0.2
+    }
+  ],
+  "collisionBoxes": [
+    {
+      "id": "ward_wall_left",
+      "bounds": {
+        "min": [
+          -2.25,
+          -0.2,
+          -2.75
+        ],
+        "max": [
+          -2.05,
+          2.55,
+          2.75
+        ]
+      }
+    },
+    {
+      "id": "ward_wall_right",
+      "bounds": {
+        "min": [
+          2.05,
+          -0.2,
+          -2.75
+        ],
+        "max": [
+          2.25,
+          2.55,
+          2.75
+        ]
+      }
+    },
+    {
+      "id": "ward_back_wall",
+      "bounds": {
+        "min": [
+          -2.2,
+          -0.2,
+          -2.75
+        ],
+        "max": [
+          2.2,
+          2.55,
+          -2.55
+        ]
+      }
+    },
+    {
+      "id": "ward_front_wall",
+      "bounds": {
+        "min": [
+          -2.2,
+          -0.2,
+          2.55
+        ],
+        "max": [
+          2.2,
+          2.55,
+          2.75
+        ]
+      }
+    },
+    {
+      "id": "ward_bed_collision",
+      "bounds": {
+        "min": [
+          -0.78,
+          -0.2,
+          -0.02
+        ],
+        "max": [
+          0.78,
+          1.0,
+          1.62
+        ]
+      }
+    },
+    {
+      "id": "ward_equipment_collision",
+      "bounds": {
+        "min": [
+          -1.56,
+          -0.2,
+          0.44
+        ],
+        "max": [
+          -0.86,
+          1.8,
+          1.76
+        ]
+      }
+    },
+    {
+      "id": "ward_bedside_table_collision",
+      "bounds": {
+        "min": [
+          0.88,
+          -0.2,
+          1.08
+        ],
+        "max": [
+          1.52,
+          1.2,
+          1.82
+        ]
+      }
+    }
+  ],
+  "doors": [
+    {
+      "id": "door_ward_corridor_locked",
+      "bounds": {
+        "min": [
+          1.52,
+          -0.2,
+          -1.98
+        ],
+        "max": [
+          2.28,
+          2.4,
+          -0.82
+        ]
+      },
+      "targetRoomId": "hospital_patient_ward",
+      "targetSpawnId": "ward_entry",
+      "requiredItemId": "future_ward_release",
+      "choiceText": "Дверь закрыта снаружи."
+    }
+  ],
+  "interactables": [
+    {
+      "id": "ward_patient_card",
+      "type": "patient_card",
+      "position": [
+        1.1,
+        0.92,
+        1.45
+      ],
+      "radius": 0.55,
+      "setsFlags": [
+        "ward_patient_card_seen"
+      ],
+      "choiceText": "Посмотреть карточку."
+    },
+    {
+      "id": "ward_iv_drip",
+      "type": "medical_equipment",
+      "position": [
+        -1.18,
+        1.2,
+        1.34
+      ],
+      "radius": 0.75,
+      "setsFlags": [
+        "ward_iv_seen"
+      ],
+      "choiceText": "Осмотреть капельницу."
+    },
+    {
+      "id": "ward_window",
+      "type": "window",
+      "position": [
+        -1.72,
+        1.35,
+        -0.95
+      ],
+      "radius": 0.85,
+      "setsFlags": [
+        "ward_window_seen"
+      ],
+      "choiceText": "Подойти к окну."
+    }
+  ],
+  "roomEnterEvents": [
+    {
+      "id": "ward_entered",
+      "setFlag": "entered_hospital_ward",
+      "once": true
+    }
+  ],
+  "sequences": [
+    {
+      "id": "hospital_ward_wakeup_sequence",
+      "autoStart": true,
+      "once": true,
+      "conditions": [
+        "entered_hospital_ward",
+        {
+          "flag": "ward_stood_up",
+          "not": true
+        }
+      ],
+      "steps": [
+        {
+          "time": 0,
+          "actions": [
+            {
+              "type": "lockPlayerControl",
+              "cameraMode": "BedLimitedLook",
+              "entityId": "bed_head_anchor"
+            },
+            {
+              "type": "setCameraMode",
+              "cameraMode": "BedLimitedLook",
+              "entityId": "bed_head_anchor"
+            },
+            {
+              "type": "fadeScreen",
+              "blackFade": 0.92,
+              "noiseIntensity": 0.08,
+              "duration": 0
+            },
+            {
+              "type": "setFlag",
+              "flag": "ward_wakeup_started"
+            }
+          ]
+        },
+        {
+          "time": 0.6,
+          "actions": [
+            {
+              "type": "fadeScreen",
+              "blackFade": 0.16,
+              "noiseIntensity": 0.03,
+              "duration": 3.2
+            }
+          ]
+        },
+        {
+          "time": 4.5,
+          "actions": [
+            {
+              "type": "setCameraMode",
+              "cameraMode": "BedLimitedLook",
+              "entityId": "bed_head_anchor"
+            },
+            {
+              "type": "setFlag",
+              "flag": "ward_awake"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stateFlags": [
+    "entered_hospital_ward",
+    "ward_wakeup_started",
+    "ward_awake",
+    "ward_stood_up",
+    "ward_patient_card_seen",
+    "ward_iv_seen",
+    "ward_window_seen"
+  ],
+  "debugNotes": [
+    "Night hospital ward after ambulance. Keep this as a separate room from office and ambulance content.",
+    "The ward runtime composition intentionally uses local clean OBJ props only. Heavy imported GLB references stay out of the playable room to preserve loading time and visual readability.",
+    "Primary read: patient wakes at the bed head, sees the headwall, monitor, IV stand, bedside table, curtain, window and locked corridor door without dense background clutter.",
+    "After the wakeup sequence, R exits the bed to the bed_stand spawn and returns normal player control."
+  ]
+}

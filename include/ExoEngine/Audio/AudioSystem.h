@@ -22,6 +22,7 @@ public:
     [[nodiscard]] bool available() const;
     [[nodiscard]] bool playOneShot(const std::filesystem::path& path, int loops = 0);
     [[nodiscard]] bool playMusic(const std::filesystem::path& path, int loops = -1);
+    void stopAllCues();
     void stopMusic();
     void setMasterVolume(float value);
     void setMusicVolume(float value);

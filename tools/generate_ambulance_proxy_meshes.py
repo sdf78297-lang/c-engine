@@ -146,22 +146,38 @@ def uvs_for_face(count: int) -> list[tuple[float, float]]:
 def write_materials() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     materials = {
-        "clinical_blue": (0.72, 0.88, 0.95),
-        "painted_metal": (0.78, 0.82, 0.86),
-        "dark_rubber": (0.05, 0.07, 0.08),
-        "screen_glass": (0.02, 0.18, 0.12),
-        "oxygen_green": (0.05, 0.55, 0.18),
-        "strap_red": (0.50, 0.03, 0.02),
-        "soft_white": (0.92, 0.95, 0.96),
+        "clinical_blue": ((0.56, 0.67, 0.72), (0.055, 0.060, 0.060), 22.0),
+        "painted_metal": ((0.66, 0.69, 0.69), (0.26, 0.28, 0.27), 70.0),
+        "dark_rubber": ((0.025, 0.029, 0.030), (0.012, 0.012, 0.012), 8.0),
+        "screen_glass": ((0.010, 0.055, 0.042), (0.50, 0.70, 0.58), 128.0),
+        "oxygen_green": ((0.055, 0.36, 0.16), (0.08, 0.11, 0.08), 28.0),
+        "strap_red": ((0.42, 0.018, 0.012), (0.035, 0.020, 0.018), 16.0),
+        "soft_white": ((0.86, 0.86, 0.82), (0.055, 0.055, 0.050), 24.0),
+        "abs_panel": ((0.78, 0.78, 0.72), (0.075, 0.075, 0.065), 30.0),
+        "abs_shadow": ((0.55, 0.57, 0.55), (0.050, 0.050, 0.048), 22.0),
+        "rubber_floor": ((0.075, 0.083, 0.083), (0.018, 0.018, 0.016), 10.0),
+        "ceiling_panel": ((0.80, 0.80, 0.74), (0.070, 0.070, 0.060), 28.0),
+        "cabinet_off_white": ((0.83, 0.84, 0.79), (0.080, 0.080, 0.070), 36.0),
+        "cabinet_glass": ((0.26, 0.34, 0.34), (0.35, 0.44, 0.40), 96.0),
+        "linen_off_white": ((0.88, 0.88, 0.83), (0.018, 0.017, 0.015), 8.0),
+        "blanket_desaturated_blue": ((0.35, 0.48, 0.55), (0.020, 0.020, 0.018), 9.0),
+        "stainless": ((0.62, 0.64, 0.63), (0.44, 0.46, 0.43), 112.0),
+        "monitor_green": ((0.06, 0.86, 0.34), (0.18, 0.40, 0.22), 82.0),
+        "label_blue": ((0.12, 0.28, 0.44), (0.035, 0.045, 0.055), 18.0),
+        "label_yellow": ((0.80, 0.62, 0.18), (0.045, 0.040, 0.025), 18.0),
+        "paper_label": ((0.78, 0.76, 0.66), (0.018, 0.017, 0.014), 9.0),
+        "amber_light": ((1.00, 0.76, 0.44), (0.18, 0.12, 0.06), 48.0),
+        "grime": ((0.11, 0.105, 0.090), (0.006, 0.006, 0.005), 6.0),
     }
     lines: list[str] = ["# Generated ambulance proxy material library"]
-    for name, color in materials.items():
+    for name, (color, specular, shininess) in materials.items():
         r, g, b = color
+        sr, sg, sb = specular
         lines.extend([
             f"newmtl {name}",
             f"Kd {r:.3f} {g:.3f} {b:.3f}",
-            "Ks 0.080 0.090 0.100",
-            "Ns 32.0",
+            f"Ks {sr:.3f} {sg:.3f} {sb:.3f}",
+            f"Ns {shininess:.1f}",
         ])
     (OUT / "ambulance_proxy_materials.mtl").write_text("\n".join(lines) + "\n", encoding="utf-8")
 

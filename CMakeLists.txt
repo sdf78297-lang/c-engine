@@ -134,6 +134,16 @@ if(EXO_BUILD_SANDBOX)
             COMMAND ${CMAKE_COMMAND} -E copy_directory "${EXO_ULTRALIGHT_SDK}/bin" "$<TARGET_FILE_DIR:ExoSandbox>"
         )
     endif()
+    if(WIN32)
+        add_executable(ExoSandboxWindowed WIN32 apps/sandbox/main.cpp)
+        target_link_libraries(ExoSandboxWindowed PRIVATE Exo::Engine)
+        set_target_properties(ExoSandboxWindowed PROPERTIES OUTPUT_NAME "exo_sandbox_windowed")
+        if(EXO_ENABLE_HTML_UI)
+            add_custom_command(TARGET ExoSandboxWindowed POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_directory "${EXO_ULTRALIGHT_SDK}/bin" "$<TARGET_FILE_DIR:ExoSandboxWindowed>"
+            )
+        endif()
+    endif()
 endif()
 
 if(EXO_BUILD_VALIDATOR)

@@ -24,33 +24,33 @@
       0.01
     ],
     "ambientColor": [
-      0.34,
-      0.43,
-      0.54
+      0.52,
+      0.50,
+      0.44
     ],
-    "ambientIntensity": 0.38,
+    "ambientIntensity": 0.31,
     "keyLightDirection": [
       -0.18,
       0.96,
       -0.08
     ],
     "keyLightColor": [
-      0.72,
-      0.84,
-      1
+      1.0,
+      0.93,
+      0.78
     ],
-    "keyLightIntensity": 0.44,
+    "keyLightIntensity": 0.32,
     "fogColor": [
-      0.014,
-      0.02,
-      0.03
+      0.020,
+      0.018,
+      0.014
     ],
-    "fogStart": 5.5,
-    "fogDensity": 0.014,
-    "exposure": 0.94,
-    "contrast": 1.16,
-    "saturation": 0.76,
-    "vignetteStrength": 0.3
+    "fogStart": 5.8,
+    "fogDensity": 0.010,
+    "exposure": 1.06,
+    "contrast": 1.13,
+    "saturation": 0.88,
+    "vignetteStrength": 0.22
   },
   "walkBounds": {
     "min": [
@@ -95,15 +95,15 @@
   ],
   "staticMeshes": [
     {
-      "name": "ambulance_clean_shell",
-      "meshAsset": "game/rooms/ambulance/ambulance_clean_shell.mesh",
-      "materialAsset": "game/rooms/ambulance/ambulance_clean_shell.material",
-      "meshSource": "assets/rooms/ambulance/clean/ambulance_clean_shell.obj",
+      "name": "ambulance_runtime_shell",
+      "meshAsset": "game/rooms/ambulance/ambulance_runtime_shell.mesh",
+      "materialAsset": "game/rooms/ambulance/ambulance_runtime_shell.material",
+      "meshSource": "assets/rooms/ambulance/clean/ambulance_runtime_shell.obj",
       "renderOverrides": {
         "colorTint": [
-          0.95,
+          1.0,
           0.98,
-          1
+          0.90
         ]
       },
       "transform": {
@@ -126,14 +126,14 @@
     },
     {
       "name": "patient_stretcher_modern",
-      "meshAsset": "game/rooms/ambulance/patient_stretcher_modern.mesh",
-      "materialAsset": "game/rooms/ambulance/patient_stretcher_modern.material",
-      "meshSource": "assets/rooms/ambulance/optimized/patient_stretcher_proxy.obj",
+      "meshAsset": "game/rooms/ambulance/patient_stretcher_runtime.mesh",
+      "materialAsset": "game/rooms/ambulance/patient_stretcher_runtime.material",
+      "meshSource": "assets/rooms/ambulance/clean/ambulance_patient_stretcher_runtime.obj",
       "renderOverrides": {
         "colorTint": [
-          0.98,
+          1.0,
           0.99,
-          1
+          0.94
         ]
       },
       "transform": {
@@ -156,21 +156,21 @@
     },
     {
       "name": "medical_cabinet",
-      "meshAsset": "game/rooms/ambulance/medical_cabinet.mesh",
-      "materialAsset": "game/rooms/ambulance/medical_cabinet.material",
-      "meshSource": "assets/rooms/ambulance/optimized/medical_cabinet_proxy.obj",
+      "meshAsset": "game/rooms/ambulance/medical_cabinet_runtime.mesh",
+      "materialAsset": "game/rooms/ambulance/medical_cabinet_runtime.material",
+      "meshSource": "assets/rooms/ambulance/clean/ambulance_medical_cabinet.obj",
       "renderOverrides": {
         "colorTint": [
-          0.92,
-          0.96,
-          1
+          1.0,
+          0.98,
+          0.90
         ]
       },
       "transform": {
         "position": [
-          -1.1,
-          0.82,
-          -1.42
+          -1.24,
+          0.96,
+          -1.36
         ],
         "rotation": [
           0,
@@ -178,29 +178,29 @@
           0
         ],
         "scale": [
-          0.28,
-          0.34,
-          0.28
+          0.62,
+          0.62,
+          0.62
         ]
       }
     },
     {
       "name": "medical_equipment_rack",
-      "meshAsset": "game/rooms/ambulance/medical_equipment.mesh",
-      "materialAsset": "game/rooms/ambulance/medical_equipment.material",
-      "meshSource": "assets/rooms/ambulance/optimized/medical_equipment_rack_proxy.obj",
+      "meshAsset": "game/rooms/ambulance/medical_equipment_runtime.mesh",
+      "materialAsset": "game/rooms/ambulance/medical_equipment_runtime.material",
+      "meshSource": "assets/rooms/ambulance/clean/ambulance_equipment_rack.obj",
       "renderOverrides": {
         "colorTint": [
-          0.86,
-          0.9,
-          0.96
+          0.98,
+          0.96,
+          0.90
         ]
       },
       "transform": {
         "position": [
-          -1.06,
-          0.5,
-          -2.08
+          -1.22,
+          0.88,
+          -2.02
         ],
         "rotation": [
           0,
@@ -208,22 +208,22 @@
           0
         ],
         "scale": [
-          0.24,
-          0.3,
-          0.24
+          0.5,
+          0.55,
+          0.5
         ]
       }
     },
     {
       "name": "patient_monitor",
-      "meshAsset": "game/rooms/ambulance/patient_monitor.mesh",
-      "materialAsset": "game/rooms/ambulance/patient_monitor.material",
-      "meshSource": "assets/rooms/ambulance/optimized/patient_monitor_proxy.obj",
+      "meshAsset": "game/rooms/ambulance/patient_monitor_runtime.mesh",
+      "materialAsset": "game/rooms/ambulance/patient_monitor_runtime.material",
+      "meshSource": "assets/rooms/ambulance/clean/ambulance_patient_monitor.obj",
       "renderOverrides": {
         "colorTint": [
-          0.78,
-          0.82,
-          0.86
+          0.90,
+          0.94,
+          0.88
         ],
         "emissiveColor": [
           0.15,
@@ -234,8 +234,8 @@
       },
       "transform": {
         "position": [
-          -1.02,
-          1.18,
+          -1.14,
+          1.22,
           0.72
         ],
         "rotation": [
@@ -244,9 +244,99 @@
           0
         ],
         "scale": [
-          0.24,
-          0.24,
-          0.24
+          0.46,
+          0.46,
+          0.46
+        ]
+      }
+    },
+    {
+      "name": "oxygen_cylinders",
+      "meshAsset": "game/rooms/ambulance/oxygen_cylinders_runtime.mesh",
+      "materialAsset": "game/rooms/ambulance/oxygen_cylinders_runtime.material",
+      "meshSource": "assets/rooms/ambulance/clean/ambulance_oxygen_cylinders.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.82,
+          0.98,
+          0.82
+        ]
+      },
+      "transform": {
+        "position": [
+          1.18,
+          0.96,
+          -1.42
+        ],
+        "rotation": [
+          0,
+          -1.5708,
+          0
+        ],
+        "scale": [
+          0.55,
+          0.58,
+          0.55
+        ]
+      }
+    },
+    {
+      "name": "medical_bag",
+      "meshAsset": "game/rooms/ambulance/medical_bag_runtime.mesh",
+      "materialAsset": "game/rooms/ambulance/medical_bag_runtime.material",
+      "meshSource": "assets/rooms/ambulance/clean/ambulance_medical_bag.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.88,
+          0.18,
+          0.16
+        ]
+      },
+      "transform": {
+        "position": [
+          0.82,
+          0.46,
+          -0.24
+        ],
+        "rotation": [
+          0,
+          -0.55,
+          0
+        ],
+        "scale": [
+          0.44,
+          0.44,
+          0.44
+        ]
+      }
+    },
+    {
+      "name": "iv_stand",
+      "meshAsset": "game/rooms/ambulance/iv_stand_runtime.mesh",
+      "materialAsset": "game/rooms/ambulance/iv_stand_runtime.material",
+      "meshSource": "assets/rooms/ambulance/clean/ambulance_iv_stand.obj",
+      "renderOverrides": {
+        "colorTint": [
+          0.96,
+          0.95,
+          0.90
+        ]
+      },
+      "transform": {
+        "position": [
+          0.62,
+          0.96,
+          1.12
+        ],
+        "rotation": [
+          0,
+          0.4,
+          0
+        ],
+        "scale": [
+          0.42,
+          0.86,
+          0.42
         ]
       }
     },
@@ -282,96 +372,6 @@
           0.74
         ]
       }
-    },
-    {
-      "name": "oxygen_cylinders",
-      "meshAsset": "game/rooms/ambulance/oxygen_cylinders.mesh",
-      "materialAsset": "game/rooms/ambulance/oxygen_cylinders.material",
-      "meshSource": "assets/rooms/ambulance/optimized/oxygen_cylinders_proxy.obj",
-      "renderOverrides": {
-        "colorTint": [
-          0.78,
-          0.95,
-          0.82
-        ]
-      },
-      "transform": {
-        "position": [
-          1.05,
-          0.58,
-          -1.48
-        ],
-        "rotation": [
-          0,
-          -1.5708,
-          0
-        ],
-        "scale": [
-          0.28,
-          0.32,
-          0.28
-        ]
-      }
-    },
-    {
-      "name": "medical_bag",
-      "meshAsset": "game/rooms/ambulance/medical_bag.mesh",
-      "materialAsset": "game/rooms/ambulance/medical_bag.material",
-      "meshSource": "assets/rooms/ambulance/optimized/medical_bag_proxy.obj",
-      "renderOverrides": {
-        "colorTint": [
-          0.88,
-          0.18,
-          0.16
-        ]
-      },
-      "transform": {
-        "position": [
-          0.78,
-          0.3,
-          -0.28
-        ],
-        "rotation": [
-          0,
-          -0.55,
-          0
-        ],
-        "scale": [
-          0.22,
-          0.22,
-          0.22
-        ]
-      }
-    },
-    {
-      "name": "iv_stand",
-      "meshAsset": "game/rooms/ambulance/iv_stand.mesh",
-      "materialAsset": "game/rooms/ambulance/iv_stand.material",
-      "meshSource": "assets/rooms/ambulance/optimized/iv_stand_proxy.obj",
-      "renderOverrides": {
-        "colorTint": [
-          0.94,
-          0.96,
-          0.98
-        ]
-      },
-      "transform": {
-        "position": [
-          0.62,
-          0.82,
-          1.12
-        ],
-        "rotation": [
-          0,
-          0.4,
-          0
-        ],
-        "scale": [
-          0.18,
-          0.75,
-          0.18
-        ]
-      }
     }
   ],
   "pointLights": [
@@ -382,12 +382,12 @@
         0.88
       ],
       "color": [
-        0.68,
+        1.0,
         0.82,
-        1
+        0.58
       ],
-      "radius": 3.35,
-      "intensity": 0.86
+      "radius": 2.85,
+      "intensity": 0.82
     },
     {
       "position": [
@@ -396,12 +396,12 @@
         -1.82
       ],
       "color": [
-        0.55,
-        0.72,
-        1
+        0.78,
+        0.88,
+        1.0
       ],
-      "radius": 2.65,
-      "intensity": 0.42
+      "radius": 2.25,
+      "intensity": 0.34
     },
     {
       "position": [
@@ -410,12 +410,12 @@
         0.64
       ],
       "color": [
-        0.14,
-        1,
-        0.4
+        0.05,
+        0.92,
+        0.30
       ],
-      "radius": 1.05,
-      "intensity": 0.58
+      "radius": 0.82,
+      "intensity": 0.52
     },
     {
       "position": [
@@ -424,26 +424,26 @@
         -1.35
       ],
       "color": [
-        0.16,
         0.34,
-        1
+        0.42,
+        1.0
       ],
-      "radius": 1.9,
-      "intensity": 0.32
+      "radius": 1.25,
+      "intensity": 0.16
     },
     {
       "position": [
-        0,
-        1.15,
-        -3.05
+        0.68,
+        0.72,
+        -0.16
       ],
       "color": [
-        0.42,
-        0.52,
-        0.74
+        1.0,
+        0.34,
+        0.18
       ],
-      "radius": 1.75,
-      "intensity": 0.1
+      "radius": 0.72,
+      "intensity": 0.10
     }
   ],
   "fixedCameras": [
@@ -463,18 +463,18 @@
       },
       "position": [
         0,
-        0.98,
-        0.86
+        1.55,
+        2.18
       ],
       "target": [
         0,
-        0.8,
-        -0.78
+        0.84,
+        -0.75
       ],
-      "fovDeg": 62,
-      "near": 0.02,
-      "far": 80,
-      "priority": 50,
+      "fovDeg": 72,
+      "near": 0.08,
+      "far": 12,
+      "priority": 90,
       "blendSeconds": 0
     },
     {
@@ -492,19 +492,19 @@
         ]
       },
       "position": [
-        1.45,
-        1.22,
-        1.05
+        0,
+        1.62,
+        -2.85
       ],
       "target": [
-        -0.55,
-        0.86,
-        -0.55
+        0.1,
+        0.78,
+        0.38
       ],
-      "fovDeg": 54,
-      "near": 0.03,
-      "far": 80,
-      "priority": 40,
+      "fovDeg": 70,
+      "near": 0.08,
+      "far": 12,
+      "priority": 80,
       "blendSeconds": 0.15
     }
   ],
@@ -766,12 +766,12 @@
           "actions": [
             {
               "type": "lockPlayerControl",
-              "mode": "lying",
+              "mode": "fixed_cinematic",
               "entityId": "stretcher_head_anchor"
             },
             {
               "type": "setCameraMode",
-              "cameraMode": "LyingLimitedLook",
+              "cameraMode": "FixedCinematic",
               "entityId": "stretcher_head_anchor"
             },
             {
@@ -928,7 +928,12 @@
             },
             {
               "type": "lockPlayerControl",
-              "mode": "limited",
+              "mode": "fixed_cinematic",
+              "entityId": "stretcher_head_anchor"
+            },
+            {
+              "type": "setCameraMode",
+              "cameraMode": "FixedCinematic",
               "entityId": "stretcher_head_anchor"
             },
             {
@@ -1138,11 +1143,28 @@
               "entityId": "nurse_actor",
               "cueId": "nurse_idle_in_vehicle",
               "duration": 120,
-              "intensity": 1.0
+              "intensity": 1
             },
             {
               "type": "clearEntityTransform",
               "entityId": "nurse_actor"
+            }
+          ]
+        },
+        {
+          "time": 22.2,
+          "actions": [
+            {
+              "type": "setFlag",
+              "flag": "entered_hospital_ward"
+            },
+            {
+              "type": "stopAudio"
+            },
+            {
+              "type": "transitionRoom",
+              "roomId": "hospital_patient_ward",
+              "spawnId": "bed_wakeup"
             }
           ]
         }
@@ -1158,13 +1180,14 @@
     "ambulance_awake",
     "nurse_warned_brain_bleed",
     "ambulance_consciousness_fading",
-    "nurse_losing_him_played"
+    "nurse_losing_him_played",
+    "entered_hospital_ward"
   ],
   "debugNotes": [
-    "This room renders through staticMeshes. Do not replace it with an unsupported entities-only format.",
-    "The active meshSource paths use optimized gameplay proxy OBJ files for heavy ambulance equipment; imported Meshy GLB files remain as high-poly source references.",
-    "The stretcher uses patient_stretcher_modern.glb from Meshy at near-real scale; avoid stretching it in Z because the lying camera is close to the pillow.",
-    "patient_stretcher_modern is rotated 180 degrees because the generated pillow is on the opposite side of the GLB local Z axis.",
-    "nurse_actor uses nurse_actor_rigged.glb with generated humanoid bones and first-pass clips; replace with a polished production rig when available."
+    "Ambulance runtime keeps the full readable object set: shell, clean OBJ stretcher, cabinet, equipment rack, patient monitor, oxygen cylinders, medical bag, IV stand and nurse actor.",
+    "Heavy imported Meshy GLB files remain source/high-poly references; the game loads clean runtime OBJ props to avoid transition stalls and frame spikes.",
+    "The monitor stays as its own mesh so green emissive medical feedback remains readable from the stretcher camera.",
+    "The ambulance ride uses FixedCinematic camera mode so the player watches a staged in-vehicle scene instead of driving the view during the heaviest sequence.",
+    "nurse_actor still uses the rigged GLB because it carries animation clips; renderer skinning is GPU-driven to keep the ambulance sequence responsive."
   ]
 }

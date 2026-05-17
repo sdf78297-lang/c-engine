@@ -2,7 +2,9 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <initializer_list>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -63,6 +65,7 @@ private:
         SeatedComputer,
         CollapseCutscene,
         LyingLimitedLook,
+        FixedCinematic,
     };
 
     int runHeadless();
@@ -73,7 +76,12 @@ private:
     [[nodiscard]] RenderView makeCurrentView() const;
     void updatePlayer(float deltaSeconds, float mouseDeltaX, float mouseDeltaY);
     void updateLyingLimitedLook(float deltaSeconds, float mouseDeltaX, float mouseDeltaY);
+    [[nodiscard]] bool hospitalBedStandPromptAvailable() const;
+    void logHospitalBedStandBlocked() const;
+    [[nodiscard]] bool tryStandFromHospitalBed();
     void reloadSceneMeshes();
+    void preloadLinkedRoomMeshes();
+    void preloadRoomMeshes(const std::string& roomId, const std::string& spawnId);
     void activateCurrentFocus();
     void beginWorkstationEntrySequence();
     void beginWorkstationExitSequence();
@@ -85,10 +93,15 @@ private:
     [[nodiscard]] ScreenOverlay currentScreenOverlay() const;
     void armCollapseAfterWorkstation();
     void skipToCollapseShortcut();
+    void debugTeleportToRoom(
+        const std::string& roomId,
+        const std::string& spawnId,
+        std::initializer_list<std::string_view> flags);
     void beginCollapseDizzy();
     void setCollapseCameraStage(CollapseSequenceState stage);
     void resetCollapseRuntime();
-    void enterLyingLimitedLook(const std::string& anchorId, bool inputEnabled);
+    void enterLyingLimitedLook(const std::string& anchorId, bool inputEnabled, float basePitchRadians = 0.0f);
+    void enterFixedCinematicCamera();
     [[nodiscard]] bool lyingLimitedLookActive() const;
     [[nodiscard]] Vec3 roomAnchorPosition(const std::string& anchorId, Vec3 fallback) const;
     void updateCollapseSequence(float deltaSeconds);
@@ -185,6 +198,7 @@ private:
     float sequenceFadeTimer_ = 0.0f;
     std::unordered_set<std::string> sequenceHiddenEntities_;
     std::unordered_map<std::string, ActiveCharacterPerformance> characterPerformances_;
+    std::unordered_set<std::string> preloadedRoomMeshKeys_;
 };
 
 } // namespace Exo

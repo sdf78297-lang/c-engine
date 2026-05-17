@@ -1,4 +1,5 @@
 build/
+build_*/
 out/
 local_deps/
 .vs/
