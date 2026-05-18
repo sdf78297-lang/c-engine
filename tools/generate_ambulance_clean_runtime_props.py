@@ -63,8 +63,8 @@ def runtime_shell() -> None:
         w.box(-1.255, 1.22, z, 0.035, 0.64, 0.42, "cabinet_glass")
         w.box(-1.278, 0.88, z, 0.025, 0.06, 0.34, "stainless")
     w.box(-1.06, 0.36, 0.40, 0.34, 0.30, 3.60, "abs_shadow")
-    w.box(-1.04, 0.54, 0.40, 0.38, 0.08, 3.70, "blanket_desaturated_blue")
-    w.box(-1.02, 0.71, 0.40, 0.055, 0.30, 3.66, "stainless")
+    w.rounded_box_y(-1.04, 0.54, 0.40, 0.38, 0.08, 3.70, 0.045, "blanket_desaturated_blue", 12)
+    w.tube_between((-1.02, 0.71, -1.42), (-1.02, 0.71, 2.22), 0.028, "stainless", 12)
 
     # Right-side equipment panels, ports and rear-door shapes.
     w.box(1.19, 1.18, 0.24, 0.12, 0.78, 2.32, "cabinet_off_white")
@@ -98,16 +98,16 @@ def runtime_shell() -> None:
 
 def medical_cabinet() -> None:
     w = writer("ambulance_medical_cabinet")
-    w.box(0.0, 0.0, 0.0, 1.70, 1.62, 0.52, "cabinet_off_white")
+    w.rounded_box_z(0.0, 0.0, 0.0, 1.70, 1.62, 0.52, 0.075, "cabinet_off_white", 12)
     for x in (-0.43, 0.43):
-        w.box(x, 0.02, -0.30, 0.76, 1.48, 0.045, "soft_white")
-        w.box(x + 0.25, 0.02, -0.34, 0.035, 0.92, 0.05, "stainless")
-        w.box(x - 0.18, 0.44, -0.35, 0.22, 0.12, 0.035, "paper_label")
+        w.rounded_box_z(x, 0.02, -0.30, 0.76, 1.48, 0.045, 0.050, "soft_white", 12)
+        w.tube_between((x + 0.25, -0.44, -0.36), (x + 0.25, 0.48, -0.36), 0.020, "stainless", 12)
+        w.rounded_box_z(x - 0.18, 0.44, -0.35, 0.22, 0.12, 0.035, 0.018, "paper_label", 8)
     for y in (-0.46, 0.0, 0.46):
         w.box(0.0, y, -0.35, 1.56, 0.035, 0.08, "stainless")
-    w.box(0.0, -0.84, 0.02, 1.82, 0.12, 0.62, "dark_rubber")
-    w.box(-0.62, 0.64, -0.35, 0.28, 0.08, 0.035, "strap_red")
-    w.box(-0.62, 0.54, -0.35, 0.18, 0.06, 0.035, "screen_glass")
+    w.rounded_box_y(0.0, -0.84, 0.02, 1.82, 0.12, 0.62, 0.060, "dark_rubber", 12)
+    w.rounded_box_z(-0.62, 0.64, -0.35, 0.28, 0.08, 0.035, 0.020, "strap_red", 8)
+    w.rounded_box_z(-0.62, 0.54, -0.35, 0.18, 0.06, 0.035, 0.016, "screen_glass", 8)
     for x in (-0.66, -0.24, 0.24, 0.66):
         w.box(x, 0.72, -0.355, 0.18, 0.055, 0.030, "tape_white")
         w.box(x, -0.70, -0.355, 0.16, 0.045, 0.030, "label_yellow")
@@ -117,10 +117,10 @@ def medical_cabinet() -> None:
 
 def patient_stretcher() -> None:
     w = writer("ambulance_patient_stretcher_runtime")
-    w.box(0.0, 0.08, 0.0, 0.78, 0.11, 1.86, "stainless")
-    w.box(0.0, 0.23, -0.10, 0.70, 0.14, 1.56, "linen_off_white")
-    w.box(0.0, 0.32, -0.26, 0.72, 0.12, 1.05, "blanket_desaturated_blue")
-    w.box(0.0, 0.34, 0.67, 0.52, 0.11, 0.36, "linen_off_white")
+    w.rounded_box_y(0.0, 0.08, 0.0, 0.78, 0.11, 1.86, 0.055, "stainless", 12)
+    w.rounded_box_y(0.0, 0.23, -0.10, 0.70, 0.14, 1.56, 0.070, "linen_off_white", 14)
+    w.rounded_box_y(0.0, 0.32, -0.26, 0.72, 0.12, 1.05, 0.060, "blanket_desaturated_blue", 14)
+    w.rounded_box_y(0.0, 0.34, 0.67, 0.52, 0.11, 0.36, 0.055, "linen_off_white", 12)
     for z in (-0.72, -0.44, -0.16, 0.12):
         w.box(0.0, 0.39, z, 0.68, 0.018, 0.024, "abs_shadow")
     for z in (-0.42, 0.26):
@@ -131,13 +131,13 @@ def patient_stretcher() -> None:
     w.box(0.32, 0.455, 0.72, 0.18, 0.025, 0.11, "paper_label")
     w.box(0.32, 0.473, 0.72, 0.12, 0.016, 0.022, "label_blue")
     for x in (-0.47, 0.47):
-        w.box(x, 0.35, 0.0, 0.035, 0.12, 1.76, "painted_metal")
-        w.box(x, 0.50, 0.0, 0.035, 0.035, 1.68, "painted_metal")
+        w.tube_between((x, 0.35, -0.88), (x, 0.35, 0.88), 0.022, "painted_metal", 12)
+        w.tube_between((x, 0.50, -0.84), (x, 0.50, 0.84), 0.020, "painted_metal", 12)
         for z in (-0.65, 0.65):
-            w.box(x, -0.34, z, 0.055, 0.74, 0.055, "painted_metal")
+            w.tube_between((x, 0.02, z), (x, -0.70, z), 0.026, "painted_metal", 12)
             w.cylinder_y(x * 0.78, -0.76, z, 0.085, 0.050, "dark_rubber", 16)
     for z in (-0.78, 0.78):
-        w.box(0.0, 0.26, z, 0.92, 0.045, 0.045, "painted_metal")
+        w.tube_between((-0.46, 0.26, z), (0.46, 0.26, z), 0.023, "painted_metal", 12)
     w.write("ambulance_patient_stretcher_runtime.obj")
 
 
@@ -145,33 +145,52 @@ def equipment_rack() -> None:
     w = writer("ambulance_equipment_rack")
     for x in (-0.78, 0.78):
         for z in (-0.43, 0.43):
-            w.box(x, 0.0, z, 0.06, 1.18, 0.06, "painted_metal")
+            w.tube_between((x, -0.59, z), (x, 0.59, z), 0.030, "painted_metal", 12)
     for y in (-0.48, 0.0, 0.48):
-        w.box(0.0, y, 0.0, 1.65, 0.05, 0.88, "painted_metal")
-    w.box(-0.34, 0.33, -0.18, 0.70, 0.38, 0.36, "soft_white")
-    w.box(0.43, 0.30, -0.19, 0.46, 0.32, 0.32, "screen_glass")
-    w.box(0.43, 0.30, -0.36, 0.34, 0.20, 0.035, "screen_glass")
+        w.tube_between((-0.82, y, -0.43), (0.82, y, -0.43), 0.026, "painted_metal", 12)
+        w.tube_between((-0.82, y, 0.43), (0.82, y, 0.43), 0.026, "painted_metal", 12)
+    w.rounded_box_z(-0.34, 0.33, -0.18, 0.70, 0.38, 0.36, 0.045, "soft_white", 12)
+    w.rounded_box_z(0.43, 0.30, -0.19, 0.46, 0.32, 0.32, 0.040, "screen_glass", 12)
+    w.rounded_box_z(0.43, 0.30, -0.36, 0.34, 0.20, 0.035, 0.025, "screen_glass", 10)
     w.box(0.30, 0.34, -0.385, 0.16, 0.018, 0.018, "monitor_green")
     w.box(0.48, 0.26, -0.385, 0.12, 0.018, 0.018, "monitor_green")
     for x in (0.25, 0.40, 0.55):
         w.box(x, 0.08, -0.37, 0.045, 0.045, 0.035, "oxygen_green")
     for x in (-0.58, -0.44, -0.30):
         w.box(x, 0.05, -0.385, 0.040, 0.040, 0.028, "warning_orange")
-    w.box(0.08, 0.14, -0.392, 0.72, 0.018, 0.018, "cable_black")
-    w.box(-0.28, -0.04, -0.392, 0.018, 0.34, 0.018, "cable_black")
-    w.box(-0.44, -0.20, -0.392, 0.34, 0.018, 0.018, "cable_black")
-    w.box(-0.36, -0.26, -0.10, 0.58, 0.28, 0.42, "painted_metal")
-    w.box(0.35, -0.30, -0.08, 0.48, 0.22, 0.36, "soft_white")
+    w.cable([(0.42, 0.12, -0.392), (0.08, 0.14, -0.392), (-0.28, -0.04, -0.392), (-0.44, -0.20, -0.392)], 0.012, "cable_black", 7)
+    w.rounded_box_z(-0.36, -0.26, -0.10, 0.58, 0.28, 0.42, 0.038, "painted_metal", 10)
+    w.rounded_box_z(0.35, -0.30, -0.08, 0.48, 0.22, 0.36, 0.034, "soft_white", 10)
     w.cylinder_y(-0.05, -0.03, -0.43, 0.12, 0.035, "dark_rubber", 18)
     w.write("ambulance_equipment_rack.obj")
+
+
+def patient_monitor() -> None:
+    w = writer("ambulance_patient_monitor")
+    w.rounded_box_z(0.0, 0.22, -0.03, 1.28, 0.68, 0.20, 0.075, "painted_metal", 14)
+    w.rounded_box_z(0.0, 0.25, -0.155, 1.04, 0.45, 0.035, 0.050, "screen_glass", 14)
+    w.rounded_box_z(0.0, -0.30, 0.02, 0.14, 0.72, 0.12, 0.035, "painted_metal", 10)
+    w.rounded_box_y(0.0, -0.72, 0.02, 0.68, 0.09, 0.42, 0.055, "dark_rubber", 12)
+    w.tube_between((-0.36, -0.08, -0.30), (0.36, -0.08, -0.30), 0.030, "stainless", 12)
+    for x in (0.30, 0.43, 0.56):
+        w.rounded_box_z(x, -0.02, -0.175, 0.065, 0.065, 0.020, 0.015, "oxygen_green", 8)
+    for x, mat in ((-0.44, "warning_orange"), (-0.32, "label_yellow"), (-0.20, "monitor_green")):
+        w.rounded_box_z(x, -0.03, -0.176, 0.070, 0.040, 0.018, 0.012, mat, 8)
+    for y, sx in ((0.36, 0.70), (0.29, 0.58), (0.18, 0.78)):
+        w.rounded_box_z(-0.08, y, -0.178, sx, 0.018, 0.012, 0.006, "monitor_green", 6)
+    w.rounded_box_z(-0.42, 0.01, -0.176, 0.18, 0.030, 0.014, 0.008, "label_blue", 6)
+    w.rounded_box_z(0.40, 0.49, -0.176, 0.22, 0.040, 0.014, 0.010, "paper_label", 6)
+    w.cable([(0.50, 0.02, 0.09), (0.68, -0.10, 0.18), (0.78, -0.34, 0.16), (0.58, -0.53, 0.04)], 0.015, "cable_black", 7)
+    w.cable([(-0.48, 0.02, 0.08), (-0.64, -0.08, 0.15), (-0.70, -0.24, 0.05), (-0.38, -0.36, -0.10)], 0.012, "cable_black", 7)
+    w.write("ambulance_patient_monitor.obj")
 
 
 def oxygen_cylinders() -> None:
     w = writer("ambulance_oxygen_cylinders")
     for x in (-0.30, 0.30):
         w.cylinder_y(x, 0.0, 0.0, 0.19, 1.58, "oxygen_green", 24)
-        w.box(x, 0.84, 0.0, 0.22, 0.10, 0.22, "painted_metal")
-        w.box(x, 0.93, 0.0, 0.13, 0.08, 0.13, "painted_metal")
+        w.rounded_box_y(x, 0.84, 0.0, 0.22, 0.10, 0.22, 0.050, "painted_metal", 12)
+        w.cylinder_y(x, 0.93, 0.0, 0.070, 0.08, "painted_metal", 14)
     for y in (-0.02, 0.42):
         w.box(0.0, y, -0.22, 0.96, 0.07, 0.06, "painted_metal")
         w.box(0.0, y, -0.29, 0.88, 0.05, 0.05, "dark_rubber")
@@ -180,17 +199,18 @@ def oxygen_cylinders() -> None:
         w.box(x, 0.48, -0.205, 0.22, 0.055, 0.025, "label_blue")
     w.box(-0.30, 0.12, -0.205, 0.22, 0.18, 0.025, "paper_label")
     w.box(0.30, 0.12, -0.205, 0.22, 0.18, 0.025, "paper_label")
-    w.box(0.0, 0.0, 0.25, 0.86, 1.70, 0.08, "painted_metal")
-    w.box(0.0, -0.86, 0.0, 0.90, 0.10, 0.52, "dark_rubber")
+    w.tube_between((-0.43, -0.78, 0.25), (-0.43, 0.80, 0.25), 0.035, "painted_metal", 12)
+    w.tube_between((0.43, -0.78, 0.25), (0.43, 0.80, 0.25), 0.035, "painted_metal", 12)
+    w.rounded_box_y(0.0, -0.86, 0.0, 0.90, 0.10, 0.52, 0.055, "dark_rubber", 12)
     w.write("ambulance_oxygen_cylinders.obj")
 
 
 def medical_bag() -> None:
     w = writer("ambulance_medical_bag")
-    w.box(0.0, -0.12, 0.0, 1.55, 0.78, 0.84, "strap_red")
-    w.box(0.0, 0.30, 0.0, 1.40, 0.12, 0.72, "strap_red")
-    w.box(0.0, 0.45, -0.02, 0.80, 0.12, 0.14, "dark_rubber")
-    w.box(0.0, -0.10, -0.46, 1.68, 0.08, 0.08, "dark_rubber")
+    w.rounded_box_y(0.0, -0.12, 0.0, 1.55, 0.78, 0.84, 0.150, "strap_red", 14)
+    w.rounded_box_y(0.0, 0.30, 0.0, 1.40, 0.12, 0.72, 0.070, "strap_red", 12)
+    w.tube_between((-0.40, 0.45, -0.02), (0.40, 0.45, -0.02), 0.060, "dark_rubber", 12)
+    w.tube_between((-0.84, -0.10, -0.46), (0.84, -0.10, -0.46), 0.040, "dark_rubber", 12)
     w.box(-0.38, -0.10, -0.50, 0.10, 0.86, 0.08, "dark_rubber")
     w.box(0.38, -0.10, -0.50, 0.10, 0.86, 0.08, "dark_rubber")
     w.box(0.0, -0.12, -0.91, 0.44, 0.10, 0.035, "soft_white")
@@ -205,13 +225,12 @@ def medical_bag() -> None:
 def iv_stand() -> None:
     w = writer("ambulance_iv_stand")
     w.cylinder_y(0.0, 0.0, 0.0, 0.025, 1.74, "painted_metal", 16)
-    w.box(0.0, 0.90, 0.0, 0.55, 0.035, 0.035, "painted_metal")
-    w.box(-0.26, 0.82, 0.0, 0.035, 0.18, 0.035, "painted_metal")
-    w.box(0.26, 0.82, 0.0, 0.035, 0.18, 0.035, "painted_metal")
-    w.box(-0.24, 0.54, 0.0, 0.18, 0.36, 0.035, "soft_white")
-    w.box(-0.24, 0.34, 0.0, 0.035, 0.20, 0.025, "painted_metal")
-    w.box(-0.24, 0.16, 0.0, 0.018, 0.40, 0.018, "cable_black")
-    w.box(-0.10, -0.03, 0.0, 0.30, 0.016, 0.018, "cable_black")
+    w.tube_between((-0.28, 0.90, 0.0), (0.28, 0.90, 0.0), 0.018, "painted_metal", 10)
+    w.tube_between((-0.26, 0.90, 0.0), (-0.26, 0.74, 0.0), 0.016, "painted_metal", 10)
+    w.tube_between((0.26, 0.90, 0.0), (0.26, 0.74, 0.0), 0.016, "painted_metal", 10)
+    w.rounded_box_z(-0.24, 0.54, 0.0, 0.18, 0.36, 0.035, 0.026, "soft_white", 8)
+    w.tube_between((-0.24, 0.44, 0.0), (-0.24, 0.24, 0.0), 0.013, "painted_metal", 8)
+    w.cable([(-0.24, 0.26, 0.0), (-0.24, 0.16, 0.0), (-0.10, -0.03, 0.0), (0.06, -0.05, 0.0)], 0.010, "cable_black", 7)
     for angle in (0.0, math.tau / 3.0, 2.0 * math.tau / 3.0):
         x = math.cos(angle) * 0.23
         z = math.sin(angle) * 0.23
@@ -227,6 +246,7 @@ def main() -> None:
     patient_stretcher()
     medical_cabinet()
     equipment_rack()
+    patient_monitor()
     oxygen_cylinders()
     medical_bag()
     iv_stand()

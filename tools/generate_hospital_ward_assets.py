@@ -93,6 +93,76 @@ class ObjWriter:
         self.face(material, tuple(reversed(bottom)))
         self.face(material, tuple(top))
 
+    def tube_between(
+        self,
+        start: tuple[float, float, float],
+        end: tuple[float, float, float],
+        radius: float,
+        material: str,
+        sides: int = 8,
+        capped: bool = True,
+    ) -> None:
+        sx, sy, sz = start
+        ex, ey, ez = end
+        ax, ay, az = ex - sx, ey - sy, ez - sz
+        length = math.sqrt(ax * ax + ay * ay + az * az)
+        if length <= 1.0e-6:
+            return
+        ax, ay, az = ax / length, ay / length, az / length
+        if abs(ay) < 0.92:
+            rx, ry, rz = -az, 0.0, ax
+        else:
+            rx, ry, rz = 1.0, 0.0, 0.0
+        rlen = math.sqrt(rx * rx + ry * ry + rz * rz)
+        rx, ry, rz = rx / rlen, ry / rlen, rz / rlen
+        ux = ay * rz - az * ry
+        uy = az * rx - ax * rz
+        uz = ax * ry - ay * rx
+
+        start_ring: list[int] = []
+        end_ring: list[int] = []
+        for i in range(sides):
+            a = math.tau * i / sides
+            ca = math.cos(a) * radius
+            sa = math.sin(a) * radius
+            ox = rx * ca + ux * sa
+            oy = ry * ca + uy * sa
+            oz = rz * ca + uz * sa
+            start_ring.append(self.vertex(sx + ox, sy + oy, sz + oz))
+            end_ring.append(self.vertex(ex + ox, ey + oy, ez + oz))
+        for i in range(sides):
+            self.face(material, (start_ring[i], start_ring[(i + 1) % sides], end_ring[(i + 1) % sides], end_ring[i]))
+        if capped:
+            self.face(material, tuple(reversed(start_ring)))
+            self.face(material, tuple(end_ring))
+
+    def rounded_box_y(
+        self,
+        cx: float,
+        cy: float,
+        cz: float,
+        sx: float,
+        sy: float,
+        sz: float,
+        radius: float,
+        material: str,
+        sides: int = 8,
+    ) -> None:
+        radius = min(radius, sx * 0.45, sz * 0.45)
+        core_x = max(0.001, sx - radius * 2.0)
+        core_z = max(0.001, sz - radius * 2.0)
+        self.box(cx, cy, cz, core_x, sy, sz, material)
+        self.box(cx, cy, cz, sx, sy, core_z, material)
+        x0, x1 = cx - sx * 0.5 + radius, cx + sx * 0.5 - radius
+        z0, z1 = cz - sz * 0.5 + radius, cz + sz * 0.5 - radius
+        for x in (x0, x1):
+            for z in (z0, z1):
+                self.cylinder_y(x, cy, z, radius, sy, material, sides)
+
+    def cable(self, points: list[tuple[float, float, float]], radius: float, material: str, sides: int = 7) -> None:
+        for a, b in zip(points, points[1:]):
+            self.tube_between(a, b, radius, material, sides, capped=True)
+
     def write(self, filename: str) -> None:
         OUT.mkdir(parents=True, exist_ok=True)
         lines = [
@@ -219,9 +289,11 @@ def shell() -> None:
     w.box(0.0, 0.11, 2.64, 4.18, 0.14, 0.06, "wall_trim")
     w.box(-2.14, 0.11, 0.0, 0.06, 0.14, 5.12, "wall_trim")
     w.box(2.14, 0.11, 0.0, 0.06, 0.14, 5.12, "wall_trim")
-    w.box(0.0, 0.86, -2.635, 4.05, 0.10, 0.045, "rail_bumper")
-    w.box(-2.135, 0.86, 0.0, 0.045, 0.10, 5.00, "rail_bumper")
-    w.box(2.135, 0.86, -0.42, 0.045, 0.10, 4.12, "rail_bumper")
+    w.tube_between((-2.03, 0.86, -2.635), (2.03, 0.86, -2.635), 0.042, "rail_bumper", 10)
+    w.tube_between((-2.135, 0.86, -2.50), (-2.135, 0.86, 2.50), 0.042, "rail_bumper", 10)
+    w.tube_between((2.135, 0.86, -2.48), (2.135, 0.86, 1.64), 0.042, "rail_bumper", 10)
+    for x, z in ((-2.15, -2.62), (2.15, -2.62), (-2.15, 2.62), (2.15, 2.62)):
+        w.tube_between((x, 0.10, z), (x, 2.46, z), 0.028, "wall_trim", 8)
     w.box(0.0, 0.28, -2.638, 4.08, 0.09, 0.035, "wall_stain")
     w.box(-2.138, 0.32, 0.68, 0.035, 0.10, 1.20, "wall_stain")
     w.box(0.42, 0.012, -0.30, 1.10, 0.018, 0.15, "vinyl_scuff")
@@ -230,12 +302,12 @@ def shell() -> None:
     for z in (-1.86, -0.92, 0.18, 1.26):
         w.box(0.0, 0.018, z, 3.65, 0.016, 0.030, "old_bruise")
     w.box(-2.23, 1.52, -0.75, 0.035, 0.92, 1.32, "dark_glass")
-    w.box(-2.25, 1.52, -0.75, 0.08, 1.08, 1.48, "metal")
+    w.rounded_box_y(-2.25, 1.52, -0.75, 0.08, 1.08, 1.48, 0.035, "metal", 8)
     w.box(-2.28, 1.52, -0.75, 0.03, 0.84, 1.20, "dark_glass")
     w.box(-2.17, 0.92, -0.75, 0.16, 0.08, 1.52, "metal")
     w.box(-2.17, 1.52, -0.75, 0.08, 0.05, 1.26, "metal")
     w.box(-2.17, 1.52, -0.75, 0.08, 0.88, 0.035, "metal")
-    w.box(0.0, 2.46, -0.15, 1.40, 0.06, 0.22, "metal")
+    w.rounded_box_y(0.0, 2.46, -0.15, 1.40, 0.06, 0.22, 0.045, "metal", 8)
     w.box(-1.70, 1.30, -2.63, 0.52, 0.42, 0.06, "paper")
     w.box(-1.70, 1.18, -2.66, 0.38, 0.026, 0.020, "warning_red")
     w.box(-1.92, 0.98, -2.64, 0.34, 0.22, 0.030, "outlet_white")
@@ -249,10 +321,10 @@ def shell() -> None:
 
 def bed() -> None:
     w = ObjWriter("hospital_bed")
-    w.box(0.0, 0.54, 0.0, 1.12, 0.12, 2.20, "metal")
-    w.box(0.0, 0.64, 0.0, 1.02, 0.12, 2.04, "linen_shadow")
-    w.box(0.0, 0.75, 0.08, 0.98, 0.18, 1.82, "bed_sheet")
-    w.box(0.0, 0.88, -0.42, 0.92, 0.10, 1.04, "blanket")
+    w.rounded_box_y(0.0, 0.54, 0.0, 1.12, 0.12, 2.20, 0.090, "metal", 10)
+    w.rounded_box_y(0.0, 0.64, 0.0, 1.02, 0.12, 2.04, 0.075, "linen_shadow", 10)
+    w.rounded_box_y(0.0, 0.75, 0.08, 0.98, 0.18, 1.82, 0.105, "bed_sheet", 10)
+    w.rounded_box_y(0.0, 0.88, -0.42, 0.92, 0.10, 1.04, 0.080, "blanket", 10)
     w.box(0.0, 0.95, 0.05, 0.88, 0.034, 0.060, "linen_shadow")
     w.box(-0.26, 0.955, -0.18, 0.035, 0.030, 1.10, "linen_shadow")
     w.box(0.03, 0.962, -0.20, 0.030, 0.026, 1.00, "linen_shadow")
@@ -263,20 +335,21 @@ def bed() -> None:
         w.box(0.0, 1.015, z, 1.04, 0.024, 0.046, "tape")
         w.box(-0.52, 1.030, z, 0.055, 0.034, 0.064, "metal")
     w.box(0.28, 1.018, -0.80, 0.20, 0.022, 0.09, "sterile_blue")
-    w.box(0.0, 0.96, 0.78, 0.76, 0.14, 0.34, "bed_sheet")
+    w.rounded_box_y(0.0, 0.96, 0.78, 0.76, 0.14, 0.34, 0.075, "bed_sheet", 10)
     w.box(-0.20, 1.035, 0.78, 0.030, 0.025, 0.30, "linen_shadow")
     w.box(0.22, 1.030, 0.77, 0.032, 0.024, 0.28, "linen_shadow")
-    w.box(0.0, 1.04, 1.08, 1.14, 0.72, 0.065, "metal")
-    w.box(0.0, 0.91, -1.09, 1.04, 0.44, 0.065, "metal")
-    w.box(0.0, 1.26, 1.055, 0.96, 0.055, 0.050, "rail_bumper")
-    w.box(0.0, 1.02, -1.085, 0.82, 0.050, 0.050, "rail_bumper")
+    w.rounded_box_y(0.0, 1.04, 1.08, 1.14, 0.72, 0.065, 0.025, "metal", 8)
+    w.rounded_box_y(0.0, 0.91, -1.09, 1.04, 0.44, 0.065, 0.025, "metal", 8)
+    w.tube_between((-0.48, 1.26, 1.055), (0.48, 1.26, 1.055), 0.035, "rail_bumper", 10)
+    w.tube_between((-0.41, 1.02, -1.085), (0.41, 1.02, -1.085), 0.032, "rail_bumper", 10)
     for x in (-0.62, 0.62):
-        w.box(x, 0.88, -0.20, 0.045, 0.34, 1.20, "metal")
-        w.box(x, 1.08, -0.20, 0.055, 0.05, 1.16, "metal")
+        w.tube_between((x, 0.71, -0.80), (x, 1.05, -0.80), 0.024, "metal", 8)
+        w.tube_between((x, 0.71, 0.40), (x, 1.05, 0.40), 0.024, "metal", 8)
+        w.tube_between((x, 1.08, -0.78), (x, 1.08, 0.36), 0.032, "metal", 10)
         for z in (-0.68, -0.30, 0.08):
-            w.box(x, 0.98, z, 0.040, 0.23, 0.035, "metal")
-        w.box(x, 0.39, -0.82, 0.05, 0.70, 0.06, "metal")
-        w.box(x, 0.39, 0.82, 0.05, 0.70, 0.06, "metal")
+            w.tube_between((x, 0.86, z), (x, 1.08, z), 0.021, "metal", 8)
+        w.tube_between((x, 0.05, -0.82), (x, 0.72, -0.82), 0.028, "metal", 8)
+        w.tube_between((x, 0.05, 0.82), (x, 0.72, 0.82), 0.028, "metal", 8)
     for z in (-0.82, 0.82):
         w.cylinder_y(-0.43, 0.06, z, 0.08, 0.055, "metal", 12)
         w.cylinder_y(0.43, 0.06, z, 0.08, 0.055, "metal", 12)
@@ -287,19 +360,23 @@ def bed() -> None:
 
 def bedside_table() -> None:
     w = ObjWriter("bedside_table")
-    w.box(0.0, 0.42, 0.0, 0.62, 0.84, 0.50, "cabinet")
-    w.box(0.0, 0.84, -0.02, 0.64, 0.035, 0.52, "metal")
+    w.rounded_box_y(0.0, 0.42, 0.0, 0.62, 0.84, 0.50, 0.055, "cabinet", 9)
+    w.rounded_box_y(0.0, 0.84, -0.02, 0.64, 0.035, 0.52, 0.045, "metal", 9)
     w.box(0.0, 0.70, -0.27, 0.52, 0.18, 0.04, "paper")
     w.box(0.0, 0.72, -0.292, 0.44, 0.022, 0.018, "wall_stain")
     w.box(0.0, 0.42, -0.27, 0.52, 0.22, 0.04, "cabinet")
     w.box(0.0, 0.12, -0.27, 0.52, 0.22, 0.04, "cabinet")
     w.box(0.0, 0.44, -0.31, 0.30, 0.035, 0.035, "metal")
     w.box(0.0, 0.14, -0.31, 0.30, 0.035, 0.035, "metal")
-    w.box(0.0, 0.95, 0.0, 0.66, 0.06, 0.54, "metal")
-    w.box(0.18, 1.02, -0.04, 0.14, 0.12, 0.14, "bed_sheet")
+    w.rounded_box_y(0.0, 0.95, 0.0, 0.66, 0.06, 0.54, 0.050, "metal", 9)
+    for x in (-0.24, 0.24):
+        for z in (-0.19, 0.19):
+            w.cylinder_y(x, 0.04, z, 0.034, 0.045, "rubber_dark", 10)
+    w.rounded_box_y(0.18, 1.02, -0.04, 0.14, 0.12, 0.14, 0.030, "bed_sheet", 8)
     w.box(-0.11, 1.015, -0.16, 0.24, 0.020, 0.16, "paper")
     w.box(-0.11, 1.032, -0.16, 0.18, 0.014, 0.018, "medical_green")
     w.cylinder_y(-0.18, 1.03, 0.08, 0.055, 0.12, "fluid_blue", 12)
+    w.cylinder_y(-0.18, 1.095, 0.08, 0.034, 0.018, "metal", 12)
     w.box(0.20, 1.045, 0.16, 0.22, 0.018, 0.12, "tape")
     w.box(0.20, 1.060, 0.16, 0.12, 0.014, 0.020, "warning_red")
     w.box(-0.24, 1.052, 0.12, 0.12, 0.018, 0.20, "sterile_blue")
@@ -309,38 +386,41 @@ def bedside_table() -> None:
 def iv_stand() -> None:
     w = ObjWriter("ward_iv_stand")
     w.cylinder_y(0.0, 0.88, 0.0, 0.025, 1.72, "metal", 12)
-    w.box(0.0, 1.76, 0.0, 0.54, 0.035, 0.035, "metal")
-    w.box(-0.25, 1.60, 0.0, 0.035, 0.32, 0.035, "metal")
-    w.box(0.25, 1.60, 0.0, 0.035, 0.32, 0.035, "metal")
-    w.box(-0.24, 1.36, 0.0, 0.18, 0.35, 0.06, "bed_sheet")
+    w.tube_between((-0.27, 1.76, 0.0), (0.27, 1.76, 0.0), 0.020, "metal", 8)
+    w.tube_between((-0.25, 1.76, 0.0), (-0.25, 1.44, 0.0), 0.018, "metal", 8)
+    w.tube_between((0.25, 1.76, 0.0), (0.25, 1.44, 0.0), 0.018, "metal", 8)
+    w.rounded_box_y(-0.24, 1.36, 0.0, 0.18, 0.35, 0.06, 0.025, "bed_sheet", 8)
     w.box(-0.24, 1.31, -0.035, 0.12, 0.24, 0.025, "fluid_blue")
     w.box(-0.24, 1.12, 0.0, 0.025, 0.48, 0.025, "metal")
     w.box(-0.17, 1.00, 0.0, 0.035, 0.14, 0.025, "fluid_blue")
-    w.box(-0.13, 0.78, 0.0, 0.018, 0.40, 0.018, "rubber_dark")
-    w.box(-0.04, 0.60, 0.0, 0.20, 0.014, 0.018, "rubber_dark")
-    w.box(0.13, 0.53, 0.0, 0.018, 0.16, 0.018, "rubber_dark")
-    w.box(0.0, 0.03, 0.0, 0.70, 0.06, 0.70, "metal")
+    w.cable([(-0.13, 0.96, 0.0), (-0.15, 0.78, 0.02), (-0.08, 0.62, 0.01), (0.11, 0.54, 0.0)], 0.010, "rubber_dark")
+    w.tube_between((-0.34, 0.03, 0.0), (0.34, 0.03, 0.0), 0.026, "metal", 8)
+    w.tube_between((0.0, 0.03, -0.34), (0.0, 0.03, 0.34), 0.026, "metal", 8)
+    for x, z in ((-0.34, 0.0), (0.34, 0.0), (0.0, -0.34), (0.0, 0.34)):
+        w.cylinder_y(x, 0.025, z, 0.045, 0.035, "rubber_dark", 10)
     w.write("iv_stand.obj")
 
 
 def monitor() -> None:
     w = ObjWriter("ward_patient_monitor")
-    w.box(0.0, 1.18, 0.0, 0.72, 0.44, 0.16, "rubber_dark")
-    w.box(0.0, 1.19, -0.095, 0.58, 0.32, 0.035, "monitor_glass")
+    w.rounded_box_y(0.0, 1.18, 0.0, 0.72, 0.44, 0.16, 0.060, "rubber_dark", 10)
+    w.rounded_box_y(0.0, 1.19, -0.095, 0.58, 0.32, 0.035, 0.035, "monitor_glass", 10)
     w.box(-0.12, 1.22, -0.118, 0.17, 0.016, 0.014, "medical_green")
     w.box(0.08, 1.26, -0.118, 0.13, 0.016, 0.014, "medical_green")
     w.box(0.23, 1.16, -0.118, 0.08, 0.016, 0.014, "medical_green")
     w.box(-0.24, 1.10, -0.118, 0.06, 0.016, 0.014, "signal_yellow")
     w.box(-0.12, 1.10, -0.118, 0.06, 0.016, 0.014, "warning_red")
     w.box(0.00, 1.10, -0.118, 0.06, 0.016, 0.014, "fluid_blue")
-    w.box(-0.38, 0.80, 0.03, 0.06, 0.78, 0.06, "metal")
-    w.box(-0.16, 0.43, 0.02, 0.56, 0.08, 0.32, "metal")
-    w.box(0.28, 0.88, -0.03, 0.18, 0.08, 0.08, "warning_red")
+    w.tube_between((-0.38, 0.43, 0.03), (-0.38, 0.92, 0.03), 0.035, "metal", 10)
+    w.tube_between((-0.38, 0.92, 0.03), (-0.18, 1.00, 0.01), 0.030, "metal", 10)
+    w.rounded_box_y(-0.16, 0.43, 0.02, 0.56, 0.08, 0.32, 0.050, "metal", 10)
+    w.rounded_box_y(0.28, 0.88, -0.03, 0.18, 0.08, 0.08, 0.020, "warning_red", 8)
     w.box(0.28, 0.99, -0.092, 0.16, 0.024, 0.018, "warm_indicator")
     w.box(0.10, 0.99, -0.092, 0.08, 0.020, 0.018, "sterile_blue")
-    w.box(-0.48, 0.74, 0.05, 0.025, 0.36, 0.025, "rubber_dark")
-    w.box(-0.43, 0.63, -0.03, 0.18, 0.018, 0.025, "rubber_dark")
-    w.box(-0.35, 0.56, -0.03, 0.018, 0.14, 0.025, "rubber_dark")
+    w.cable([(-0.34, 0.98, 0.05), (-0.48, 0.78, 0.06), (-0.43, 0.63, -0.03), (-0.35, 0.56, -0.03)], 0.012, "rubber_dark")
+    w.cable([(0.19, 0.98, 0.05), (0.35, 0.82, 0.02), (0.44, 0.67, -0.04)], 0.010, "medical_green")
+    for x, mat in ((0.23, "metal"), (0.29, "signal_yellow"), (0.35, "fluid_blue")):
+        w.cylinder_y(x, 0.82, -0.087, 0.016, 0.018, mat, 8)
     w.write("patient_monitor.obj")
 
 
@@ -357,27 +437,27 @@ def curtain() -> None:
 
 def door() -> None:
     w = ObjWriter("ward_door")
-    w.box(0.0, 1.06, 0.0, 0.86, 2.12, 0.08, "door")
+    w.rounded_box_y(0.0, 1.06, 0.0, 0.86, 2.12, 0.08, 0.035, "door", 8)
     w.box(0.0, 2.18, -0.01, 1.04, 0.10, 0.12, "metal")
     w.box(-0.52, 1.10, -0.01, 0.10, 2.28, 0.12, "metal")
     w.box(0.52, 1.10, -0.01, 0.10, 2.28, 0.12, "metal")
     w.box(-0.22, 1.42, -0.06, 0.32, 0.20, 0.035, "dark_glass")
-    w.box(0.34, 1.00, -0.08, 0.12, 0.06, 0.08, "metal")
+    w.tube_between((0.27, 1.00, -0.08), (0.41, 1.00, -0.08), 0.030, "metal", 10)
     w.box(0.0, 0.24, -0.055, 0.62, 0.18, 0.035, "metal")
     w.write("ward_door.obj")
 
 
 def medical_headwall() -> None:
     w = ObjWriter("ward_medical_headwall")
-    w.box(0.0, 1.48, 0.0, 1.70, 0.34, 0.065, "cabinet")
-    w.box(0.0, 1.66, -0.045, 1.58, 0.060, 0.035, "metal")
-    w.box(0.0, 1.30, -0.045, 1.48, 0.055, 0.035, "metal")
+    w.rounded_box_y(0.0, 1.48, 0.0, 1.70, 0.34, 0.065, 0.035, "cabinet", 8)
+    w.tube_between((-0.78, 1.66, -0.045), (0.78, 1.66, -0.045), 0.032, "metal", 10)
+    w.tube_between((-0.74, 1.30, -0.045), (0.74, 1.30, -0.045), 0.030, "metal", 10)
     for x, mat in [(-0.58, "gas_oxygen"), (-0.40, "gas_air"), (-0.22, "gas_vacuum")]:
-        w.box(x, 1.50, -0.058, 0.115, 0.115, 0.026, mat)
+        w.rounded_box_y(x, 1.50, -0.058, 0.115, 0.115, 0.026, 0.020, mat, 8)
         w.cylinder_y(x, 1.50, -0.074, 0.040, 0.020, "metal", 14)
         w.box(x, 1.61, -0.060, 0.11, 0.035, 0.018, "paper")
     for x in (0.12, 0.32, 0.52):
-        w.box(x, 1.50, -0.058, 0.13, 0.16, 0.026, "outlet_white")
+        w.rounded_box_y(x, 1.50, -0.058, 0.13, 0.16, 0.026, 0.018, "outlet_white", 8)
         w.box(x - 0.025, 1.525, -0.077, 0.018, 0.050, 0.010, "rubber_dark")
         w.box(x + 0.025, 1.525, -0.077, 0.018, 0.050, 0.010, "rubber_dark")
         w.box(x, 1.452, -0.077, 0.052, 0.012, 0.010, "rubber_dark")
@@ -385,18 +465,18 @@ def medical_headwall() -> None:
     w.box(0.69, 1.57, -0.056, 0.14, 0.014, 0.016, "warning_red")
     w.box(0.70, 1.45, -0.058, 0.22, 0.050, 0.020, "warm_indicator")
     w.box(0.70, 1.42, -0.062, 0.16, 0.016, 0.014, "tape")
-    w.box(0.58, 1.30, -0.04, 0.035, 0.32, 0.030, "rubber_dark")
-    w.box(0.48, 1.18, -0.05, 0.22, 0.024, 0.024, "rubber_dark")
-    w.box(-0.42, 1.24, -0.048, 0.030, 0.28, 0.028, "rubber_dark")
-    w.box(-0.30, 1.13, -0.048, 0.24, 0.022, 0.026, "rubber_dark")
-    w.box(-0.02, 1.72, -0.060, 0.30, 0.12, 0.022, "dark_glass")
+    w.cable([(0.58, 1.30, -0.04), (0.56, 1.22, -0.055), (0.48, 1.18, -0.05), (0.36, 1.16, -0.045)], 0.012, "rubber_dark")
+    w.cable([(-0.42, 1.24, -0.048), (-0.40, 1.17, -0.052), (-0.30, 1.13, -0.048), (-0.18, 1.12, -0.046)], 0.012, "rubber_dark")
+    w.rounded_box_y(-0.02, 1.72, -0.060, 0.30, 0.12, 0.022, 0.018, "dark_glass", 8)
+    for x in (-0.70, -0.66, -0.62):
+        w.cylinder_y(x, 1.38, -0.073, 0.018, 0.018, "warm_indicator", 8)
     w.write("medical_headwall.obj")
 
 
 def overbed_light() -> None:
     w = ObjWriter("ward_overbed_light")
-    w.box(0.0, 2.06, 0.0, 1.34, 0.11, 0.08, "metal")
-    w.box(0.0, 1.99, -0.045, 1.08, 0.035, 0.035, "soft_light")
+    w.rounded_box_y(0.0, 2.06, 0.0, 1.34, 0.11, 0.08, 0.035, "metal", 8)
+    w.tube_between((-0.54, 1.99, -0.045), (0.54, 1.99, -0.045), 0.026, "soft_light", 10)
     w.box(-0.30, 1.955, -0.048, 0.18, 0.026, 0.026, "warm_indicator")
     w.box(0.34, 1.955, -0.048, 0.14, 0.022, 0.026, "soft_light")
     w.box(-0.58, 2.00, -0.02, 0.045, 0.12, 0.04, "metal")
@@ -408,17 +488,15 @@ def clinical_details() -> None:
     w = ObjWriter("ward_clinical_details")
 
     # Bed call unit and cable, visible from the wakeup camera.
-    w.box(0.68, 0.98, 1.26, 0.12, 0.04, 0.18, "signal_yellow")
+    w.rounded_box_y(0.68, 0.98, 1.26, 0.12, 0.04, 0.18, 0.025, "signal_yellow", 8)
     w.box(0.68, 1.00, 1.20, 0.045, 0.016, 0.045, "warning_red")
-    w.box(0.62, 0.94, 1.02, 0.025, 0.025, 0.48, "rubber_dark")
-    w.box(0.44, 0.92, 0.79, 0.38, 0.018, 0.025, "rubber_dark")
+    w.cable([(0.66, 0.965, 1.18), (0.62, 0.94, 1.02), (0.50, 0.92, 0.86), (0.25, 0.915, 0.78)], 0.012, "rubber_dark")
     w.box(0.52, 0.935, 0.96, 0.18, 0.016, 0.020, "sterile_blue")
 
-    # Monitor leads running toward the patient, kept as simple boxes for runtime cost.
-    w.box(-0.70, 0.99, 0.88, 0.56, 0.018, 0.022, "rubber_dark")
-    w.box(-0.42, 0.98, 0.74, 0.024, 0.018, 0.30, "rubber_dark")
+    # Monitor leads are low-side tubes: readable curves without pushing the room over budget.
+    w.cable([(-0.98, 1.02, 1.02), (-0.70, 0.99, 0.88), (-0.42, 0.98, 0.74), (-0.28, 0.99, 0.61)], 0.010, "rubber_dark")
     w.box(-0.28, 0.99, 0.61, 0.20, 0.014, 0.020, "medical_green")
-    w.box(-0.52, 1.04, 1.02, 0.030, 0.020, 0.34, "rubber_dark")
+    w.cable([(-0.70, 1.04, 1.18), (-0.52, 1.04, 1.02), (-0.30, 1.02, 0.78), (-0.18, 1.01, 0.48)], 0.010, "rubber_dark")
     w.box(-0.18, 1.01, 0.48, 0.22, 0.014, 0.018, "warning_red")
     w.box(0.12, 1.005, 0.43, 0.28, 0.014, 0.018, "fluid_blue")
     w.box(-0.04, 1.024, 0.36, 0.16, 0.014, 0.018, "warm_indicator")
@@ -426,7 +504,7 @@ def clinical_details() -> None:
     # Patient wrist band and small clipped chart near the bedside table.
     w.box(0.34, 0.99, 0.18, 0.24, 0.018, 0.050, "paper")
     w.box(0.43, 1.00, 0.18, 0.040, 0.020, 0.055, "signal_yellow")
-    w.box(1.18, 1.02, 1.15, 0.30, 0.035, 0.22, "paper")
+    w.rounded_box_y(1.18, 1.02, 1.15, 0.30, 0.035, 0.22, 0.025, "paper", 8)
     w.box(1.18, 1.045, 1.02, 0.24, 0.018, 0.025, "metal")
     w.box(1.04, 1.065, 1.15, 0.014, 0.018, 0.16, "medical_green")
     w.box(1.14, 1.068, 1.15, 0.014, 0.018, 0.18, "wall_stain")

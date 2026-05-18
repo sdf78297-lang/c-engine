@@ -75,6 +75,100 @@ class ObjWriter:
         self.face(material, tuple(reversed(bottom)))
         self.face(material, tuple(top))
 
+    def tube_between(
+        self,
+        start: tuple[float, float, float],
+        end: tuple[float, float, float],
+        radius: float,
+        material: str,
+        sides: int = 10,
+        capped: bool = True,
+    ) -> None:
+        sx, sy, sz = start
+        ex, ey, ez = end
+        ax, ay, az = ex - sx, ey - sy, ez - sz
+        length = math.sqrt(ax * ax + ay * ay + az * az)
+        if length <= 1.0e-6:
+            return
+        ax, ay, az = ax / length, ay / length, az / length
+        if abs(ay) < 0.92:
+            rx, ry, rz = -az, 0.0, ax
+        else:
+            rx, ry, rz = 1.0, 0.0, 0.0
+        rlen = math.sqrt(rx * rx + ry * ry + rz * rz)
+        rx, ry, rz = rx / rlen, ry / rlen, rz / rlen
+        ux = ay * rz - az * ry
+        uy = az * rx - ax * rz
+        uz = ax * ry - ay * rx
+
+        start_ring: list[int] = []
+        end_ring: list[int] = []
+        for i in range(sides):
+            a = math.tau * i / sides
+            ca = math.cos(a) * radius
+            sa = math.sin(a) * radius
+            ox = rx * ca + ux * sa
+            oy = ry * ca + uy * sa
+            oz = rz * ca + uz * sa
+            start_ring.append(self.vertex(sx + ox, sy + oy, sz + oz))
+            end_ring.append(self.vertex(ex + ox, ey + oy, ez + oz))
+        for i in range(sides):
+            self.face(material, (start_ring[i], start_ring[(i + 1) % sides], end_ring[(i + 1) % sides], end_ring[i]))
+        if capped:
+            self.face(material, tuple(reversed(start_ring)))
+            self.face(material, tuple(end_ring))
+
+    def rounded_box_z(
+        self,
+        cx: float,
+        cy: float,
+        cz: float,
+        sx: float,
+        sy: float,
+        sz: float,
+        radius: float,
+        material: str,
+        sides: int = 10,
+    ) -> None:
+        radius = min(radius, sx * 0.45, sy * 0.45)
+        core_x = max(0.001, sx - radius * 2.0)
+        core_y = max(0.001, sy - radius * 2.0)
+        self.box(cx, cy, cz, core_x, sy, sz, material)
+        self.box(cx, cy, cz, sx, core_y, sz, material)
+        x0, x1 = cx - sx * 0.5 + radius, cx + sx * 0.5 - radius
+        y0, y1 = cy - sy * 0.5 + radius, cy + sy * 0.5 - radius
+        z0, z1 = cz - sz * 0.5, cz + sz * 0.5
+        for x in (x0, x1):
+            for y in (y0, y1):
+                self.tube_between((x, y, z0), (x, y, z1), radius, material, sides)
+
+    def rounded_box_y(
+        self,
+        cx: float,
+        cy: float,
+        cz: float,
+        sx: float,
+        sy: float,
+        sz: float,
+        radius: float,
+        material: str,
+        sides: int = 10,
+    ) -> None:
+        radius = min(radius, sx * 0.45, sz * 0.45)
+        core_x = max(0.001, sx - radius * 2.0)
+        core_z = max(0.001, sz - radius * 2.0)
+        self.box(cx, cy, cz, core_x, sy, sz, material)
+        self.box(cx, cy, cz, sx, sy, core_z, material)
+        x0, x1 = cx - sx * 0.5 + radius, cx + sx * 0.5 - radius
+        z0, z1 = cz - sz * 0.5 + radius, cz + sz * 0.5 - radius
+        for x in (x0, x1):
+            for z in (z0, z1):
+                self.cylinder_y(x, cy, z, radius, sy, material, sides)
+
+    def cable(self, points: list[tuple[float, float, float]], radius: float, material: str, sides: int = 7) -> None:
+        for start, end in zip(points, points[1:]):
+            self.tube_between(start, end, radius, material, sides)
+
     def write(self, filename: str) -> None:
         OUT.mkdir(parents=True, exist_ok=True)
         path = OUT / filename

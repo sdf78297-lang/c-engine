@@ -40,6 +40,12 @@ Kd 0.420 0.560 0.680
 Ks 0.040 0.050 0.060
 Ns 10
 
+newmtl ambulance_pillow
+Ka 0.070 0.072 0.070
+Kd 0.870 0.860 0.810
+Ks 0.030 0.030 0.026
+Ns 12
+
 newmtl ambulance_metal
 Ka 0.050 0.055 0.060
 Kd 0.530 0.570 0.600
